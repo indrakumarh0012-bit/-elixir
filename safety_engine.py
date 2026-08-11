@@ -1,12 +1,49 @@
 PEDIATRIC_DRUG_DB = {
+    # Primary reference: Harriet Lane Handbook — Chapter 29 Drug Dosages (formulary)
     "PARACETAMOL": {
-        "min_mg_kg": 10.0, "max_mg_kg": 15.0, "absolute_max_single_mg": 1000.0,
-        "max_daily_mg_kg": 60.0, "notes": "Give every 4-6 hrs PRN. Max 4 doses/24 hrs."
+        "min_mg_kg": 10.0,
+        "max_mg_kg": 15.0,
+        "absolute_max_single_mg": 1000.0,
+        "max_daily_mg_kg": 90.0,
+        "absolute_max_daily_mg": 4000.0,
+        "default_doses_per_day": 4,
+        "notes": (
+            "Harriet Lane: Acetaminophen/Paracetamol PO/PR 10–15 mg/kg/dose Q4–6 hr; "
+            "max 90 mg/kg/24 hr or 4 g/24 hr (adult max also 5 doses/24 hr). "
+            "IV regimens differ — verify separately."
+        ),
+        "source": "Harriet Lane Handbook formulary (Acetaminophen)",
     },
     "AMOXICILLIN": {
-        "min_mg_kg": 20.0, "max_mg_kg": 30.0, "absolute_max_single_mg": 1000.0,
-        "max_daily_mg_kg": 90.0, "notes": "Standard dosing every 8 hours."
-    }
+        # Per-dose range assumes standard child dosing divided Q8 hr (TID): 25–50 mg/kg/24 hr
+        "min_mg_kg": 8.0,
+        "max_mg_kg": 17.0,
+        "absolute_max_single_mg": 1000.0,
+        "max_daily_mg_kg": 50.0,
+        "absolute_max_daily_mg": 3000.0,
+        "high_dose_daily_mg_kg": 90.0,
+        "default_doses_per_day": 3,
+        "notes": (
+            "Harriet Lane: Child standard 25–50 mg/kg/24 hr ÷ Q8–12 hr PO; "
+            "high-dose (resistant S. pneumoniae / AOM / sinusitis / CAP) 80–90 mg/kg/24 hr ÷ Q8–12 hr; "
+            "max usually 2–3 g/24 hr (some experts up to 4 g/24 hr). "
+            "Neonate–≤3 mo: 20–30 mg/kg/24 hr ÷ Q12 hr."
+        ),
+        "source": "Harriet Lane Handbook formulary (Amoxicillin)",
+    },
+    "IBUPROFEN": {
+        "min_mg_kg": 5.0,
+        "max_mg_kg": 10.0,
+        "absolute_max_single_mg": 800.0,
+        "max_daily_mg_kg": 40.0,
+        "absolute_max_daily_mg": 2400.0,
+        "default_doses_per_day": 4,
+        "notes": (
+            "Harriet Lane–aligned analgesic dosing: typically 5–10 mg/kg/dose PO Q6–8 hr; "
+            "usual max ~40 mg/kg/24 hr. Avoid in dehydration / significant renal impairment."
+        ),
+        "source": "Harriet Lane Handbook (analgesic reference use)",
+    },
 }
 
 def ideal_body_weight_kg(height_cm, is_female=False):
@@ -78,22 +115,46 @@ def calculate_cr_cl(
         "gender_factor": gender_factor,
     }
 
-def verify_pediatric_dose(drug_name, prescribed_mg, weight_kg, doses_per_day=3):
+def verify_pediatric_dose(drug_name, prescribed_mg, weight_kg, doses_per_day=None):
     key = drug_name.strip().upper()
     if key not in PEDIATRIC_DRUG_DB:
         return {"status": "UNKNOWN", "message": f"Drug '{drug_name}' not in safety database."}
 
     rules = PEDIATRIC_DRUG_DB[key]
+    if doses_per_day is None:
+        doses_per_day = rules.get("default_doses_per_day", 3)
+
     min_rec = round(rules["min_mg_kg"] * weight_kg, 1)
     max_rec = round(min(rules["max_mg_kg"] * weight_kg, rules["absolute_max_single_mg"]), 1)
     total_daily = prescribed_mg * doses_per_day
-    max_daily = rules["max_daily_mg_kg"] * weight_kg
+    max_daily_by_wt = rules["max_daily_mg_kg"] * weight_kg
+    max_daily = min(max_daily_by_wt, rules.get("absolute_max_daily_mg", max_daily_by_wt))
+    range_str = f"{min_rec}–{max_rec} mg/dose"
+    meta = {"range": range_str, "notes": rules.get("notes", ""), "source": rules.get("source", "")}
 
     if prescribed_mg > max_rec:
-        return {"status": "ERROR", "message": f"🔴 OVERDOSE: Prescribed {prescribed_mg} mg exceeds single max safe dose ({max_rec} mg).", "range": f"{min_rec}–{max_rec} mg"}
-    elif prescribed_mg < min_rec:
-        return {"status": "WARNING", "message": f"🟡 UNDERDOSE: Prescribed {prescribed_mg} mg is below therapeutic threshold ({min_rec} mg).", "range": f"{min_rec}–{max_rec} mg"}
-    elif total_daily > max_daily:
-        return {"status": "ERROR", "message": f"🔴 DAILY MAX EXCEEDED: Total daily dose ({total_daily} mg) exceeds limit ({max_daily} mg/day).", "range": f"{min_rec}–{max_rec} mg"}
-    else:
-        return {"status": "SAFE", "message": f"🟢 SAFE DOSE: {prescribed_mg} mg is within standard limits.", "range": f"{min_rec}–{max_rec} mg"}
+        return {
+            "status": "ERROR",
+            "message": f"🔴 OVERDOSE: Prescribed {prescribed_mg} mg exceeds single max safe dose ({max_rec} mg).",
+            **meta,
+        }
+    if prescribed_mg < min_rec:
+        return {
+            "status": "WARNING",
+            "message": f"🟡 UNDERDOSE: Prescribed {prescribed_mg} mg is below therapeutic threshold ({min_rec} mg).",
+            **meta,
+        }
+    if total_daily > max_daily:
+        return {
+            "status": "ERROR",
+            "message": (
+                f"🔴 DAILY MAX EXCEEDED: Total daily dose ({total_daily} mg) exceeds "
+                f"Harriet Lane limit ({round(max_daily, 1)} mg/day)."
+            ),
+            **meta,
+        }
+    return {
+        "status": "SAFE",
+        "message": f"🟢 SAFE DOSE: {prescribed_mg} mg is within Harriet Lane standard limits.",
+        **meta,
+    }

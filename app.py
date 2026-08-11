@@ -42,12 +42,23 @@ with tab2:
     col_peds, col_renal = st.columns(2)
     with col_peds:
         st.markdown("### 👶 Pediatric Dosing")
+        st.caption("Reference: Harriet Lane Handbook formulary (primary)")
         p_weight = st.number_input("Child Weight (kg)", 2.0, 60.0, 12.0)
         p_drug = st.selectbox("Select Medication", list(PEDIATRIC_DRUG_DB.keys()))
-        p_dose = st.number_input("Prescribed Single Dose (mg)", 1.0, 1000.0, 200.0)
+        p_dose = st.number_input("Prescribed Single Dose (mg)", 1.0, 1000.0, 150.0)
+        p_freq = st.number_input(
+            "Doses per day",
+            1,
+            8,
+            int(PEDIATRIC_DRUG_DB[p_drug].get("default_doses_per_day", 3)),
+        )
+        st.info(PEDIATRIC_DRUG_DB[p_drug]["notes"])
         if st.button("Verify Pediatric Dose"):
-            res = verify_pediatric_dose(p_drug, p_dose, p_weight, 3)
+            res = verify_pediatric_dose(p_drug, p_dose, p_weight, p_freq)
             st.write(res["message"])
+            st.caption(f"Suggested single-dose range: {res.get('range', '')}")
+            if res.get("source"):
+                st.caption(f"Source: {res['source']}")
 
     with col_renal:
         st.markdown("### 🩺 Adult Renal Clearance (CrCl)")

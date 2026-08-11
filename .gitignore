@@ -2,3 +2,5 @@
 *.pyc
 *.mp3
 .streamlit/
+hl_extract.txt
+hl_mono.txt
