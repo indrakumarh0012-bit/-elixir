@@ -3,6 +3,7 @@ import urllib.parse
 from safety_engine import calculate_cr_cl, verify_pediatric_dose, PEDIATRIC_DRUG_DB
 from elixir_ai import summarize_medical_history, generate_kannada_discharge_text, create_kannada_audio
 from whatsapp_dispatch import build_whatsapp_message, send_whatsapp_cloud_api
+from document_ingest import ingest_uploaded_file
 
 st.set_page_config(page_title="Smart-Elixir Platform", page_icon="🏥", layout="wide")
 st.title("🏥 Smart-Elixir: Clinical AI & Patient Safety Hub")
@@ -47,13 +48,28 @@ with tab1:
             "Surgery (Bailey & Love / S. Das)",
         ],
     )
+    uploaded = st.file_uploader(
+        "Upload notes PDF or image (max 15 MB)",
+        type=["pdf", "png", "jpg", "jpeg", "webp"],
+        accept_multiple_files=False,
+    )
     raw_notes = st.text_area("Paste Previous Hospital Notes / Lab History", height=220)
     if st.button("⚡ Generate Executive Brief"):
-        if not raw_notes.strip():
-            st.warning("Please paste clinical notes first.")
+        notes = raw_notes.strip()
+        if uploaded is not None:
+            with st.spinner("Reading uploaded file..."):
+                ok, extracted = ingest_uploaded_file(uploaded, groq_api_key)
+            if not ok:
+                st.error(extracted)
+                st.stop()
+            notes = (notes + "\n\n" if notes else "") + f"[From upload: {uploaded.name}]\n{extracted}"
+            with st.expander("Extracted text from upload"):
+                st.text(extracted[:8000])
+        if not notes:
+            st.warning("Paste clinical notes and/or upload a PDF/image first.")
         else:
             with st.spinner("Processing detailed clinical brief with Groq..."):
-                st.markdown(summarize_medical_history(raw_notes, groq_api_key, specialty))
+                st.markdown(summarize_medical_history(notes, groq_api_key, specialty))
 
 with tab2:
     col_peds, col_renal = st.columns(2)

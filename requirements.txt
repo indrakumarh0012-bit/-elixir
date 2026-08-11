@@ -2,3 +2,5 @@ streamlit
 openai
 gTTS
 requests
+pypdf
+Pillow
