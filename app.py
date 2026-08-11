@@ -35,8 +35,8 @@ tab1, tab2, tab3 = st.tabs(["📑 Summarizer", "🛡️ Safety Guard", "📲 Kan
 
 with tab1:
     st.caption(
-        "Detailed brief with dose / route (PO vs IV) / duration, aligned to "
-        "Nelson (Pediatrics), Williams (OBG), Harrison (Medicine), Bailey & Love + S. Das (Surgery)."
+        "Factual summary only from your notes: each patient separate, each treatment listed separately. "
+        "No invented doses or empty sections. Specialty lens is for wording only."
     )
     specialty = st.selectbox(
         "Specialty lens",

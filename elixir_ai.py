@@ -4,7 +4,7 @@ from gtts import gTTS
 def get_groq_client(api_key):
     return OpenAI(base_url="https://api.groq.com/openai/v1", api_key=api_key)
 
-def _chat(prompt, groq_api_key, empty_message):
+def _chat(prompt, groq_api_key, empty_message, temperature=0.2):
     if not groq_api_key:
         return empty_message
     try:
@@ -12,7 +12,7 @@ def _chat(prompt, groq_api_key, empty_message):
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
+            temperature=temperature,
         )
         return response.choices[0].message.content
     except AuthenticationError:
@@ -25,78 +25,40 @@ def _chat(prompt, groq_api_key, empty_message):
 def summarize_medical_history(raw_notes, groq_api_key, specialty="Auto"):
     specialty = (specialty or "Auto").strip()
     prompt = f"""
-You are a senior clinical summarizer for Smart-Elixir.
-Create a DETAILED clinical executive brief from the notes below.
+You are a clinical documentation summarizer for Smart-Elixir.
+Write a SHORT, ACCURATE summary of ONLY what is written in the notes.
 
-REFERENCE FRAMEWORK (use the matching standard textbook style/structure):
-- Pediatrics → Nelson Textbook of Pediatrics (+ Harriet Lane for drug dosing when relevant)
-- Obstetrics & Gynecology → Williams Obstetrics / Williams Gynecology
-- Internal Medicine → Harrison's Principles of Internal Medicine
-- Surgery → Bailey & Love's Short Practice of Surgery and S. Das (A Manual on Clinical Surgery / operative principles as applicable)
+Specialty hint (for terminology only, do NOT invent content): {specialty}
+Textbook names (Nelson/Williams/Harrison/Bailey/S.Das) are for language style only — do NOT add textbook advice that is not in the notes.
 
-Selected specialty hint from clinician: {specialty}
-If specialty is Auto, infer the most likely specialty from the notes and state which textbook lens you used.
+HARD RULES:
+1) Use ONLY facts explicitly present in the notes. If something is not written, OMIT it. Do not write "Unknown", "Not mentioned", "N/A", "Suggested", or empty sections.
+2) Do NOT invent diagnoses, labs, doses, routes, durations, differentials, red flags, or follow-up plans.
+3) If multiple patients appear, make a separate summary for EACH patient (Patient 1, Patient 2, ...). Never merge treatments across patients.
+4) List EACH treatment/drug on its OWN line/bullet — never combine many drugs into one paragraph.
+5) For a treatment, include ONLY fields that are actually present among: drug name, dose, route (PO/IV/IM/etc.), frequency, duration, indication.
+6) Keep numbers in English digits (e.g., 250 mg, 5 ml, 7 days).
+7) Keep the summary concise. No filler, no teaching commentary, no checklists of missing data.
 
-OUTPUT RULES:
-1) Be detailed and clinically useful — not a vague one-liner summary.
-2) Prefer facts present in the notes. If you add standard textbook-based expected treatment detail that is NOT explicitly in the notes, label it clearly as:
-   "Suggested (textbook-aligned; confirm locally): ..."
-3) NEVER invent lab values, imaging findings, or diagnoses not supported by the notes.
-4) Keep ALL numbers, doses, frequencies, and durations in English digits/units (e.g., 500 mg, 7 days, Q8 hr).
-5) For every drug/treatment, include when available (or mark Unknown):
-   - Drug/intervention name
-   - Dose (mg / mg/kg / mcg etc.)
-   - Route: Oral (PO) / IV / IM / SC / PR / Inhalation / Topical / Other
-   - Frequency
-   - Duration
-   - Indication
-6) Use markdown with the exact section headings below.
+OUTPUT FORMAT (repeat per patient):
 
-# Clinical Executive Brief
+### Patient: <name or identifier if present, else Patient 1>
+- Age / sex / weight: <only if present>
+- Presentation: <only if present>
+- Diagnosis: <only if present>
+- Investigations: <only values/tests present>
+- Treatments given:
+  1. <Drug> — <dose if present>, <route if present>, <frequency if present>, <duration if present>
+  2. <next drug/treatment separately>
+- Other care: <fluids/procedures/advice only if present>
+- Disposition / follow-up: <only if present>
 
-## 1. Specialty & Reference Lens
-- Inferred/selected specialty
-- Primary textbook lens used
-
-## 2. Patient Snapshot
-- Age / sex / weight (if available)
-- Key comorbidities / allergies
-- Admission/context reason
-
-## 3. Clinical Presentation
-- Chief complaints and timeline
-- Relevant positives/negatives from history & exam
-
-## 4. Investigations
-- Labs (with values/dates if present)
-- Imaging / procedures
-
-## 5. Working Diagnosis / Differentials
-- Most likely diagnosis
-- Important differentials
-
-## 6. Treatment Plan (DETAILED)
-Provide a table with columns:
-| Therapy | Dose | Route (PO/IV/etc.) | Frequency | Duration | Indication | Source in notes / Suggested |
-
-Then add short bullet notes for fluids, oxygen, supportive care, and non-drug interventions.
-
-## 7. Monitoring & Red Flags
-- Parameters to monitor
-- When to escalate / danger signs
-
-## 8. Disposition & Follow-up
-- Discharge / admit / refer advice if present
-- Follow-up timing and counseling points
-
-## 9. Clinician Checklist
-- Missing data that should be confirmed before acting
-- Dose/route/duration items needing clarification
+If only one patient, still use this structure once.
 
 NOTES:
 {raw_notes}
 """.strip()
-    return _chat(prompt, groq_api_key, "⚠️ Please enter your Groq API Key in the sidebar.")
+    return _chat(prompt, groq_api_key, "⚠️ Please enter your Groq API Key in the sidebar.", temperature=0.1)
 
 def generate_kannada_discharge_text(clinical_plan, groq_api_key):
     prompt = (
