@@ -1,6 +1,6 @@
-streamlit
-openai
-gTTS
-requests
-pypdf
-Pillow
+streamlit>=1.28.0
+openai>=1.0.0
+gTTS>=2.5.0
+requests>=2.31.0
+pypdf>=4.0.0
+Pillow>=10.0.0

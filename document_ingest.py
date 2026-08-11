@@ -1,7 +1,6 @@
 import base64
 from io import BytesIO
 
-from pypdf import PdfReader
 from openai import OpenAI, AuthenticationError, APIError
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB
@@ -25,6 +24,10 @@ def validate_upload(file):
     return True, ""
 
 def extract_text_from_pdf(file_bytes):
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return None  # signal missing dependency
     reader = PdfReader(BytesIO(file_bytes))
     chunks = []
     for i, page in enumerate(reader.pages, start=1):
@@ -80,6 +83,11 @@ def ingest_uploaded_file(uploaded_file, groq_api_key=""):
 
     if mime == "application/pdf" or name.endswith(".pdf"):
         text = extract_text_from_pdf(file_bytes)
+        if text is None:
+            return False, (
+                "PDF support package `pypdf` is not installed on the server. "
+                "Reboot the Streamlit app after requirements.txt update, or paste notes as text."
+            )
         if not text.strip():
             return False, "No extractable text found in PDF (it may be a scanned image-only PDF)."
         return True, text
