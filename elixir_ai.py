@@ -62,16 +62,23 @@ NOTES:
 
 def generate_kannada_discharge_text(clinical_plan, groq_api_key):
     prompt = (
-        "Translate the following discharge instructions into simple Kannada for a patient.\n"
+        "Create simple Kannada medicine instructions for a patient/caregiver.\n\n"
         "STRICT RULES:\n"
-        "1) All words/sentences must be in Kannada script.\n"
-        "2) Keep ALL numbers, doses, strengths, times, and dates in English digits only "
-        "(example: 250 mg, 5 ml, 3 times, 12/08/2026). Never use Kannada numerals or number-words.\n"
-        "3) Keep drug names and units (mg, ml, kg, hrs) in English.\n"
-        "4) Do not add extra medical advice beyond the input.\n\n"
-        f"Instructions:\n{clinical_plan}"
+        "1) Words and sentences in Kannada script only.\n"
+        "2) ALL numbers must stay in English digits (1, 2, 250, 5) — never Kannada digits or number-words.\n"
+        "3) Keep drug names, routes (PO/IV), and units (mg, ml, kg, drops) in English.\n"
+        "4) For EACH medicine separately, include:\n"
+        "   - Medicine name\n"
+        "   - Exact dose with English numbers\n"
+        "   - Route (by mouth / injection etc. in Kannada words + PO/IV in English if given)\n"
+        "   - How many times per day (English numbers)\n"
+        "   - How many days (English numbers)\n"
+        "   - How to take (e.g., after food, with water, shake syrup, use spacer)\n"
+        "5) Do not invent medicines or doses not in the input.\n"
+        "6) Keep it short and clear.\n\n"
+        f"Care plan:\n{clinical_plan}"
     )
-    return _chat(prompt, groq_api_key, "ದಯವಿಟ್ಟು ಉಚಿತ Groq API Key ನಮೂದಿಸಿ.")
+    return _chat(prompt, groq_api_key, "ದಯವಿಟ್ಟು ಉಚಿತ Groq API Key ನಮೂದಿಸಿ.", temperature=0.1)
 
 def create_kannada_audio(kannada_text, output_filename="kannada_instructions.mp3"):
     if not kannada_text or kannada_text.startswith("⚠️") or kannada_text.startswith("ದಯವಿಟ್ಟು"):

@@ -170,71 +170,91 @@ def suggest_paracetamol_by_age(age_years):
 def calculate_pediatric_dose(
     drug_name,
     weight_kg,
-    mg_per_kg,
+    mg_per_kg=None,
     doses_per_day=None,
+    route=None,
     age_years=None,
 ):
-    """
-    Exact single-dose calculator from editable mg/kg × weight.
-    Caps to absolute max single dose from Harriet Lane DB when present.
-    """
+    """Exact single-dose calculator: editable mg/kg × weight, with route & contraindications."""
     key = drug_name.strip().upper()
     if key not in PEDIATRIC_DRUG_DB:
-        return {"ok": False, "message": f"Drug '{drug_name}' not in Harriet Lane safety database."}
+        return {"ok": False, "message": f"Drug '{drug_name}' not in safety database."}
 
     rules = PEDIATRIC_DRUG_DB[key]
     if weight_kg <= 0:
         return {"ok": False, "message": "Weight must be > 0 kg."}
-    if mg_per_kg <= 0:
+
+    routes = rules.get("routes", ["PO"])
+    chosen_route = route if route in routes else routes[0]
+    freq = int(doses_per_day if doses_per_day is not None else rules.get("default_doses_per_day", 3))
+
+    # Topical / age-banded / volume products
+    if rules["min_mg_kg"] == 0 and rules["max_mg_kg"] == 0 and rules.get("absolute_max_single_mg", 0) == 0:
+        return {
+            "ok": True,
+            "drug": key,
+            "weight_kg": weight_kg,
+            "mg_per_kg": None,
+            "single_dose_mg": None,
+            "daily_dose_mg": None,
+            "suggested_min_mg": None,
+            "suggested_max_mg": None,
+            "doses_per_day": freq,
+            "route": chosen_route,
+            "routes": routes,
+            "how_to_take": rules.get("how_to_take", ""),
+            "contraindications": rules.get("contraindications", ""),
+            "notes": rules.get("notes", ""),
+            "message": "This medicine is age/device/volume/topical based — follow how-to-take (not mg/kg × weight).",
+            "warnings": [],
+            "age_table_hint": suggest_paracetamol_by_age(age_years) if key == "PARACETAMOL" and age_years is not None else None,
+        }
+
+    use_mg_kg = float(rules["min_mg_kg"] if mg_per_kg is None else mg_per_kg)
+    if use_mg_kg <= 0:
         return {"ok": False, "message": "mg/kg must be > 0."}
 
-    if doses_per_day is None:
-        doses_per_day = rules.get("default_doses_per_day", 3)
-
-    raw_single = mg_per_kg * weight_kg
-    capped_single = min(raw_single, rules["absolute_max_single_mg"])
-    single_mg = round(capped_single, 1)
-    daily_mg = round(single_mg * doses_per_day, 1)
-
-    hl_min = rules["min_mg_kg"]
-    hl_max = rules["max_mg_kg"]
-    hl_single_min = round(hl_min * weight_kg, 1)
-    hl_single_max = round(min(hl_max * weight_kg, rules["absolute_max_single_mg"]), 1)
-
-    max_daily_by_wt = rules["max_daily_mg_kg"] * weight_kg
-    max_daily = min(max_daily_by_wt, rules.get("absolute_max_daily_mg", max_daily_by_wt))
+    raw_single = use_mg_kg * weight_kg
+    single_mg = round(min(raw_single, rules["absolute_max_single_mg"]), 1)
+    daily_mg = round(single_mg * freq, 1)
+    sug_min = round(rules["min_mg_kg"] * weight_kg, 1)
+    sug_max = round(min(rules["max_mg_kg"] * weight_kg, rules["absolute_max_single_mg"]), 1)
+    max_daily = min(
+        rules["max_daily_mg_kg"] * weight_kg,
+        rules.get("absolute_max_daily_mg", rules["max_daily_mg_kg"] * weight_kg),
+    )
 
     warnings = []
-    if mg_per_kg < hl_min:
-        warnings.append(f"Selected {mg_per_kg} mg/kg is below Harriet Lane usual min ({hl_min} mg/kg).")
-    if mg_per_kg > hl_max:
-        warnings.append(f"Selected {mg_per_kg} mg/kg is above Harriet Lane usual max ({hl_max} mg/kg).")
+    if use_mg_kg < rules["min_mg_kg"] or use_mg_kg > rules["max_mg_kg"]:
+        warnings.append(
+            f"mg/kg ({use_mg_kg}) is outside usual range {rules['min_mg_kg']}–{rules['max_mg_kg']}."
+        )
     if raw_single > rules["absolute_max_single_mg"]:
-        warnings.append(
-            f"Calculated dose capped at absolute max single dose {rules['absolute_max_single_mg']} mg."
-        )
+        warnings.append(f"Capped at absolute max single dose {rules['absolute_max_single_mg']} mg.")
     if daily_mg > max_daily:
-        warnings.append(
-            f"Total daily ({daily_mg} mg) exceeds Harriet Lane daily max ({round(max_daily, 1)} mg)."
-        )
+        warnings.append(f"Daily total {daily_mg} mg exceeds usual max ~{round(max_daily, 1)} mg/day.")
 
-    age_hint = None
-    if key == "PARACETAMOL" and age_years is not None:
-        age_hint = suggest_paracetamol_by_age(age_years)
+    msg = f"Exact single dose: {single_mg} mg via {chosen_route}."
+    if warnings:
+        msg += " " + " ".join(warnings)
 
     return {
         "ok": True,
         "drug": key,
         "weight_kg": weight_kg,
-        "mg_per_kg": mg_per_kg,
+        "mg_per_kg": use_mg_kg,
         "single_dose_mg": single_mg,
-        "doses_per_day": doses_per_day,
         "daily_dose_mg": daily_mg,
-        "hl_suggested_mg_kg": f"{hl_min}–{hl_max}",
-        "hl_single_range_mg": f"{hl_single_min}–{hl_single_max}",
-        "max_daily_mg": round(max_daily, 1),
+        "suggested_min_mg": sug_min,
+        "suggested_max_mg": sug_max,
+        "doses_per_day": freq,
+        "route": chosen_route,
+        "routes": routes,
+        "how_to_take": rules.get("how_to_take", ""),
+        "contraindications": rules.get("contraindications", ""),
         "notes": rules.get("notes", ""),
         "source": rules.get("source", ""),
+        "message": msg,
         "warnings": warnings,
-        "age_table_hint": age_hint,
+        "age_table_hint": suggest_paracetamol_by_age(age_years) if key == "PARACETAMOL" and age_years is not None else None,
     }
