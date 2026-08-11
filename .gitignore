@@ -4,3 +4,5 @@
 .streamlit/
 hl_extract.txt
 hl_mono.txt
+ref_comp.txt
+patch_pediatric_db.py

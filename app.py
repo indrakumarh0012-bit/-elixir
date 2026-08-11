@@ -1,6 +1,11 @@
 import streamlit as st
 import urllib.parse
-from safety_engine import calculate_cr_cl, verify_pediatric_dose, PEDIATRIC_DRUG_DB
+from safety_engine import (
+    calculate_cr_cl,
+    verify_pediatric_dose,
+    PEDIATRIC_DRUG_DB,
+    calculate_pediatric_dose,
+)
 from elixir_ai import summarize_medical_history, generate_kannada_discharge_text, create_kannada_audio
 from whatsapp_dispatch import build_whatsapp_message, send_whatsapp_cloud_api
 from document_ingest import ingest_uploaded_file
@@ -31,7 +36,9 @@ with st.sidebar:
         "`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`."
     )
 
-tab1, tab2, tab3 = st.tabs(["📑 Summarizer", "🛡️ Safety Guard", "📲 Kannada Dispatch"])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["📑 Summarizer", "🛡️ Safety Guard", "🧮 Ped Dose Calculator", "📲 Kannada Dispatch"]
+)
 
 with tab1:
     st.caption(
@@ -74,24 +81,45 @@ with tab1:
 with tab2:
     col_peds, col_renal = st.columns(2)
     with col_peds:
-        st.markdown("### 👶 Pediatric Dosing")
-        st.caption("Reference: Harriet Lane Handbook formulary (primary)")
-        p_weight = st.number_input("Child Weight (kg)", 2.0, 60.0, 12.0)
-        p_drug = st.selectbox("Select Medication", list(PEDIATRIC_DRUG_DB.keys()))
-        p_dose = st.number_input("Prescribed Single Dose (mg)", 1.0, 1000.0, 150.0)
+        st.markdown("### 👶 Pediatric Verify Dose")
+        st.caption(
+            f"{len(PEDIATRIC_DRUG_DB)} drugs — antibiotics + OPD (cold/cough/fever/vomit/"
+            "abdomen/allergy/scabies). Harriet Lane / Nelson–aligned."
+        )
+        categories = sorted({m.get("category", "General") for m in PEDIATRIC_DRUG_DB.values()})
+        cat = st.selectbox("Filter by category", ["All"] + categories, key="verify_cat")
+        drug_options = sorted(
+            [
+                k for k, v in PEDIATRIC_DRUG_DB.items()
+                if cat == "All" or v.get("category") == cat
+            ]
+        )
+        p_weight = st.number_input("Child Weight (kg)", 2.0, 80.0, 12.0, key="verify_wt")
+        p_drug = st.selectbox("Select Medication", drug_options, key="verify_drug")
+        meta = PEDIATRIC_DRUG_DB[p_drug]
+        st.write(f"**Routes:** {', '.join(meta.get('routes', []))}")
+        if meta.get("indications"):
+            st.write(f"**Common use:** {meta['indications']}")
+        st.write(f"**How to take:** {meta.get('how_to_take', '')}")
+        if meta.get("contraindications"):
+            st.warning(f"**Contraindications / cautions:** {meta['contraindications']}")
+        p_dose = st.number_input("Prescribed Single Dose (mg)", 0.0, 5000.0, 150.0, key="verify_dose")
         p_freq = st.number_input(
             "Doses per day",
             1,
             8,
-            int(PEDIATRIC_DRUG_DB[p_drug].get("default_doses_per_day", 3)),
+            int(meta.get("default_doses_per_day", 3)),
+            key="verify_freq",
         )
-        st.info(PEDIATRIC_DRUG_DB[p_drug]["notes"])
+        st.info(meta.get("notes", ""))
         if st.button("Verify Pediatric Dose"):
             res = verify_pediatric_dose(p_drug, p_dose, p_weight, p_freq)
             st.write(res["message"])
             st.caption(f"Suggested single-dose range: {res.get('range', '')}")
-            if res.get("source"):
-                st.caption(f"Source: {res['source']}")
+            if res.get("contraindications"):
+                st.warning(f"Contraindications: {res['contraindications']}")
+            if res.get("how_to_take"):
+                st.caption(f"How to take: {res['how_to_take']}")
 
     with col_renal:
         st.markdown("### 🩺 Adult Renal Clearance (CrCl)")
@@ -132,9 +160,69 @@ with tab2:
         )
 
 with tab3:
+    st.markdown("### 🧮 Pediatric Dose Calculator")
+    st.caption(
+        "Suggested mg/kg from formulary ranges. Modify mg/kg if needed; weight gives exact mg. "
+        "Confirm before prescribing."
+    )
+    c1, c2 = st.columns(2)
+    with c1:
+        calc_age_years = st.number_input("Age (years)", 0.0, 18.0, 3.0, step=0.5, key="calc_age")
+        calc_wt = st.number_input("Weight (kg)", 1.0, 100.0, 14.0, step=0.1, key="calc_wt")
+        calc_cat = st.selectbox(
+            "Category",
+            ["All"] + sorted({m.get("category", "General") for m in PEDIATRIC_DRUG_DB.values()}),
+            key="calc_cat",
+        )
+        calc_drugs = sorted(
+            [
+                k for k, v in PEDIATRIC_DRUG_DB.items()
+                if calc_cat == "All" or v.get("category") == calc_cat
+            ]
+        )
+        calc_drug = st.selectbox("Medicine", calc_drugs, key="calc_drug")
+        meta = PEDIATRIC_DRUG_DB[calc_drug]
+        calc_route = st.selectbox("Route", meta.get("routes", ["PO"]), key="calc_route")
+    with c2:
+        st.write(f"**Usual mg/kg/dose:** {meta['min_mg_kg']} – {meta['max_mg_kg']}")
+        default_mgkg = round((meta["min_mg_kg"] + meta["max_mg_kg"]) / 2, 2) if meta["max_mg_kg"] else 0.0
+        calc_mgkg = st.number_input(
+            "Dose (mg/kg) — editable",
+            0.0, 200.0, float(default_mgkg), step=0.05, key="calc_mgkg",
+        )
+        calc_freq = st.number_input(
+            "Doses per day", 1, 8, int(meta.get("default_doses_per_day", 3)), key="calc_freq",
+        )
+        st.write(f"**How to take:** {meta.get('how_to_take', '')}")
+        if meta.get("contraindications"):
+            st.warning(f"**Contraindications:** {meta['contraindications']}")
+        st.caption(meta.get("notes", ""))
+
+    calc = calculate_pediatric_dose(calc_drug, calc_wt, calc_mgkg, calc_freq, calc_route)
+    if calc.get("ok"):
+        if calc.get("single_dose_mg") is not None:
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Exact single dose", f"{calc['single_dose_mg']} mg")
+            m2.metric("Total per day", f"{calc['daily_dose_mg']} mg")
+            m3.metric("Route", calc["route"])
+            st.success(
+                f"For {calc_wt} kg @ {calc_mgkg} mg/kg → **{calc['single_dose_mg']} mg** "
+                f"{calc['route']} × {calc_freq}/day"
+            )
+            st.caption(
+                f"Suggested single-dose window for this weight: "
+                f"{calc['suggested_min_mg']}–{calc['suggested_max_mg']} mg · Age {calc_age_years} yr"
+            )
+        else:
+            st.info(calc.get("message", ""))
+        st.write("**Instructions:**", calc.get("how_to_take", ""))
+    else:
+        st.error(calc.get("message", "Could not calculate."))
+
+with tab4:
     clinical_plan = st.text_area(
         "Enter Care Plan in English",
-        value="Take Paracetamol 250mg syrup. Return next week.",
+        value="Take Paracetamol 250 mg syrup by mouth every 6 hours for 3 days. Return next week.",
     )
     if st.button("🌐 Generate Kannada Translation & Audio"):
         with st.spinner("Translating with Groq..."):
