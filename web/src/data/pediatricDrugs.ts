@@ -5,7 +5,10 @@
 
 export type DosageForm =
   | "Syrup"
+  | "Suspension"
   | "Suspension (dry powder)"
+  | "Suspension (dry powder) / sachets"
+  | "Suspension / drops"
   | "Drops"
   | "Tablet / DT"
   | "Capsule"

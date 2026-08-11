@@ -16,17 +16,30 @@ def _secret(name, default=""):
     except Exception:
         return default
 
-with st.sidebar:
-    st.header("🔑 Credentials")
-    groq_api_key = st.text_input(
-        "Groq API Key (Free)",
-        type="password",
-        value=_secret("GROQ_API_KEY"),
-        help="Get a free key at https://console.groq.com/keys — or set GROQ_API_KEY in Streamlit Cloud secrets.",
-    )
+_saved_groq = _secret("GROQ_API_KEY")
 
+# Production / sell-ready: API key lives in secrets only — end users never paste it.
+with st.sidebar:
+    st.header("Smart-Elixir")
+    st.caption("Summarizer · Ped dose · CrCl · uploads ≤100 MB")
+    if _saved_groq:
+        groq_api_key = _saved_groq
+        st.success("AI ready (secure key loaded).")
+    else:
+        st.warning(
+            "AI key not configured. Owner: set GROQ_API_KEY once in "
+            "Streamlit Cloud → Settings → Secrets (or local `.streamlit/secrets.toml`)."
+        )
+        # Dev-only fallback — not shown once secrets are set
+        groq_api_key = st.text_input(
+            "Owner setup — Groq API Key",
+            type="password",
+            help="Get a free key at https://console.groq.com/keys — then save it in secrets and reboot.",
+        )
+
+# Order: Summarizer → Ped Dose (detail) → Creatinine Clearance (end)
 tab1, tab2, tab3 = st.tabs(
-    ["📑 Summarizer", "🩺 Creatinine Clearance", "🧮 Ped Dose Calculator"]
+    ["📑 Summarizer", "🧮 Ped Dose Calculator", "🩺 Creatinine Clearance"]
 )
 
 with tab1:
@@ -45,9 +58,8 @@ with tab1:
         ],
     )
     uploaded = st.file_uploader(
-        "Upload notes PDF or image (max 15 MB)",
+        "Upload notes PDF or image (max 100 MB)",
         type=["pdf", "png", "jpg", "jpeg", "webp"],
-        accept_multiple_files=False,
     )
     raw_notes = st.text_area("Paste Previous Hospital Notes / Lab History", height=220)
     if st.button("⚡ Generate Executive Brief"):
@@ -68,47 +80,10 @@ with tab1:
                 st.markdown(summarize_medical_history(notes, groq_api_key, specialty))
 
 with tab2:
-    st.markdown("### 🩺 Creatinine Clearance (CrCl)")
-    st.caption("Cockcroft–Gault equation")
-    a_sex = st.radio("Sex", ["Male", "Female"], horizontal=True, key="cr_sex")
-    a_age = st.number_input("Age (years)", 18, 110, 60, key="cr_age")
-    a_weight = st.number_input("Actual Body Weight (kg)", 30.0, 200.0, 60.0, key="cr_wt")
-    a_height = st.number_input(
-        "Height (cm) — optional for IBW/AjBW",
-        0.0, 220.0, 165.0,
-        help="If ABW > 120% of IBW, Adjusted Body Weight is used.",
-        key="cr_ht",
-    )
-    cr_unit = st.selectbox("Serum Creatinine Unit", ["mg/dL", "µmol/L"], key="cr_unit")
-    if cr_unit == "mg/dL":
-        a_cr = st.number_input("Serum Creatinine", 0.2, 20.0, 1.2, step=0.1, key="cr_val_mg")
-    else:
-        a_cr = st.number_input("Serum Creatinine", 10.0, 2000.0, 106.0, step=1.0, key="cr_val_umol")
-
-    result = calculate_cr_cl(
-        age=a_age,
-        weight_kg=a_weight,
-        serum_cr=a_cr,
-        is_female=(a_sex == "Female"),
-        cr_unit=cr_unit,
-        height_cm=a_height if a_height > 0 else None,
-    )
-    st.metric("Estimated CrCl", f"{result['cr_cl']} mL/min")
-    st.caption(
-        f"Weight used: **{result['weight_used']} kg** ({result['weight_basis']})"
-        + (f" · IBW {result['ibw']} kg" if result["ibw"] is not None else "")
-        + (f" · AjBW {result['ajbw']} kg" if result["ajbw"] is not None else "")
-        + f" · Gender factor {result['gender_factor']}"
-    )
-    st.info(
-        "Cockcroft–Gault is preferred for drug dosing. "
-        "Inaccurate in AKI / unstable creatinine."
-    )
-
-with tab3:
     st.markdown("### 🧮 Pediatric Dose Calculator")
     st.caption(
-        "Suggested mg/kg from formulary ranges. Modify mg/kg if needed; weight gives exact mg."
+        "Detailed mg/kg calculator from formulary ranges. Edit mg/kg if needed; weight gives exact mg. "
+        "Check route, frequency, how-to-take, and contraindications before prescribing."
     )
     c1, c2 = st.columns(2)
     with c1:
@@ -168,3 +143,41 @@ with tab3:
         st.write("**Instructions:**", calc.get("how_to_take", ""))
     else:
         st.error(calc.get("message", "Could not calculate."))
+
+with tab3:
+    st.markdown("### 🩺 Creatinine Clearance (CrCl)")
+    st.caption("Cockcroft–Gault equation — kept at the end for adult dosing support.")
+    a_sex = st.radio("Sex", ["Male", "Female"], horizontal=True, key="cr_sex")
+    a_age = st.number_input("Age (years)", 18, 110, 60, key="cr_age")
+    a_weight = st.number_input("Actual Body Weight (kg)", 30.0, 200.0, 60.0, key="cr_wt")
+    a_height = st.number_input(
+        "Height (cm) — optional for IBW/AjBW",
+        0.0, 220.0, 165.0,
+        help="If ABW > 120% of IBW, Adjusted Body Weight is used.",
+        key="cr_ht",
+    )
+    cr_unit = st.selectbox("Serum Creatinine Unit", ["mg/dL", "µmol/L"], key="cr_unit")
+    if cr_unit == "mg/dL":
+        a_cr = st.number_input("Serum Creatinine", 0.2, 20.0, 1.2, step=0.1, key="cr_val_mg")
+    else:
+        a_cr = st.number_input("Serum Creatinine", 10.0, 2000.0, 106.0, step=1.0, key="cr_val_umol")
+
+    result = calculate_cr_cl(
+        age=a_age,
+        weight_kg=a_weight,
+        serum_cr=a_cr,
+        is_female=(a_sex == "Female"),
+        cr_unit=cr_unit,
+        height_cm=a_height if a_height > 0 else None,
+    )
+    st.metric("Estimated CrCl", f"{result['cr_cl']} mL/min")
+    st.caption(
+        f"Weight used: **{result['weight_used']} kg** ({result['weight_basis']})"
+        + (f" · IBW {result['ibw']} kg" if result["ibw"] is not None else "")
+        + (f" · AjBW {result['ajbw']} kg" if result["ajbw"] is not None else "")
+        + f" · Gender factor {result['gender_factor']}"
+    )
+    st.info(
+        "Cockcroft–Gault is preferred for drug dosing. "
+        "Inaccurate in AKI / unstable creatinine."
+    )

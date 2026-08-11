@@ -3,7 +3,7 @@ from io import BytesIO
 
 from openai import OpenAI, AuthenticationError, APIError
 
-MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB
+MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 ALLOWED_TYPES = {
     "application/pdf",
     "image/png",
@@ -20,7 +20,7 @@ def validate_upload(file):
         data = file.getvalue()
         size = len(data)
     if size > MAX_UPLOAD_BYTES:
-        return False, f"File exceeds 15 MB limit ({size / (1024 * 1024):.1f} MB)."
+        return False, f"File exceeds 100 MB limit ({size / (1024 * 1024):.1f} MB)."
     return True, ""
 
 def extract_text_from_pdf(file_bytes):
@@ -101,4 +101,4 @@ def ingest_uploaded_file(uploaded_file, groq_api_key=""):
             return False, "No clinical text could be read from the image."
         return True, text
 
-    return False, "Unsupported file type. Upload PDF or image (PNG/JPG/WEBP), max 15 MB."
+    return False, "Unsupported file type. Upload PDF or image (PNG/JPG/WEBP), max 100 MB."
