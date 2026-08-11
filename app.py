@@ -2,26 +2,33 @@ import streamlit as st
 import urllib.parse
 from safety_engine import calculate_cr_cl, verify_pediatric_dose, PEDIATRIC_DRUG_DB
 from elixir_ai import summarize_medical_history, generate_kannada_discharge_text, create_kannada_audio
+from whatsapp_dispatch import build_whatsapp_message, send_whatsapp_cloud_api
 
 st.set_page_config(page_title="Smart-Elixir Platform", page_icon="🏥", layout="wide")
 st.title("🏥 Smart-Elixir: Clinical AI & Patient Safety Hub")
 
+def _secret(name, default=""):
+    try:
+        return st.secrets[name]
+    except Exception:
+        return default
+
 with st.sidebar:
     st.header("🔑 Credentials")
-    secret_key = ""
-    try:
-        secret_key = st.secrets["GROQ_API_KEY"]
-    except Exception:
-        pass
     groq_api_key = st.text_input(
         "Groq API Key (Free)",
         type="password",
-        value=secret_key or "",
+        value=_secret("GROQ_API_KEY"),
         help="Get a free key at https://console.groq.com/keys — or set GROQ_API_KEY in Streamlit Cloud secrets.",
     )
     st.markdown("---")
     patient_phone = st.text_input("Patient WhatsApp Number", "+919876543210")
     followup_date = st.date_input("Next Follow-up Date")
+    st.markdown("---")
+    st.caption(
+        "Direct WhatsApp send needs Meta Cloud API secrets: "
+        "`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`."
+    )
 
 tab1, tab2, tab3 = st.tabs(["📑 Summarizer", "🛡️ Safety Guard", "📲 Kannada Dispatch"])
 
@@ -41,7 +48,7 @@ with tab2:
         if st.button("Verify Pediatric Dose"):
             res = verify_pediatric_dose(p_drug, p_dose, p_weight, 3)
             st.write(res["message"])
-            
+
     with col_renal:
         st.markdown("### 🩺 Adult Renal Clearance (CrCl)")
         st.caption("Cockcroft–Gault equation")
@@ -81,25 +88,49 @@ with tab2:
         )
 
 with tab3:
-    clinical_plan = st.text_area("Enter Care Plan in English", value="Take Paracetamol 250mg syrup. Return next week.")
+    clinical_plan = st.text_area(
+        "Enter Care Plan in English",
+        value="Take Paracetamol 250mg syrup. Return next week.",
+    )
     if st.button("🌐 Generate Kannada Translation & Audio"):
         with st.spinner("Translating with Groq..."):
             k_text = generate_kannada_discharge_text(clinical_plan, groq_api_key)
         st.session_state["k_text"] = k_text
         st.session_state["audio_path"] = create_kannada_audio(k_text)
+        if not (k_text.startswith("⚠️") or k_text.startswith("ದಯವಿಟ್ಟು")):
+            st.session_state["wa_message"] = build_whatsapp_message(k_text, followup_date)
 
     if "k_text" in st.session_state:
         k_text = st.session_state["k_text"]
         if k_text.startswith("⚠️") or k_text.startswith("ದಯವಿಟ್ಟು"):
             st.error(k_text)
         else:
+            wa_message = st.session_state.get("wa_message") or build_whatsapp_message(k_text, followup_date)
+            st.session_state["wa_message"] = wa_message
+
+            st.subheader("Kannada instructions")
             st.success(k_text)
             if st.session_state.get("audio_path"):
                 st.audio(st.session_state["audio_path"], format="audio/mp3")
-            encoded_msg = urllib.parse.quote(k_text)
-            whatsapp_url = f"https://wa.me/{patient_phone.replace('+', '')}?text={encoded_msg}"
-            st.markdown(
-                f'<a href="{whatsapp_url}" target="_blank"><button>💬 Open in WhatsApp & Send (₹0 Fee)</button></a>',
-                unsafe_allow_html=True,
-            )
 
+            st.subheader("WhatsApp message (reminder + instructions)")
+            st.code(wa_message, language=None)
+
+            if st.button("📤 Send on WhatsApp now", type="primary"):
+                ok, info = send_whatsapp_cloud_api(
+                    patient_phone,
+                    wa_message,
+                    token=_secret("WHATSAPP_TOKEN"),
+                    phone_number_id=_secret("WHATSAPP_PHONE_NUMBER_ID"),
+                )
+                if ok:
+                    st.success(info)
+                else:
+                    st.error(info)
+                    encoded_msg = urllib.parse.quote(wa_message)
+                    whatsapp_url = f"https://wa.me/{patient_phone.replace('+', '').replace(' ', '')}?text={encoded_msg}"
+                    st.warning(
+                        "Fallback: opens WhatsApp with the full message pre-filled. "
+                        "WhatsApp always requires tapping Send once unless Cloud API is configured."
+                    )
+                    st.link_button("Open pre-filled WhatsApp chat", whatsapp_url)

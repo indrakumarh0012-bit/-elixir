@@ -27,7 +27,16 @@ def summarize_medical_history(raw_notes, groq_api_key):
     return _chat(prompt, groq_api_key, "⚠️ Please enter your Groq API Key in the sidebar.")
 
 def generate_kannada_discharge_text(clinical_plan, groq_api_key):
-    prompt = f"Translate the following discharge instructions into simple Kannada for a patient:\n{clinical_plan}"
+    prompt = (
+        "Translate the following discharge instructions into simple Kannada for a patient.\n"
+        "STRICT RULES:\n"
+        "1) All words/sentences must be in Kannada script.\n"
+        "2) Keep ALL numbers, doses, strengths, times, and dates in English digits only "
+        "(example: 250 mg, 5 ml, 3 times, 12/08/2026). Never use Kannada numerals or number-words.\n"
+        "3) Keep drug names and units (mg, ml, kg, hrs) in English.\n"
+        "4) Do not add extra medical advice beyond the input.\n\n"
+        f"Instructions:\n{clinical_plan}"
+    )
     return _chat(prompt, groq_api_key, "ದಯವಿಟ್ಟು ಉಚಿತ Groq API Key ನಮೂದಿಸಿ.")
 
 def create_kannada_audio(kannada_text, output_filename="kannada_instructions.mp3"):
