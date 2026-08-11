@@ -44,11 +44,41 @@ with tab2:
             
     with col_renal:
         st.markdown("### 🩺 Adult Renal Clearance (CrCl)")
-        a_age = st.number_input("Age", 18, 110, 65)
-        a_weight = st.number_input("Weight (kg)", 30.0, 150.0, 60.0)
-        a_cr = st.number_input("Serum Cr (mg/dL)", 0.2, 10.0, 1.8)
-        cr_cl_val = calculate_cr_cl(a_age, a_weight, a_cr, False)
-        st.metric("Calculated CrCl", f"{cr_cl_val} mL/min")
+        st.caption("Cockcroft–Gault equation")
+        a_sex = st.radio("Sex", ["Male", "Female"], horizontal=True, key="cr_sex")
+        a_age = st.number_input("Age (years)", 18, 110, 60, key="cr_age")
+        a_weight = st.number_input("Actual Body Weight (kg)", 30.0, 200.0, 60.0, key="cr_wt")
+        a_height = st.number_input(
+            "Height (cm) — optional for IBW/AjBW",
+            0.0, 220.0, 165.0,
+            help="If ABW > 120% of IBW, Adjusted Body Weight is used.",
+            key="cr_ht",
+        )
+        cr_unit = st.selectbox("Serum Creatinine Unit", ["mg/dL", "µmol/L"], key="cr_unit")
+        if cr_unit == "mg/dL":
+            a_cr = st.number_input("Serum Creatinine", 0.2, 20.0, 1.2, step=0.1, key="cr_val_mg")
+        else:
+            a_cr = st.number_input("Serum Creatinine", 10.0, 2000.0, 106.0, step=1.0, key="cr_val_umol")
+
+        result = calculate_cr_cl(
+            age=a_age,
+            weight_kg=a_weight,
+            serum_cr=a_cr,
+            is_female=(a_sex == "Female"),
+            cr_unit=cr_unit,
+            height_cm=a_height if a_height > 0 else None,
+        )
+        st.metric("Estimated CrCl", f"{result['cr_cl']} mL/min")
+        st.caption(
+            f"Weight used: **{result['weight_used']} kg** ({result['weight_basis']})"
+            + (f" · IBW {result['ibw']} kg" if result["ibw"] is not None else "")
+            + (f" · AjBW {result['ajbw']} kg" if result["ajbw"] is not None else "")
+            + f" · Gender factor {result['gender_factor']}"
+        )
+        st.info(
+            "Cockcroft–Gault is preferred for drug dosing. "
+            "Inaccurate in AKI / unstable creatinine. CKD-EPI is preferred for CKD staging."
+        )
 
 with tab3:
     clinical_plan = st.text_area("Enter Care Plan in English", value="Take Paracetamol 250mg syrup. Return next week.")
