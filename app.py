@@ -8,7 +8,17 @@ st.title("🏥 Smart-Elixir: Clinical AI & Patient Safety Hub")
 
 with st.sidebar:
     st.header("🔑 Credentials")
-    groq_api_key = st.text_input("Groq API Key (Free)", type="password")
+    secret_key = ""
+    try:
+        secret_key = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+    groq_api_key = st.text_input(
+        "Groq API Key (Free)",
+        type="password",
+        value=secret_key or "",
+        help="Get a free key at https://console.groq.com/keys — or set GROQ_API_KEY in Streamlit Cloud secrets.",
+    )
     st.markdown("---")
     patient_phone = st.text_input("Patient WhatsApp Number", "+919876543210")
     followup_date = st.date_input("Next Follow-up Date")
@@ -43,14 +53,23 @@ with tab2:
 with tab3:
     clinical_plan = st.text_area("Enter Care Plan in English", value="Take Paracetamol 250mg syrup. Return next week.")
     if st.button("🌐 Generate Kannada Translation & Audio"):
-        k_text = generate_kannada_discharge_text(clinical_plan, groq_api_key)
+        with st.spinner("Translating with Groq..."):
+            k_text = generate_kannada_discharge_text(clinical_plan, groq_api_key)
         st.session_state["k_text"] = k_text
         st.session_state["audio_path"] = create_kannada_audio(k_text)
-            
+
     if "k_text" in st.session_state:
-        st.success(st.session_state["k_text"])
-        st.audio(st.session_state["audio_path"], format="audio/mp3")
-        
-        encoded_msg = urllib.parse.quote(st.session_state["k_text"])
-        whatsapp_url = f"https://wa.me/{patient_phone.replace('+', '')}?text={encoded_msg}"
-        st.markdown(f'<a href="{whatsapp_url}" target="_blank"><button>💬 Open in WhatsApp & Send (₹0 Fee)</button></a>', unsafe_allow_html=True)
+        k_text = st.session_state["k_text"]
+        if k_text.startswith("⚠️") or k_text.startswith("ದಯವಿಟ್ಟು"):
+            st.error(k_text)
+        else:
+            st.success(k_text)
+            if st.session_state.get("audio_path"):
+                st.audio(st.session_state["audio_path"], format="audio/mp3")
+            encoded_msg = urllib.parse.quote(k_text)
+            whatsapp_url = f"https://wa.me/{patient_phone.replace('+', '')}?text={encoded_msg}"
+            st.markdown(
+                f'<a href="{whatsapp_url}" target="_blank"><button>💬 Open in WhatsApp & Send (₹0 Fee)</button></a>',
+                unsafe_allow_html=True,
+            )
+
