@@ -22,8 +22,80 @@ def _chat(prompt, groq_api_key, empty_message):
     except Exception as e:
         return f"⚠️ Unexpected error: {e}"
 
-def summarize_medical_history(raw_notes, groq_api_key):
-    prompt = f"You are a Clinical Summarizer. Create a 1-page Executive Brief from these notes:\n{raw_notes}"
+def summarize_medical_history(raw_notes, groq_api_key, specialty="Auto"):
+    specialty = (specialty or "Auto").strip()
+    prompt = f"""
+You are a senior clinical summarizer for Smart-Elixir.
+Create a DETAILED clinical executive brief from the notes below.
+
+REFERENCE FRAMEWORK (use the matching standard textbook style/structure):
+- Pediatrics → Nelson Textbook of Pediatrics (+ Harriet Lane for drug dosing when relevant)
+- Obstetrics & Gynecology → Williams Obstetrics / Williams Gynecology
+- Internal Medicine → Harrison's Principles of Internal Medicine
+- Surgery → Bailey & Love's Short Practice of Surgery and S. Das (A Manual on Clinical Surgery / operative principles as applicable)
+
+Selected specialty hint from clinician: {specialty}
+If specialty is Auto, infer the most likely specialty from the notes and state which textbook lens you used.
+
+OUTPUT RULES:
+1) Be detailed and clinically useful — not a vague one-liner summary.
+2) Prefer facts present in the notes. If you add standard textbook-based expected treatment detail that is NOT explicitly in the notes, label it clearly as:
+   "Suggested (textbook-aligned; confirm locally): ..."
+3) NEVER invent lab values, imaging findings, or diagnoses not supported by the notes.
+4) Keep ALL numbers, doses, frequencies, and durations in English digits/units (e.g., 500 mg, 7 days, Q8 hr).
+5) For every drug/treatment, include when available (or mark Unknown):
+   - Drug/intervention name
+   - Dose (mg / mg/kg / mcg etc.)
+   - Route: Oral (PO) / IV / IM / SC / PR / Inhalation / Topical / Other
+   - Frequency
+   - Duration
+   - Indication
+6) Use markdown with the exact section headings below.
+
+# Clinical Executive Brief
+
+## 1. Specialty & Reference Lens
+- Inferred/selected specialty
+- Primary textbook lens used
+
+## 2. Patient Snapshot
+- Age / sex / weight (if available)
+- Key comorbidities / allergies
+- Admission/context reason
+
+## 3. Clinical Presentation
+- Chief complaints and timeline
+- Relevant positives/negatives from history & exam
+
+## 4. Investigations
+- Labs (with values/dates if present)
+- Imaging / procedures
+
+## 5. Working Diagnosis / Differentials
+- Most likely diagnosis
+- Important differentials
+
+## 6. Treatment Plan (DETAILED)
+Provide a table with columns:
+| Therapy | Dose | Route (PO/IV/etc.) | Frequency | Duration | Indication | Source in notes / Suggested |
+
+Then add short bullet notes for fluids, oxygen, supportive care, and non-drug interventions.
+
+## 7. Monitoring & Red Flags
+- Parameters to monitor
+- When to escalate / danger signs
+
+## 8. Disposition & Follow-up
+- Discharge / admit / refer advice if present
+- Follow-up timing and counseling points
+
+## 9. Clinician Checklist
+- Missing data that should be confirmed before acting
+- Dose/route/duration items needing clarification
+
+NOTES:
+{raw_notes}
+""".strip()
     return _chat(prompt, groq_api_key, "⚠️ Please enter your Groq API Key in the sidebar.")
 
 def generate_kannada_discharge_text(clinical_plan, groq_api_key):

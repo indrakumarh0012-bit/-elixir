@@ -33,10 +33,27 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📑 Summarizer", "🛡️ Safety Guard", "📲 Kannada Dispatch"])
 
 with tab1:
-    raw_notes = st.text_area("Paste Previous Hospital Notes / Lab History", height=180)
+    st.caption(
+        "Detailed brief with dose / route (PO vs IV) / duration, aligned to "
+        "Nelson (Pediatrics), Williams (OBG), Harrison (Medicine), Bailey & Love + S. Das (Surgery)."
+    )
+    specialty = st.selectbox(
+        "Specialty lens",
+        [
+            "Auto",
+            "Pediatrics (Nelson)",
+            "OBG (Williams)",
+            "Medicine (Harrison)",
+            "Surgery (Bailey & Love / S. Das)",
+        ],
+    )
+    raw_notes = st.text_area("Paste Previous Hospital Notes / Lab History", height=220)
     if st.button("⚡ Generate Executive Brief"):
-        with st.spinner("Processing with Groq..."):
-            st.markdown(summarize_medical_history(raw_notes, groq_api_key))
+        if not raw_notes.strip():
+            st.warning("Please paste clinical notes first.")
+        else:
+            with st.spinner("Processing detailed clinical brief with Groq..."):
+                st.markdown(summarize_medical_history(raw_notes, groq_api_key, specialty))
 
 with tab2:
     col_peds, col_renal = st.columns(2)
