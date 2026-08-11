@@ -1,13 +1,11 @@
 import streamlit as st
-import urllib.parse
 from safety_engine import (
     calculate_cr_cl,
     verify_pediatric_dose,
     PEDIATRIC_DRUG_DB,
     calculate_pediatric_dose,
 )
-from elixir_ai import summarize_medical_history, generate_kannada_discharge_text, create_kannada_audio
-from whatsapp_dispatch import build_whatsapp_message, send_whatsapp_cloud_api
+from elixir_ai import summarize_medical_history
 from document_ingest import ingest_uploaded_file
 
 st.set_page_config(page_title="Smart-Elixir Platform", page_icon="🏥", layout="wide")
@@ -27,23 +25,15 @@ with st.sidebar:
         value=_secret("GROQ_API_KEY"),
         help="Get a free key at https://console.groq.com/keys — or set GROQ_API_KEY in Streamlit Cloud secrets.",
     )
-    st.markdown("---")
-    patient_phone = st.text_input("Patient WhatsApp Number", "+919876543210")
-    followup_date = st.date_input("Next Follow-up Date")
-    st.markdown("---")
-    st.caption(
-        "Direct WhatsApp send needs Meta Cloud API secrets: "
-        "`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`."
-    )
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["📑 Summarizer", "🛡️ Safety Guard", "🧮 Ped Dose Calculator", "📲 Kannada Dispatch"]
+tab1, tab2, tab3 = st.tabs(
+    ["📑 Summarizer", "🛡️ Pediatrics & CrCl", "🧮 Ped Dose Calculator"]
 )
 
 with tab1:
     st.caption(
         "Factual summary only from your notes: each patient separate, each treatment listed separately. "
-        "No invented doses or empty sections. Specialty lens is for wording only."
+        "No invented doses or empty sections."
     )
     specialty = st.selectbox(
         "Specialty lens",
@@ -75,7 +65,7 @@ with tab1:
         if not notes:
             st.warning("Paste clinical notes and/or upload a PDF/image first.")
         else:
-            with st.spinner("Processing detailed clinical brief with Groq..."):
+            with st.spinner("Processing clinical summary with Groq..."):
                 st.markdown(summarize_medical_history(notes, groq_api_key, specialty))
 
 with tab2:
@@ -83,8 +73,8 @@ with tab2:
     with col_peds:
         st.markdown("### 👶 Pediatric Verify Dose")
         st.caption(
-            f"{len(PEDIATRIC_DRUG_DB)} drugs — antibiotics + OPD (cold/cough/fever/vomit/"
-            "abdomen/allergy/scabies). Harriet Lane / Nelson–aligned."
+            f"{len(PEDIATRIC_DRUG_DB)} drugs — antibiotics + OPD "
+            "(cold/cough/fever/vomit/abdomen/allergy/scabies)."
         )
         categories = sorted({m.get("category", "General") for m in PEDIATRIC_DRUG_DB.values()})
         cat = st.selectbox("Filter by category", ["All"] + categories, key="verify_cat")
@@ -118,11 +108,9 @@ with tab2:
             st.caption(f"Suggested single-dose range: {res.get('range', '')}")
             if res.get("contraindications"):
                 st.warning(f"Contraindications: {res['contraindications']}")
-            if res.get("how_to_take"):
-                st.caption(f"How to take: {res['how_to_take']}")
 
     with col_renal:
-        st.markdown("### 🩺 Adult Renal Clearance (CrCl)")
+        st.markdown("### 🩺 Creatinine Clearance (CrCl)")
         st.caption("Cockcroft–Gault equation")
         a_sex = st.radio("Sex", ["Male", "Female"], horizontal=True, key="cr_sex")
         a_age = st.number_input("Age (years)", 18, 110, 60, key="cr_age")
@@ -156,14 +144,13 @@ with tab2:
         )
         st.info(
             "Cockcroft–Gault is preferred for drug dosing. "
-            "Inaccurate in AKI / unstable creatinine. CKD-EPI is preferred for CKD staging."
+            "Inaccurate in AKI / unstable creatinine."
         )
 
 with tab3:
     st.markdown("### 🧮 Pediatric Dose Calculator")
     st.caption(
-        "Suggested mg/kg from formulary ranges. Modify mg/kg if needed; weight gives exact mg. "
-        "Confirm before prescribing."
+        "Suggested mg/kg from formulary ranges. Modify mg/kg if needed; weight gives exact mg."
     )
     c1, c2 = st.columns(2)
     with c1:
@@ -198,7 +185,9 @@ with tab3:
             st.warning(f"**Contraindications:** {meta['contraindications']}")
         st.caption(meta.get("notes", ""))
 
-    calc = calculate_pediatric_dose(calc_drug, calc_wt, calc_mgkg, calc_freq, calc_route)
+    calc = calculate_pediatric_dose(
+        calc_drug, calc_wt, calc_mgkg, calc_freq, calc_route, age_years=calc_age_years
+    )
     if calc.get("ok"):
         if calc.get("single_dose_mg") is not None:
             m1, m2, m3 = st.columns(3)
@@ -210,59 +199,14 @@ with tab3:
                 f"{calc['route']} × {calc_freq}/day"
             )
             st.caption(
-                f"Suggested single-dose window for this weight: "
-                f"{calc['suggested_min_mg']}–{calc['suggested_max_mg']} mg · Age {calc_age_years} yr"
+                f"Suggested single-dose window: "
+                f"{calc.get('suggested_min_mg')}–{calc.get('suggested_max_mg')} mg"
             )
+            if calc.get("warnings"):
+                for w in calc["warnings"]:
+                    st.warning(w)
         else:
             st.info(calc.get("message", ""))
         st.write("**Instructions:**", calc.get("how_to_take", ""))
     else:
         st.error(calc.get("message", "Could not calculate."))
-
-with tab4:
-    clinical_plan = st.text_area(
-        "Enter Care Plan in English",
-        value="Take Paracetamol 250 mg syrup by mouth every 6 hours for 3 days. Return next week.",
-    )
-    if st.button("🌐 Generate Kannada Translation & Audio"):
-        with st.spinner("Translating with Groq..."):
-            k_text = generate_kannada_discharge_text(clinical_plan, groq_api_key)
-        st.session_state["k_text"] = k_text
-        st.session_state["audio_path"] = create_kannada_audio(k_text)
-        if not (k_text.startswith("⚠️") or k_text.startswith("ದಯವಿಟ್ಟು")):
-            st.session_state["wa_message"] = build_whatsapp_message(k_text, followup_date)
-
-    if "k_text" in st.session_state:
-        k_text = st.session_state["k_text"]
-        if k_text.startswith("⚠️") or k_text.startswith("ದಯವಿಟ್ಟು"):
-            st.error(k_text)
-        else:
-            wa_message = st.session_state.get("wa_message") or build_whatsapp_message(k_text, followup_date)
-            st.session_state["wa_message"] = wa_message
-
-            st.subheader("Kannada instructions")
-            st.success(k_text)
-            if st.session_state.get("audio_path"):
-                st.audio(st.session_state["audio_path"], format="audio/mp3")
-
-            st.subheader("WhatsApp message (reminder + instructions)")
-            st.code(wa_message, language=None)
-
-            if st.button("📤 Send on WhatsApp now", type="primary"):
-                ok, info = send_whatsapp_cloud_api(
-                    patient_phone,
-                    wa_message,
-                    token=_secret("WHATSAPP_TOKEN"),
-                    phone_number_id=_secret("WHATSAPP_PHONE_NUMBER_ID"),
-                )
-                if ok:
-                    st.success(info)
-                else:
-                    st.error(info)
-                    encoded_msg = urllib.parse.quote(wa_message)
-                    whatsapp_url = f"https://wa.me/{patient_phone.replace('+', '').replace(' ', '')}?text={encoded_msg}"
-                    st.warning(
-                        "Fallback: opens WhatsApp with the full message pre-filled. "
-                        "WhatsApp always requires tapping Send once unless Cloud API is configured."
-                    )
-                    st.link_button("Open pre-filled WhatsApp chat", whatsapp_url)
