@@ -7,8 +7,7 @@ from safety_engine import (
 from elixir_ai import summarize_medical_history
 from document_ingest import ingest_uploaded_file
 
-st.set_page_config(page_title="Smart-Elixir Platform", page_icon="🏥", layout="wide")
-st.title("🏥 Smart-Elixir: Clinical AI & Patient Safety Hub")
+st.set_page_config(page_title="Smart-Elixir (Legacy Streamlit)", page_icon="🏥", layout="wide")
 
 def _secret(name, default=""):
     try:
@@ -16,12 +15,29 @@ def _secret(name, default=""):
     except Exception:
         return default
 
+# Banner: Streamlit Cloud always serves this OLD Python UI.
+# The NEW product is the React app in /web (see NEW_SMART_ELIXIR/README.md).
+NEW_APP_URL = _secret("NEW_APP_URL", "http://127.0.0.1:5173/")
+st.error(
+    "**This is the OLD Streamlit app.**  \n"
+    "The **NEW Smart-Elixir** (Summarizer performa · Regimen · Books · Ped Dose · CrCl) "
+    "is the React app in the `web/` folder — see repo folder **`NEW_SMART_ELIXIR`**.  \n"
+    f"Open the new app: [{NEW_APP_URL}]({NEW_APP_URL})"
+)
+st.info(
+    "Streamlit Cloud cannot host the Vite/React app. Deploy `web/` on Vercel or Netlify, "
+    "then set `NEW_APP_URL` in Streamlit Secrets to that URL."
+)
+
+st.title("🏥 Smart-Elixir (Legacy Streamlit)")
+st.caption("Legacy only — prefer the new React app documented in NEW_SMART_ELIXIR/")
+
 _saved_groq = _secret("GROQ_API_KEY")
 
 # Production / sell-ready: API key lives in secrets only — end users never paste it.
 with st.sidebar:
-    st.header("Smart-Elixir")
-    st.caption("Summarizer · Ped dose · CrCl · uploads ≤100 MB")
+    st.header("Legacy Streamlit")
+    st.caption("Old UI · New app = React in web/")
     if _saved_groq:
         groq_api_key = _saved_groq
         st.success("AI ready (secure key loaded).")
@@ -39,7 +55,7 @@ with st.sidebar:
 
 # Order: Summarizer → Ped Dose (detail) → Creatinine Clearance (end)
 tab1, tab2, tab3 = st.tabs(
-    ["📑 Summarizer", "🧮 Ped Dose Calculator", "🩺 Creatinine Clearance"]
+    ["📑 Summarizer (legacy)", "🧮 Ped Dose Calculator", "🩺 Creatinine Clearance"]
 )
 
 with tab1:
