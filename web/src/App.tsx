@@ -16,16 +16,11 @@ export default function App() {
 
   return (
     <main className="min-h-screen">
-      <header className="border-b border-[var(--line)] bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
-          <div>
-            <p className="text-lg font-bold tracking-tight text-[var(--accent)]">
-              Smart-Elixir
-            </p>
-            <p className="text-xs text-[var(--muted)]">
-              Past history · textbooks · drugs/polypharmacy · ped dose · CrCl
-            </p>
-          </div>
+      <header className="border-b border-[var(--line)] bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
+          <p className="text-lg font-bold tracking-tight text-[var(--accent)]">
+            Smart-Elixir
+          </p>
           <nav className="flex flex-wrap gap-2">
             {tabs.map((t) => (
               <button

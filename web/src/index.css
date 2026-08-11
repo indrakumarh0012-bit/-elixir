@@ -31,3 +31,15 @@ body {
 #root {
   min-height: 100vh;
 }
+
+@media print {
+  body {
+    background: white !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  #patient-performa-print {
+    break-inside: avoid;
+  }
+}

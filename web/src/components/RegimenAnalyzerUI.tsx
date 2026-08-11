@@ -86,19 +86,13 @@ export default function RegimenAnalyzerUI() {
     <div className="bg-slate-50 px-3 py-4 md:px-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-4">
-          <h1 className="text-2xl font-bold text-slate-900">
-            Clinical Medication Optimizer & Regimen Analyzer
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Required during patient summary analysis: DDIs, Beers / STOPP / START,
-            pediatric dosing, and renal timing adjustments.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">Regimen Analyzer</h1>
           <button
             type="button"
             onClick={loadDemo}
             className="mt-2 text-xs font-semibold text-blue-700 underline"
           >
-            Load geriatric demo regimen
+            Load demo
           </button>
         </header>
 

@@ -1,31 +1,44 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ALL_SPECIALTIES,
   getSpecialties,
   medicalBooksDB,
-  type MedicalTextbook,
 } from "../data/medicalBooksDB";
+import {
+  analyzeNotesToPerforma,
+  getGroqApiKey,
+  saveGroqApiKey,
+} from "../lib/buildPerforma";
 import {
   ACCEPT_ATTR,
   formatBytes,
   ingestRecordFile,
-  MAX_UPLOAD_LABEL,
   type UploadedRecordFile,
 } from "../lib/recordUpload";
+import { EMPTY_PATIENT_SUMMARY } from "../summary/emptyPatientSummary";
+import {
+  copyPatientSummary,
+  downloadPatientSummary,
+} from "../summary/formatSummaryText";
+import {
+  archiveMany,
+  loadSummaryArchive,
+  removeArchivedSummary,
+  type ArchivedSummary,
+} from "../summary/summaryArchive";
+import type { PatientSummary } from "../summary/types";
+import PatientPerformaPanel from "./PatientPerformaPanel";
 import ReferenceLibrary from "./ReferenceLibrary";
 import RegimenAnalyzerUI from "./RegimenAnalyzerUI";
 
-type SummarizerPane = "history" | "regimen" | "books";
+type SummarizerPane = "history" | "saved" | "regimen" | "books";
 
-function levelBadge(level: MedicalTextbook["level"]): string {
-  if (level === "UG Standard") return "bg-emerald-100 text-emerald-800";
-  if (level === "PG / Superspecialty") return "bg-violet-100 text-violet-800";
-  return "bg-orange-100 text-orange-800";
+function printCurrentPerforma() {
+  window.print();
 }
 
 /**
- * Unified Summarizer: past history + specialty textbooks + drugs/polypharmacy analysis.
- * PDF/image uploads up to 100 MB are required for patient-record analysis.
+ * Past History: upload → multi-patient performas → copy/download/print → saved archive.
  */
 export default function PatientAnalysisSummarizer() {
   const specialties = useMemo(
@@ -35,21 +48,34 @@ export default function PatientAnalysisSummarizer() {
   const [pane, setPane] = useState<SummarizerPane>("history");
   const [specialty, setSpecialty] = useState(specialties[0] ?? "General Medicine");
   const [pastHistory, setPastHistory] = useState("");
-  const [analysisOut, setAnalysisOut] = useState<string | null>(null);
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
   const [uploads, setUploads] = useState<UploadedRecordFile[]>([]);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const [patients, setPatients] = useState<PatientSummary[]>([]);
+  const [patientIndex, setPatientIndex] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  const [archive, setArchive] = useState<ArchivedSummary[]>(() =>
+    loadSummaryArchive(),
+  );
+
+  const [keyReady, setKeyReady] = useState(() => Boolean(getGroqApiKey()));
+  const [keyDraft, setKeyDraft] = useState("");
+
+  const performaRef = useRef<HTMLDivElement>(null);
 
   const specialtyBooks = useMemo(
     () => medicalBooksDB.filter((b) => b.specialty === specialty),
     [specialty],
   );
 
-  const selectedBooks = useMemo(
-    () => medicalBooksDB.filter((b) => selectedBookIds.includes(b.id)),
-    [selectedBookIds],
-  );
+  const current =
+    patients[patientIndex] ?? EMPTY_PATIENT_SUMMARY;
+  const patientCount = patients.length;
 
   const toggleBook = (id: string) => {
     setSelectedBookIds((prev) =>
@@ -57,10 +83,38 @@ export default function PatientAnalysisSummarizer() {
     );
   };
 
+  const flash = (msg: string) => {
+    setActionMsg(msg);
+    window.setTimeout(() => setActionMsg(null), 2500);
+  };
+
+  const runAnalysis = async (notes: string) => {
+    setAnalyzing(true);
+    setAnalyzeError(null);
+    performaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const result = await analyzeNotesToPerforma(notes, specialty);
+    setAnalyzing(false);
+    if (!result.ok) {
+      setAnalyzeError(result.error);
+      return;
+    }
+    setPatients(result.patients);
+    setPatientIndex(0);
+    setAnalyzeError(null);
+    archiveMany(result.patients);
+    setArchive(loadSummaryArchive());
+    flash(
+      result.patients.length > 1
+        ? `${result.patients.length} patients ready`
+        : "Performa ready",
+    );
+  };
+
   const handleFiles = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
     setUploadBusy(true);
     setUploadError(null);
+    setAnalyzeError(null);
     try {
       const results: UploadedRecordFile[] = [];
       for (const file of Array.from(fileList)) {
@@ -72,118 +126,57 @@ export default function PatientAnalysisSummarizer() {
       }
       const ok = results.filter((r) => r.status === "ok");
       setUploads((prev) => [...prev, ...ok]);
+
+      let combined = pastHistory.trim();
       for (const r of ok) {
         if (r.extractedText.trim()) {
-          setPastHistory((prev) =>
-            prev.trim()
-              ? `${prev.trim()}\n\n${r.extractedText}`
-              : r.extractedText,
-          );
+          combined = combined
+            ? `${combined}\n\n${r.extractedText}`
+            : r.extractedText;
         }
+      }
+
+      if (combined.trim()) {
+        setPastHistory(""); // do not show OCR/think in the paste box
+        setUploadBusy(false);
+        await runAnalysis(combined);
+        return;
+      }
+      if (ok.length && !combined.trim()) {
+        setUploadError("No text extracted");
       }
     } finally {
       setUploadBusy(false);
     }
   };
 
-  const removeUpload = (id: string) => {
-    setUploads((prev) => {
-      const target = prev.find((u) => u.id === id);
-      if (target?.previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(target.previewUrl);
-      }
-      return prev.filter((u) => u.id !== id);
-    });
-  };
-
-  const runHistoryAnalysis = () => {
-    const notes = pastHistory.trim();
-    if (!notes && uploads.length === 0) {
-      setAnalysisOut(
-        "Paste past hospital / OPD notes and/or upload PDF/image records (up to 100 MB) first.",
-      );
-      return;
-    }
-    if (!notes) {
-      setAnalysisOut(
-        "Upload processed, but no clinical text is in the notes box yet. For image-only or scanned PDFs, type/paste the readable clinical text, then analyze again.",
-      );
-      return;
-    }
-    const bookLines =
-      selectedBooks.length > 0
-        ? selectedBooks
-            .map(
-              (b) =>
-                `• ${b.title} (${b.level}) — focus: ${b.keyTopics.slice(0, 3).join("; ")}`,
-            )
-            .join("\n")
-        : specialtyBooks
-            .slice(0, 4)
-            .map((b) => `• ${b.title} (${b.level})`)
-            .join("\n");
-
-    const topics = (
-      selectedBooks.length > 0 ? selectedBooks : specialtyBooks.slice(0, 3)
-    ).flatMap((b) => b.keyTopics);
-
-    const uploadLines =
-      uploads.length > 0
-        ? uploads
-            .map(
-              (u) =>
-                `• ${u.name} (${u.kind}, ${formatBytes(u.sizeBytes)})`,
-            )
-            .join("\n")
-        : "• None (text paste only)";
-
-    setAnalysisOut(
-      [
-        `PATIENT PAST-HISTORY ANALYSIS SCAFFOLD`,
-        `Specialty lens: ${specialty}`,
-        ``,
-        `--- Uploaded records (max ${MAX_UPLOAD_LABEL} each) ---`,
-        uploadLines,
-        ``,
-        `--- Source notes (verbatim basis; do not invent) ---`,
-        notes.slice(0, 6000),
-        notes.length > 6000 ? "\n[…truncated]" : "",
-        ``,
-        `--- Textbook references for this specialty ---`,
-        bookLines,
-        ``,
-        `--- Structured clinical checklist ---`,
-        `1. Separate each patient episode / admission clearly.`,
-        `2. List each treatment line separately (drug, dose, route, frequency, duration).`,
-        `3. Flag polypharmacy, duplicates, and missing START therapies on the Regimen tab.`,
-        `4. Cross-check key topics: ${[...new Set(topics)].slice(0, 8).join("; ") || "—"}.`,
-        `5. Reconcile labs (Cr, electrolytes) with renal dosing on Regimen / CrCl tabs.`,
-        ``,
-        `Next step (required): open “Drugs & Polypharmacy” and enter the medication list from these notes.`,
-        `Then use “Textbook Library” to deepen topic summaries under ${specialty}.`,
-      ].join("\n"),
-    );
+  const openArchived = (entry: ArchivedSummary) => {
+    setPatients([entry.summary]);
+    setPatientIndex(0);
+    setPane("history");
+    setAnalyzeError(null);
+    window.setTimeout(() => {
+      performaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const panes: { id: SummarizerPane; label: string }[] = [
-    { id: "history", label: "Past History + Books" },
-    { id: "regimen", label: "Drugs & Polypharmacy" },
-    { id: "books", label: "Full Textbook Library" },
+    { id: "history", label: "Past History" },
+    { id: "saved", label: "Saved" },
+    { id: "regimen", label: "Regimen" },
+    { id: "books", label: "Books" },
   ];
+
+  const hasActiveSummary = Boolean(
+    current.name || current.admissions.length > 0,
+  );
 
   return (
     <div className="bg-slate-50">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-3 py-4 md:px-6">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-            Patient Summary Analyzer
-          </h1>
-          <p className="mt-1 max-w-3xl text-sm text-slate-600">
-            Analyze past records with specialty textbooks, upload PDF/images up to{" "}
-            {MAX_UPLOAD_LABEL}, then reconcile drugs, DDIs, Beers/STOPP/START, and
-            polypharmacy.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+      <div className="border-b border-slate-200 bg-white print:hidden">
+        <div className="mx-auto max-w-7xl px-3 py-3 md:px-6">
+          <h1 className="text-xl font-bold text-slate-900">Summarizer</h1>
+          <div className="mt-3 flex flex-wrap gap-2">
             {panes.map((p) => (
               <button
                 key={p.id}
@@ -196,6 +189,9 @@ export default function PatientAnalysisSummarizer() {
                 }`}
               >
                 {p.label}
+                {p.id === "saved" && archive.length > 0
+                  ? ` (${archive.length})`
+                  : ""}
               </button>
             ))}
           </div>
@@ -203,210 +199,325 @@ export default function PatientAnalysisSummarizer() {
       </div>
 
       {pane === "history" && (
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-3 py-4 lg:grid-cols-5 md:px-6">
-          <aside className="lg:col-span-2">
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                Specialty for past-record analysis
-              </h2>
-              <select
-                value={specialty}
-                onChange={(e) => {
-                  setSpecialty(e.target.value);
-                  setSelectedBookIds([]);
-                }}
-                className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-              >
-                {specialties.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-
-              <p className="mt-4 text-sm font-semibold text-slate-800">
-                Select textbooks to guide analysis
-              </p>
-              <p className="text-xs text-slate-500">
-                All standard & superspecialty books for this subject are listed.
-              </p>
-              <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
-                {specialtyBooks.map((book) => {
-                  const on = selectedBookIds.includes(book.id);
-                  return (
-                    <li key={book.id}>
-                      <button
-                        type="button"
-                        onClick={() => toggleBook(book.id)}
-                        className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                          on
-                            ? "border-blue-600 bg-blue-50"
-                            : "border-slate-200 bg-white hover:border-blue-200"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${levelBadge(book.level)}`}
-                        >
-                          {book.level}
-                        </span>
-                        <p className="mt-1 text-sm font-bold text-slate-900">
-                          {book.title}
-                        </p>
-                        <p className="text-xs text-slate-500">{book.author}</p>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </aside>
-
-          <section className="space-y-4 lg:col-span-3">
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                Upload patient records (required option)
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                PDF or images (PNG/JPG/WEBP), up to <strong>{MAX_UPLOAD_LABEL}</strong>{" "}
-                per file. Multiple files allowed. PDF text is extracted into the notes
-                box automatically.
-              </p>
-              <label
-                className={`mt-3 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 transition ${
-                  uploadBusy
-                    ? "border-blue-300 bg-blue-50"
-                    : "border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/40"
-                }`}
-              >
-                <span className="text-sm font-semibold text-slate-800">
-                  {uploadBusy
-                    ? "Reading upload…"
-                    : "Click or drop PDF / images here"}
-                </span>
-                <span className="mt-1 text-xs text-slate-500">
-                  Max {MAX_UPLOAD_LABEL} each · PDF, PNG, JPG, WEBP
-                </span>
+        <div className="mx-auto max-w-7xl space-y-4 px-3 py-4 md:px-6">
+          {!keyReady && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 print:hidden">
+              <p className="text-sm font-semibold text-amber-950">Groq API key</p>
+              <div className="mt-2 flex flex-wrap gap-2">
                 <input
-                  type="file"
-                  className="sr-only"
-                  accept={ACCEPT_ATTR}
-                  multiple
-                  disabled={uploadBusy}
-                  onChange={(e) => {
-                    void handleFiles(e.target.files);
-                    e.target.value = "";
-                  }}
+                  type="password"
+                  value={keyDraft}
+                  onChange={(e) => setKeyDraft(e.target.value)}
+                  placeholder="gsk_…"
+                  className="min-w-[220px] flex-1 rounded-lg border border-amber-300 px-3 py-2 text-sm"
                 />
-              </label>
-              {uploadError && (
-                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
-                  {uploadError}
-                </p>
-              )}
-              {uploads.length > 0 && (
-                <ul className="mt-3 space-y-2">
-                  {uploads.map((u) => (
-                    <li
-                      key={u.id}
-                      className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">
-                          {u.name}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {u.kind.toUpperCase()} · {formatBytes(u.sizeBytes)}
-                        </p>
-                        {u.message && (
-                          <p className="mt-1 text-xs text-amber-800">{u.message}</p>
-                        )}
-                        {u.previewUrl && (
-                          <img
-                            src={u.previewUrl}
-                            alt={u.name}
-                            className="mt-2 max-h-40 rounded border border-slate-200 object-contain"
-                          />
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeUpload(u.id)}
-                        className="text-xs font-semibold text-red-700"
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                Past hospital / OPD records
-              </h2>
-              <textarea
-                value={pastHistory}
-                onChange={(e) => setPastHistory(e.target.value)}
-                rows={12}
-                placeholder="Paste prior notes, or upload PDF/images above (up to 100 MB). Keep each patient and each treatment separate…"
-                className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none ring-blue-600 focus:ring-2"
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={runHistoryAnalysis}
-                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                  onClick={() => {
+                    saveGroqApiKey(keyDraft);
+                    setKeyReady(Boolean(getGroqApiKey()));
+                    setKeyDraft("");
+                  }}
+                  className="rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white"
                 >
-                  Analyze past history with selected books
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPane("regimen")}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                >
-                  Continue → Drugs & Polypharmacy
+                  Save key
                 </button>
               </div>
             </div>
+          )}
 
-            {analysisOut && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 print:hidden">
+            <aside className="lg:col-span-2">
               <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <h3 className="text-base font-bold text-slate-900">
-                  Analysis output
-                </h3>
-                <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-800">
-                  {analysisOut}
-                </pre>
-                {selectedBooks.length > 0 && (
-                  <div className="mt-4 border-t border-slate-100 pt-4">
-                    <p className="text-sm font-semibold text-slate-800">
-                      Active textbook lenses
-                    </p>
-                    <ul className="mt-2 space-y-2">
-                      {selectedBooks.map((b) => (
-                        <li
-                          key={b.id}
-                          className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                <h2 className="text-sm font-bold text-slate-500">Specialty</h2>
+                <select
+                  value={specialty}
+                  onChange={(e) => {
+                    setSpecialty(e.target.value);
+                    setSelectedBookIds([]);
+                  }}
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                >
+                  {specialties.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-3 text-sm font-semibold text-slate-800">Books</p>
+                <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                  {specialtyBooks.map((book) => {
+                    const on = selectedBookIds.includes(book.id);
+                    return (
+                      <li key={book.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleBook(book.id)}
+                          className={`w-full rounded-lg border px-3 py-2 text-left text-sm font-semibold ${
+                            on
+                              ? "border-blue-600 bg-blue-50 text-blue-900"
+                              : "border-slate-200 bg-white text-slate-900"
+                          }`}
                         >
-                          <strong>{b.title}</strong> — {b.description}
-                          <br />
-                          <span className="text-xs">
-                            Topics: {b.keyTopics.join(" · ")}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                          {book.title}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </aside>
+
+            <section className="space-y-4 lg:col-span-3">
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-bold text-slate-500">
+                  Upload PDF / image
+                </h2>
+                <label
+                  className={`mt-3 flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed px-4 py-6 ${
+                    uploadBusy || analyzing
+                      ? "border-blue-300 bg-blue-50"
+                      : "border-slate-300 bg-slate-50 hover:border-blue-400"
+                  }`}
+                >
+                  <span className="text-sm font-semibold text-slate-800">
+                    {uploadBusy
+                      ? "Reading…"
+                      : analyzing
+                        ? "Filling performa…"
+                        : "Upload PDF / image"}
+                  </span>
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept={ACCEPT_ATTR}
+                    multiple
+                    disabled={uploadBusy || analyzing}
+                    onChange={(e) => {
+                      void handleFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {uploadError && (
+                  <p className="mt-2 text-sm text-red-700">{uploadError}</p>
                 )}
+                {uploads.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {uploads.map((u) => (
+                      <li
+                        key={u.id}
+                        className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                      >
+                        <span className="truncate font-medium">
+                          {u.name} · {formatBytes(u.sizeBytes)}
+                          {u.message ? ` · ${u.message}` : ""}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setUploads((prev) => prev.filter((x) => x.id !== u.id))
+                          }
+                          className="text-xs font-semibold text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <textarea
+                  value={pastHistory}
+                  onChange={(e) => setPastHistory(e.target.value)}
+                  rows={5}
+                  placeholder="Paste notes…"
+                  className="mt-4 w-full rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-600"
+                />
+                <button
+                  type="button"
+                  disabled={analyzing || !pastHistory.trim()}
+                  onClick={() => void runAnalysis(pastHistory)}
+                  className="mt-3 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {analyzing ? "Analyzing…" : "Analyze"}
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div
+            ref={performaRef}
+            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+          >
+            {hasActiveSummary && !analyzing && !analyzeError && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
+                <div className="flex flex-wrap items-center gap-2">
+                  {patientCount > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={patientIndex <= 0}
+                        onClick={() => setPatientIndex((i) => Math.max(0, i - 1))}
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold disabled:opacity-40"
+                      >
+                        ← Prev
+                      </button>
+                      <span className="text-sm font-semibold text-slate-700">
+                        Patient {patientIndex + 1} of {patientCount}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={patientIndex >= patientCount - 1}
+                        onClick={() =>
+                          setPatientIndex((i) =>
+                            Math.min(patientCount - 1, i + 1),
+                          )
+                        }
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold disabled:opacity-40"
+                      >
+                        Next →
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await copyPatientSummary(current);
+                      flash(ok ? "Copied to clipboard." : "Copy failed.");
+                    }}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      downloadPatientSummary(current);
+                      flash("Download started.");
+                    }}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                  >
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    onClick={printCurrentPerforma}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold"
+                  >
+                    Print
+                  </button>
+                </div>
               </div>
             )}
-          </section>
+
+            {actionMsg && (
+              <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 print:hidden">
+                {actionMsg}
+              </p>
+            )}
+
+            <PatientPerformaPanel
+              summary={current}
+              analyzing={analyzing}
+              error={analyzeError}
+              specialty={specialty}
+              onSummaryPatch={(next) => {
+                setPatients((prev) => {
+                  const copy = [...prev];
+                  if (patientIndex >= 0 && patientIndex < copy.length) {
+                    copy[patientIndex] = next;
+                  }
+                  return copy;
+                });
+              }}
+              patientLabel={
+                patientCount > 1
+                  ? `Patient ${patientIndex + 1} of ${patientCount}`
+                  : undefined
+              }
+            />
+          </div>
         </div>
       )}
 
-      {pane === "regimen" && <RegimenAnalyzerUI />}
-      {pane === "books" && <ReferenceLibrary />}
+      {pane === "saved" && (
+        <div className="mx-auto max-w-3xl space-y-3 px-3 py-4 md:px-6 print:hidden">
+          <h2 className="text-lg font-bold text-slate-900">
+            Saved ({archive.length})
+          </h2>
+          {archive.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+              No saved summaries
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {archive.map((entry) => (
+                <li
+                  key={entry.archiveId}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                >
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {entry.summary.name || "Unnamed"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Hospital ID:{" "}
+                      <span className="font-mono font-semibold text-slate-800">
+                        {entry.summary.hospitalId || "—"}
+                      </span>
+                      {" · "}
+                      {entry.summary.sex} · Age {entry.summary.age || "—"} ·{" "}
+                      {new Date(entry.savedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openArchived(entry)}
+                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        downloadPatientSummary(entry.summary);
+                      }}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold"
+                    >
+                      Download
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeArchivedSummary(entry.archiveId);
+                        setArchive(loadSummaryArchive());
+                      }}
+                      className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {pane === "regimen" && (
+        <div className="print:hidden">
+          <RegimenAnalyzerUI />
+        </div>
+      )}
+      {pane === "books" && (
+        <div className="print:hidden">
+          <ReferenceLibrary />
+        </div>
+      )}
     </div>
   );
 }

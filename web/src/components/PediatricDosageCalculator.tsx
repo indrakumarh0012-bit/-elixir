@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import {
+  brandsForDrug,
   dosesPerDayFromFrequency,
-  mgToMl,
   mlToDrops,
-  pediatricDrugsDB,
   searchPediatricDrugs,
   type DrugFormulation,
   type PediatricDrug,
 } from "../data/pediatricDrugs";
+import { calculatePediatricDose } from "../lib/pediatricDoseMath";
 
 type AgeUnit = "years" | "months" | "days";
 
@@ -23,7 +23,7 @@ export default function PediatricDosageCalculator() {
   const [frequency, setFrequency] = useState("q12h");
 
   const filteredDrugs = useMemo(
-    () => searchPediatricDrugs(searchQuery),
+    () => searchPediatricDrugs(searchQuery).slice(0, 40),
     [searchQuery],
   );
 
@@ -50,35 +50,44 @@ export default function PediatricDosageCalculator() {
     setSearchQuery("");
   };
 
-  const divisions = useMemo(() => {
-    if (!selectedDrug) return 1;
-    return dosesPerDayFromFrequency(frequency) || selectedDrug.defaultDosesPerDay;
-  }, [frequency, selectedDrug]);
-
   const weightNum = weight === "" ? 0 : Number(weight);
   const doseNum = targetMgPerKgDay === "" ? 0 : Number(targetMgPerKgDay);
   const isTopicalOrNonMg = Boolean(
     selectedDrug && selectedDrug.defaultDoseMgPerKg === 0 && selectedDrug.maxDosePerDayMg === 0,
   );
 
-  const rawDaily = weightNum > 0 && doseNum > 0 ? weightNum * doseNum : 0;
-  const cappedDaily =
-    selectedDrug && selectedDrug.maxDosePerDayMg > 0
-      ? Math.min(rawDaily, selectedDrug.maxDosePerDayMg)
-      : rawDaily;
-  const perDose = divisions > 0 ? cappedDaily / divisions : 0;
-  const exceedsMax =
-    Boolean(selectedDrug) &&
-    selectedDrug!.maxDosePerDayMg > 0 &&
-    rawDaily > selectedDrug!.maxDosePerDayMg;
+  const doseCalc = useMemo(() => {
+    if (!selectedDrug) {
+      return {
+        dailyMg: 0,
+        perDoseMg: 0,
+        volumeMl: null as number | null,
+        capped: false,
+        valid: false,
+        errors: [] as string[],
+      };
+    }
+    return calculatePediatricDose({
+      weightKg: weightNum,
+      doseMgPerKgDay: doseNum,
+      frequency,
+      drug: selectedDrug,
+      formulation: selectedFormulation,
+    });
+  }, [selectedDrug, weightNum, doseNum, frequency, selectedFormulation]);
+
+  const cappedDaily = doseCalc.dailyMg;
+  const perDose = doseCalc.perDoseMg;
+  const exceedsMax = doseCalc.capped;
   const renalWarn =
     Boolean(selectedDrug?.renalAdjustment) &&
     creatinine !== "" &&
     Number(creatinine) > 1.0;
-  const weightInvalid = weight !== "" && Number(weight) <= 0;
+  const weightInvalid =
+    (weight !== "" && (!(Number.isFinite(weightNum) && weightNum > 0))) ||
+    doseCalc.errors.includes("Weight must be > 0");
 
-  const volumeMl =
-    selectedFormulation && perDose > 0 ? mgToMl(perDose, selectedFormulation) : null;
+  const volumeMl = doseCalc.volumeMl;
   const dropsPerMl = selectedFormulation?.dropsPerMl ?? 20;
   const drops =
     volumeMl != null &&
@@ -88,17 +97,10 @@ export default function PediatricDosageCalculator() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <header className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
-          Smart-Elixir Clinical Tools
-        </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Pediatric Dosage Calculator
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          India / Bengaluru private OPD strengths &amp; brands included. Neonates: use{" "}
-          <strong>Cloherty</strong> + dropper/mL guidance. Seed: {pediatricDrugsDB.length} drugs.
-        </p>
       </header>
 
       <section className="mb-5 rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
@@ -135,9 +137,8 @@ export default function PediatricDosageCalculator() {
               </p>
             )}
             {isNeonate && (
-              <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-900">
-                Neonatal age — verify Cloherty &amp; Stark for GA/PNA-specific doses; use marked
-                dropper (often 1 ml ≈ 20 drops — confirm bottle).
+              <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
+                Neonate
               </p>
             )}
           </div>
@@ -182,44 +183,70 @@ export default function PediatricDosageCalculator() {
         <h2 className="mb-4 text-lg font-semibold text-slate-900">2. Drug selection</h2>
         <div className="relative">
           <label className="mb-1 block text-sm font-medium text-slate-700">
-            Search drug / brand / strength
+            Search
           </label>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="e.g. Calpol, 100 mg/5 ml, Levipil, Meftal-P..."
+            placeholder="Search drug / brand…"
             className="w-full rounded-lg border border-slate-300 px-3 py-3 outline-none focus:border-[var(--accent)]"
           />
           {searchQuery.trim() && (
-            <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+            <ul className="absolute z-20 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
               {filteredDrugs.length === 0 && (
                 <li className="px-3 py-3 text-sm text-slate-500">No matches</li>
               )}
-              {filteredDrugs.map((drug) => (
-                <li key={drug.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleDrugSelect(drug)}
-                    className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 text-left hover:bg-[var(--accent-soft)]"
-                  >
-                    <span className="font-semibold text-slate-900">{drug.name}</span>
-                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                      {drug.category}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {filteredDrugs.map((drug) => {
+                const brands = brandsForDrug(drug);
+                return (
+                  <li key={drug.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleDrugSelect(drug)}
+                      className="w-full border-b border-slate-100 px-3 py-3 text-left hover:bg-[var(--accent-soft)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="font-semibold text-slate-900">{drug.name}</span>
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                          {drug.category}
+                        </span>
+                      </div>
+                      {brands.length > 0 && (
+                        <p className="mt-1 text-xs italic text-slate-500">
+                          Brands: {brands.join(", ")}
+                          {brandsForDrug(drug, 99).length > brands.length ? "…" : ""}
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {drug.formulations.slice(0, 4).map((form) => (
+                          <span
+                            key={`${form.form}-${form.strengthLabel}`}
+                            className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-700"
+                          >
+                            {form.form}: {form.strengthLabel}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
         {selectedDrug && (
-          <p className="mt-3 text-sm text-slate-600">
-            Selected: <strong>{selectedDrug.name}</strong>{" "}
-            <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
-              {selectedDrug.category}
-            </span>
-          </p>
+          <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+            <p className="text-sm text-slate-700">
+              Selected: <strong>{selectedDrug.name}</strong>{" "}
+              <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
+                {selectedDrug.category}
+              </span>
+            </p>
+            <p className="mt-1 text-xs italic text-slate-500">
+              Brands: {brandsForDrug(selectedDrug, 10).join(", ")}
+            </p>
+          </div>
         )}
       </section>
 
@@ -289,12 +316,7 @@ export default function PediatricDosageCalculator() {
                 {(selectedFormulation.form === "Drops" ||
                   selectedFormulation.dropperCapacityMl) && (
                   <p className="mt-1 font-medium text-amber-900">
-                    Dropper: typically marked 1 ml capacity
-                    {selectedFormulation.dropperCapacityMl
-                      ? ` (listed ${selectedFormulation.dropperCapacityMl} ml)`
-                      : ""}
-                    ; many droppers ≈ {selectedFormulation.dropsPerMl ?? 20} drops = 1 ml —{" "}
-                    <em>always confirm printed on the bottle</em>.
+                    Dropper ≈ {selectedFormulation.dropsPerMl ?? 20} drops/ml
                   </p>
                 )}
               </div>
@@ -310,7 +332,7 @@ export default function PediatricDosageCalculator() {
 
           {selectedDrug.neonatalNote && isNeonate && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-              <p className="font-bold">Neonatal note (Cloherty)</p>
+              <p className="font-bold">Neonate</p>
               <p className="mt-1">{selectedDrug.neonatalNote}</p>
             </div>
           )}
@@ -385,15 +407,7 @@ export default function PediatricDosageCalculator() {
                       </p>
                       {drops != null && (
                         <p className="mt-1">
-                          <strong>Approx. drops per dose:</strong> {drops.toFixed(0)} drops
-                          {isNeonate ? " (neonate — use marked dropper)" : ""} @{" "}
-                          {dropsPerMl} drops/ml
-                        </p>
-                      )}
-                      {isNeonate && (
-                        <p className="mt-1 text-xs">
-                          Neonate tip: draw to the ml mark on the dropper first; drops are approximate
-                          if the bottle does not print drops/ml.
+                          <strong>Approx. drops:</strong> {drops.toFixed(0)}
                         </p>
                       )}
                     </div>
@@ -403,8 +417,7 @@ export default function PediatricDosageCalculator() {
 
               {exceedsMax && (
                 <div className="mb-4 rounded-lg border border-red-200 bg-[var(--danger-bg)] p-3 text-sm font-semibold text-red-700">
-                  Daily dose capped at absolute maximum ({selectedDrug.maxDosePerDayMg} mg/day).
-                  Raw calculated daily was {rawDaily.toFixed(1)} mg.
+                  Capped at {selectedDrug.maxDosePerDayMg} mg/day
                 </div>
               )}
             </>
@@ -412,7 +425,7 @@ export default function PediatricDosageCalculator() {
 
           {renalWarn && (
             <div className="mb-4 rounded-lg border border-red-200 bg-[var(--danger-bg)] p-3 text-sm font-semibold text-red-700">
-              Serum creatinine &gt; 1.0 mg/dL — this drug may need renal adjustment.
+              Check renal adjustment
             </div>
           )}
 
@@ -438,45 +451,10 @@ export default function PediatricDosageCalculator() {
             {selectedDrug.maxDosePerDayMg > 0 && (
               <div className="rounded-lg border-2 border-red-600 bg-red-50 p-3">
                 <p className="text-sm font-bold text-red-700">
-                  MAXIMUM DOSAGE FOR THE DAY: {selectedDrug.maxDosePerDayMg} mg / 24 hours
-                </p>
-                <p className="mt-1 text-xs font-medium text-red-600">
-                  Do not exceed this absolute daily maximum unless a specialist protocol explicitly
-                  allows a higher ceiling.
-                  {weightNum > 0 && !isTopicalOrNonMg
-                    ? ` Current calculated daily (after cap): ${cappedDaily.toFixed(1)} mg.`
-                    : ""}
+                  Max / day: {selectedDrug.maxDosePerDayMg} mg
                 </p>
               </div>
             )}
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">References</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
-                <li>
-                  Primary for this drug: <strong>{selectedDrug.referenceSource}</strong>
-                </li>
-                <li>
-                  Harriet Lane Handbook; Nelson Textbook of Pediatrics; IAP STG
-                </li>
-                <li>
-                  India strengths/brands: common private Bengaluru / national pharmacy stock —
-                  always match the exact bottle label in hand
-                </li>
-                {isNeonate ? (
-                  <li className="font-medium text-amber-900">
-                    Neonate (&lt;28 days):{" "}
-                    <strong>Cloherty and Stark&apos;s Manual of Neonatal Care</strong> for
-                    GA/PNA-specific doses and dropper use.
-                  </li>
-                ) : (
-                  <li>
-                    Neonates: refer{" "}
-                    <strong>Cloherty and Stark&apos;s Manual of Neonatal Care</strong> when needed.
-                  </li>
-                )}
-              </ul>
-            </div>
           </div>
         </section>
       )}

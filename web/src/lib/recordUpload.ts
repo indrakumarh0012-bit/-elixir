@@ -1,8 +1,16 @@
+import { getGroqApiKey } from "./buildPerforma";
+import { stripModelThinking } from "./stripModelThinking";
+import {
+  extractTextFromImageFile,
+  extractTextFromPdfViaVision,
+} from "./visionExtract";
+
 export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB
 export const MAX_UPLOAD_LABEL = "100 MB";
 
 export const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".webp"] as const;
-export const ACCEPT_ATTR = ".pdf,image/png,image/jpeg,image/jpg,image/webp,application/pdf";
+export const ACCEPT_ATTR =
+  ".pdf,image/png,image/jpeg,image/jpg,image/webp,application/pdf";
 
 export type UploadedRecordFile = {
   id: string;
@@ -39,9 +47,8 @@ export function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-async function extractPdfText(file: File): Promise<string> {
+async function extractPdfTextLayer(file: File): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
-  // Vite-friendly worker
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url,
@@ -75,12 +82,12 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Ingest one clinical record file (PDF or image), max 100 MB.
- * PDFs: client-side text extraction. Images: attached with preview; user should
- * confirm/transcribe clinical text into the notes box if OCR is needed later.
+ * Ingest PDF/image up to 100 MB.
+ * Text PDFs use text layer (fast). Scanned/blurry PDFs + images use vision OCR.
  */
 export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> {
   const id = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`;
+  const apiKey = getGroqApiKey();
 
   if (file.size > MAX_UPLOAD_BYTES) {
     return {
@@ -108,7 +115,27 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
 
   if (isPdf(file)) {
     try {
-      const text = await extractPdfText(file);
+      let text = await extractPdfTextLayer(file);
+      let viaVision = false;
+
+      // Scanned / empty text layer → vision (handles mild blur)
+      if (text.trim().length < 40) {
+        if (!apiKey) {
+          return {
+            id,
+            name: file.name,
+            sizeBytes: file.size,
+            kind: "pdf",
+            status: "error",
+            message:
+              "Scanned PDF needs AI key once (save key above) to read blurry/image pages.",
+            extractedText: "",
+          };
+        }
+        text = await extractTextFromPdfViaVision(file, apiKey);
+        viaVision = true;
+      }
+
       if (!text.trim()) {
         return {
           id,
@@ -116,18 +143,21 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
           sizeBytes: file.size,
           kind: "pdf",
           status: "error",
-          message:
-            "No extractable text in PDF (may be scanned/image-only). Paste OCR text or upload a text PDF.",
+          message: "Could not read text from this PDF.",
           extractedText: "",
         };
       }
+
       return {
         id,
         name: file.name,
         sizeBytes: file.size,
         kind: "pdf",
         status: "ok",
-        extractedText: `[From upload: ${file.name}]\n${text}`,
+        message: viaVision
+          ? "Scanned/blurry PDF read with smart vision."
+          : undefined,
+        extractedText: `[From upload: ${file.name}]\n${stripModelThinking(text)}`,
       };
     } catch (e) {
       return {
@@ -142,9 +172,37 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
     }
   }
 
-  // Image
+  // Image — always vision (works on mild blur / phone photos)
   try {
     const previewUrl = await readAsDataUrl(file);
+    if (!apiKey) {
+      return {
+        id,
+        name: file.name,
+        sizeBytes: file.size,
+        kind: "image",
+        status: "error",
+        previewUrl,
+        message:
+          "Image needs AI key once (save key above) to extract clinical text.",
+        extractedText: "",
+      };
+    }
+
+    const text = await extractTextFromImageFile(file, apiKey);
+    if (!text.trim()) {
+      return {
+        id,
+        name: file.name,
+        sizeBytes: file.size,
+        kind: "image",
+        status: "error",
+        previewUrl,
+        message: "No clinical text could be read from this image.",
+        extractedText: "",
+      };
+    }
+
     return {
       id,
       name: file.name,
@@ -152,9 +210,8 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
       kind: "image",
       status: "ok",
       previewUrl,
-      message:
-        "Image attached. Type or paste any clinical text you can read from it into the notes box (vision OCR available in Streamlit with Groq).",
-      extractedText: `[Image attached: ${file.name}, ${formatBytes(file.size)} — review preview and add transcribed clinical text below if needed]`,
+      message: "Image read with smart vision (blur-tolerant).",
+      extractedText: `[From upload: ${file.name}]\n${stripModelThinking(text)}`,
     };
   } catch (e) {
     return {

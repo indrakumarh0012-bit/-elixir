@@ -61,6 +61,7 @@ export interface PediatricDrug {
 }
 
 export function dosesPerDayFromFrequency(freq: string): number {
+  const key = freq.trim();
   const map: Record<string, number> = {
     q4h: 6,
     q6h: 4,
@@ -70,9 +71,12 @@ export function dosesPerDayFromFrequency(freq: string): number {
     OD: 1,
     BD: 2,
     TDS: 3,
+    TID: 3,
     QID: 4,
+    PRN: 1,
+    HS: 1,
   };
-  return map[freq] ?? 1;
+  return map[key] ?? map[key.toUpperCase()] ?? 1;
 }
 
 /** mg → ml using labeled strength */
@@ -345,15 +349,16 @@ export const pediatricDrugsDB: PediatricDrug[] = [
       note: "IV paracetamol (Ofirmev/generic): infuse over 15 minutes. Do not IV push undiluted outside protocol.",
     },
     formulations: [
-      f("Syrup", "120 mg/5 ml", 120, 5, ["Crocin", "Calpol", "Dolo", "Pyrigesic"], { packSizes: ["60 ml", "100 ml"] }),
-      f("Syrup", "250 mg/5 ml", 250, 5, ["Dolo 250", "Calpol 250", "Crocin 250"], { packSizes: ["60 ml"] }),
-      f("Drops", "100 mg/ml", 100, 1, ["Crocin drops", "Calpol drops", "Dolo drops"], {
+      f("Syrup", "120 mg/5 ml", 120, 5, ["Crocin", "Calpol", "Dolo", "Pyrigesic", "Fepanil", "P-250", "T-Minic PCM"], { packSizes: ["60 ml", "100 ml"] }),
+      f("Syrup", "250 mg/5 ml", 250, 5, ["Dolo 250", "Calpol 250", "Crocin 250", "P-250"], { packSizes: ["60 ml"] }),
+      f("Drops", "100 mg/ml", 100, 1, ["Crocin drops", "Calpol drops", "Dolo drops", "Fepanil drops"], {
         dropperCapacityMl: 1,
         dropsPerMl: 20,
         packSizes: ["15 ml"],
       }),
-      f("Tablet / DT", "500 mg / 650 mg", 500, 1, ["Dolo 650", "Crocin"], {}),
+      f("Tablet / DT", "500 mg / 650 mg", 500, 1, ["Dolo 650", "Crocin", "Dolo"], {}),
       f("Injection (IV/IM)", "10 mg/ml (100 ml bottle = 1 g)", 10, 1, ["Perfalgan", "Febrinil IV"], {}),
+      f("Other", "Suppository 80 / 170 / 250 mg", 170, 1, ["Crocin supp", "Calpol supp"], {}),
     ],
   },
   {
@@ -450,11 +455,625 @@ export const pediatricDrugsDB: PediatricDrug[] = [
     referenceSource: "IAP caution on irrational combinations / brand label",
     renalAdjustment: false,
     formulations: [
-      f("Syrup", "Levocet 2.5 mg + Ambroxol 30 mg / 5 ml (varies)", 2.5, 5, ["Xyzal A", "1-AL AX", "Lazine Plus"], {
+      f("Syrup", "Levocet 2.5 mg + Ambroxol 30 mg / 5 ml (varies)", 2.5, 5, ["Xyzal A", "1-AL AX", "Lazine Plus", "Levocet A"], {
         packSizes: ["60 ml", "100 ml"],
       }),
-      f("Syrup", "Montelukast 4 mg + Levocet 2.5 mg / 5 ml (varies)", 4, 5, ["Montair LC Kid", "Telekast L Kid"], {
+      f("Syrup", "Montelukast 4 mg + Levocet 2.5 mg / 5 ml (varies)", 4, 5, ["Montair LC Kid", "Telekast L Kid", "Montair-LC"], {
         packSizes: ["60 ml"],
+      }),
+    ],
+  },
+  {
+    id: "ambroxol_po",
+    name: "Ambroxol",
+    category: "Mucolytic / Expectorant",
+    recommendedDose:
+      "≈1.2–1.6 mg/kg/day ÷ BD–TDS (often age-banded on label: 2.5–5–10 ml). Confirm Ambroxyl / Mucolite label.",
+    defaultDoseMgPerKg: 1.5,
+    maxDosePerDayMg: 120,
+    frequencyOptions: ["BD", "TDS", "q8h", "q12h"],
+    defaultFrequency: "TDS",
+    defaultDosesPerDay: 3,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Avoid stacking with other ambroxol/ guaifenesin syrups",
+      "Caution in peptic ulcer disease",
+    ],
+    instructions: "Common Indian brands: Ambroxyl, Mucolite, Ambrodil. Give after food if GI upset.",
+    referenceSource: "Brand label / IAP symptomatic care",
+    renalAdjustment: false,
+    formulations: [
+      f("Syrup", "15 mg/5 ml", 15, 5, ["Ambroxyl", "Mucolite", "Ambrodil", "Ambrolite", "Ambrodil-S"], {
+        packSizes: ["60 ml", "100 ml"],
+      }),
+      f("Syrup", "30 mg/5 ml", 30, 5, ["Mucolite", "Ambroxyl DS", "Ambrodil"], {
+        packSizes: ["60 ml", "100 ml"],
+      }),
+      f("Drops", "7.5 mg/ml", 7.5, 1, ["Mucolite drops", "Ambrodil drops"], {
+        dropperCapacityMl: 1,
+        dropsPerMl: 20,
+        packSizes: ["15 ml"],
+      }),
+      f("Tablet / DT", "30 mg", 30, 1, ["Mucolite", "Ambrodil"], {}),
+    ],
+  },
+  {
+    id: "relent_cet_ambroxol",
+    name: "Cetirizine + Ambroxol (Relent)",
+    category: "Cold-Cough - Combination (India)",
+    recommendedDose:
+      "Age-banded on Relent label (typically 2.5–5 ml BD). Not first-line <2–4 years — prefer single agents.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 0,
+    frequencyOptions: ["BD", "OD", "TDS"],
+    defaultFrequency: "BD",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Do not stack with other cetirizine / levocet / ambroxol products",
+      "Sedation possible",
+      "IAP: avoid irrational multi-symptom syrups in young infants",
+    ],
+    instructions:
+      "Relent (Dr. Reddy's) = Cetirizine 5 mg + Ambroxol 30 mg / 5 ml. Relent Plus / other variants — check exact composition on bottle.",
+    referenceSource: "Brand insert (Relent) / IAP symptomatic care caution",
+    renalAdjustment: true,
+    formulations: [
+      f("Syrup", "Cetirizine 5 mg + Ambroxol 30 mg / 5 ml", 5, 5, ["Relent", "Relent Syrup"], {
+        packSizes: ["60 ml", "100 ml"],
+      }),
+      f("Syrup", "Relent Plus / variant (check label — may add phenylephrine)", 5, 5, ["Relent Plus"], {
+        packSizes: ["60 ml"],
+      }),
+    ],
+  },
+  {
+    id: "levocetirizine_po",
+    name: "Levocetirizine",
+    category: "Antihistamine",
+    recommendedDose: "6 mo–5 y: 1.25 mg OD; 6–11 y: 2.5 mg OD; ≥12 y: 5 mg OD (or ≈0.125 mg/kg).",
+    defaultDoseMgPerKg: 0.125,
+    maxDosePerDayMg: 5,
+    frequencyOptions: ["OD", "HS", "q24h"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: ["Renal impairment — adjust", "Mild sedation", "Not preferred <6 months"],
+    instructions: "Once daily, often at night. Common: Levocet, Teczine, 1-AL, Xyzal.",
+    referenceSource: "Harriet Lane / brand label",
+    renalAdjustment: true,
+    formulations: [
+      f("Syrup", "2.5 mg/5 ml", 2.5, 5, ["Levocet", "Teczine", "1-AL", "Xyzal", "Lazine", "Okacet-L"], {
+        packSizes: ["30 ml", "60 ml"],
+      }),
+      f("Tablet / DT", "5 mg", 5, 1, ["Levocet", "Teczine", "Xyzal", "1-AL"], {}),
+      f("Tablet / DT", "2.5 mg", 2.5, 1, ["Levocet", "Teczine"], {}),
+    ],
+  },
+  {
+    id: "mefenamic_po",
+    name: "Mefenamic Acid",
+    category: "Analgesic / Antipyretic",
+    recommendedDose: "4–8 mg/kg/dose every 8 hours (max often 3 doses/day). Prefer with food.",
+    defaultDoseMgPerKg: 6,
+    maxDosePerDayMg: 1500,
+    frequencyOptions: ["q8h", "TDS"],
+    defaultFrequency: "q8h",
+    defaultDosesPerDay: 3,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "GI bleed / ulcer risk",
+      "Avoid in renal impairment",
+      "Not preferred as first antipyretic vs paracetamol",
+    ],
+    instructions: "Meftal-P suspension is very common in Indian OPD. Take with food.",
+    referenceSource: "Brand label / Nelson symptomatic",
+    renalAdjustment: true,
+    formulations: [
+      f("Suspension", "100 mg/5 ml", 100, 5, ["Meftal-P", "Ponstan", "Mefast"], { packSizes: ["60 ml"] }),
+      f("Suspension", "50 mg/5 ml", 50, 5, ["Meftal-P", "Mefast"], { packSizes: ["60 ml"] }),
+      f("Tablet / DT", "250 mg / 500 mg", 250, 1, ["Meftal", "Ponstan"], {}),
+    ],
+  },
+  {
+    id: "zinc_po",
+    name: "Zinc (Sulfate / Acetate / Gluconate)",
+    category: "Supplement / Diarrhea",
+    recommendedDose: "Diarrhea: <6 mo 10 mg/day × 14 d; ≥6 mo 20 mg/day × 14 d (WHO/IAP).",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 20,
+    frequencyOptions: ["OD"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: ["Metallic taste", "Vomiting if given on empty stomach in some kids"],
+    instructions: "Fixed age-based dose for acute diarrhea — set mg/kg to 0 and use label ml for elemental Zn.",
+    referenceSource: "WHO / IAP diarrhea guidelines",
+    renalAdjustment: false,
+    formulations: [
+      f("Syrup", "20 mg/5 ml (elemental Zn)", 20, 5, ["Zinconia", "Ascazin", "Zincovit (check Zn)", "Z&D"], {
+        packSizes: ["60 ml", "100 ml"],
+      }),
+      f("Drops", "10 mg/ml", 10, 1, ["Zinconia drops", "Z&D drops"], {
+        dropperCapacityMl: 1,
+        dropsPerMl: 20,
+        packSizes: ["15 ml"],
+      }),
+      f("Tablet / DT", "20 mg", 20, 1, ["Zinconia", "Ascazin"], {}),
+    ],
+  },
+  {
+    id: "iron_po",
+    name: "Iron (Elemental) — Ferrous Ascorbate / FAC / Iron Polymaltose",
+    category: "Haematinic / Iron & Vitamins",
+    recommendedDose:
+      "Iron deficiency: ~3–6 mg/kg/day elemental iron PO (often OD–BD). Prophylaxis lower (often ~1–2 mg/kg/day). Use elemental iron from brand label.",
+    defaultDoseMgPerKg: 3,
+    maxDosePerDayMg: 120,
+    frequencyOptions: ["OD", "BD", "TDS"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Keep out of reach — iron overdose is toxic",
+      "Constipation / black stools / GI upset common",
+      "Avoid with milk/calcium/antacids at same time (↓ absorption)",
+      "Do not use in non-iron-deficiency anemia without diagnosis",
+    ],
+    instructions:
+      "Dose calculator uses ELEMENTAL iron mg. Check Tonoferon / Orofer / Dexorange label for elemental Fe per ml. Separate from calcium & milk by ≥2 h.",
+    referenceSource: "Harriet Lane / Nelson / IAP anaemia; brand label for elemental Fe",
+    renalAdjustment: false,
+    formulations: [
+      f(
+        "Syrup",
+        "Tonoferon — check label elemental Fe (commonly FAC / colloidal iron syrup)",
+        50,
+        5,
+        ["Tonoferon", "Tonoferon Paediatric", "Tonoferon Syrup"],
+        { packSizes: ["100 ml", "200 ml"] },
+      ),
+      f(
+        "Drops",
+        "Tonoferon drops — elemental Fe per ml on label",
+        25,
+        1,
+        ["Tonoferon Drops", "Tonoferon Paediatric Drops"],
+        { dropperCapacityMl: 1, dropsPerMl: 20, packSizes: ["15 ml", "30 ml"] },
+      ),
+      f(
+        "Syrup",
+        "Ferrous ascorbate ~30 mg elemental Fe / 5 ml (+ folate often)",
+        30,
+        5,
+        ["Orofer XT Syrup", "Feronia XT Syrup", "Hbset XT Syrup", "Richar XT Syrup"],
+        { packSizes: ["150 ml"] },
+      ),
+      f(
+        "Syrup",
+        "Ferric ammonium citrate syrup (Dexorange-type) — elemental Fe on label",
+        32,
+        5,
+        ["Dexorange Syrup", "Dexorange Paediatric", "Haemup Syrup"],
+        { packSizes: ["100 ml", "200 ml"] },
+      ),
+      f(
+        "Syrup",
+        "Iron polymaltose ~50 mg elemental Fe / 5 ml",
+        50,
+        5,
+        ["Iberol", "Ferrium XT", "Anofer-S"],
+        { packSizes: ["100 ml", "150 ml"] },
+      ),
+      f(
+        "Drops",
+        "Iron drops ~10–25 mg elemental Fe / ml (brand-specific)",
+        10,
+        1,
+        ["Orofer Drops", "Feronia Drops", "Tonoferon Drops", "Chericof-Iron"],
+        { dropperCapacityMl: 1, dropsPerMl: 20, packSizes: ["15 ml", "30 ml"] },
+      ),
+      f(
+        "Tablet / DT",
+        "Ferrous ascorbate 100 mg elemental Fe + folic acid",
+        100,
+        1,
+        ["Orofer XT", "Feronia XT", "Hbset XT", "Richar XT"],
+        {},
+      ),
+      f(
+        "Syrup",
+        "Iron + folic acid + B12 haematinic syrup (combo)",
+        30,
+        5,
+        ["Autrin Syrup", "Fefol Syrup", "Raricap Syrup", "Tonoferon (combo variants)"],
+        { packSizes: ["100 ml", "200 ml"] },
+      ),
+    ],
+  },
+  {
+    id: "tonoferon_syrup",
+    name: "Tonoferon (Iron syrup / drops)",
+    category: "Haematinic / Iron & Vitamins",
+    recommendedDose:
+      "Follow Tonoferon label age/weight bands; aim ~3–6 mg/kg/day elemental iron for deficiency (confirm elemental Fe on pack).",
+    defaultDoseMgPerKg: 3,
+    maxDosePerDayMg: 100,
+    frequencyOptions: ["OD", "BD"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Iron overdose risk — store safely",
+      "GI upset / dark stools",
+      "Separate from calcium, milk, tetracyclines, quinolones",
+    ],
+    instructions:
+      "Very common Bengaluru / Indian OPD brand. Prefer elemental-iron based dosing from bottle label. Shake well. After food if GI upset.",
+    referenceSource: "Tonoferon label + Harriet Lane iron dosing",
+    renalAdjustment: false,
+    formulations: [
+      f(
+        "Syrup",
+        "Tonoferon syrup (elemental Fe — verify bottle)",
+        50,
+        5,
+        ["Tonoferon", "Tonoferon Paediatric Syrup", "Tonoferon SF"],
+        { packSizes: ["100 ml", "200 ml"] },
+      ),
+      f(
+        "Drops",
+        "Tonoferon paediatric drops (elemental Fe / ml — verify)",
+        25,
+        1,
+        ["Tonoferon Drops", "Tonoferon Paediatric Drops"],
+        { dropperCapacityMl: 1, dropsPerMl: 20, packSizes: ["15 ml", "30 ml"] },
+      ),
+    ],
+  },
+  {
+    id: "orofer_xt_syrup",
+    name: "Orofer XT / Ferrous Ascorbate syrup",
+    category: "Haematinic / Iron & Vitamins",
+    recommendedDose:
+      "Elemental iron ~3–6 mg/kg/day for deficiency; many XT syrups ≈30 mg elemental Fe/5 ml — confirm label.",
+    defaultDoseMgPerKg: 3,
+    maxDosePerDayMg: 100,
+    frequencyOptions: ["OD", "BD"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Iron toxicity in overdose",
+      "Constipation / dark stools",
+      "Space from calcium / milk",
+    ],
+    instructions: "Common private-pharmacy iron syrup. Dose by elemental Fe, not ml alone.",
+    referenceSource: "Brand label / Harriet Lane",
+    renalAdjustment: false,
+    formulations: [
+      f(
+        "Syrup",
+        "≈30 mg elemental Fe / 5 ml (+ folic acid)",
+        30,
+        5,
+        ["Orofer XT Syrup", "Orofer XT", "Feronia XT Syrup", "Hbset XT"],
+        { packSizes: ["150 ml"] },
+      ),
+      f(
+        "Drops",
+        "Elemental Fe / ml on label",
+        10,
+        1,
+        ["Orofer Drops", "Feronia Drops"],
+        { dropperCapacityMl: 1, dropsPerMl: 20, packSizes: ["15 ml"] },
+      ),
+    ],
+  },
+  {
+    id: "dexorange_syrup",
+    name: "Dexorange / FAC haematinic syrup",
+    category: "Haematinic / Iron & Vitamins",
+    recommendedDose:
+      "Age-banded on Dexorange label; convert to elemental iron for mg/kg deficiency dosing when possible.",
+    defaultDoseMgPerKg: 3,
+    maxDosePerDayMg: 100,
+    frequencyOptions: ["OD", "BD", "TDS"],
+    defaultFrequency: "BD",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Contains B12/folate in many packs — still dose iron carefully",
+      "GI upset / dark stools",
+      "Overdose hazard",
+    ],
+    instructions: "Classic Indian haematinic syrup. Prefer empty stomach if tolerated; else after food.",
+    referenceSource: "Dexorange label / IAP anaemia practice",
+    renalAdjustment: false,
+    formulations: [
+      f(
+        "Syrup",
+        "FAC haematinic syrup (elemental Fe on label)",
+        32,
+        5,
+        ["Dexorange Syrup", "Dexorange Paediatric", "Haemup", "Raricap"],
+        { packSizes: ["100 ml", "200 ml"] },
+      ),
+    ],
+  },
+  {
+    id: "montelukast_po",
+    name: "Montelukast",
+    category: "Antiasthma / Allergy",
+    recommendedDose: "Age-banded: 4 mg (2–5 y), 5 mg (6–14 y), 10 mg (≥15 y) OD HS — not mg/kg based.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 10,
+    frequencyOptions: ["OD", "HS"],
+    defaultFrequency: "HS",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: ["Neuropsychiatric effects (irritability, sleep disturbance) — counsel parents"],
+    instructions: "Chewable / granules common. Evening dosing usual.",
+    referenceSource: "Harriet Lane / GINA adjunct",
+    renalAdjustment: false,
+    formulations: [
+      f("Tablet / DT", "4 mg chewable / granules", 4, 1, ["Montair", "Singulair", "Telekast", "Montek"], {}),
+      f("Tablet / DT", "5 mg chewable", 5, 1, ["Montair", "Singulair", "Telekast"], {}),
+      f("Tablet / DT", "10 mg", 10, 1, ["Montair", "Singulair"], {}),
+    ],
+  },
+  {
+    id: "ascoril_ls",
+    name: "Ambroxol + Levosalbutamol + Guaifenesin (Ascoril LS)",
+    category: "Cold-Cough - Combination (India)",
+    recommendedDose: "Age-banded on Ascoril LS / Bro-Zedex LS label. Prefer inhaler over oral β-agonist when possible.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 0,
+    frequencyOptions: ["TDS", "BD", "q8h"],
+    defaultFrequency: "TDS",
+    defaultDosesPerDay: 3,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Tachycardia / tremor from levosalbutamol",
+      "Avoid stacking with Asthalin / Levolin syrup",
+      "Not for infants without clinician advice",
+    ],
+    instructions: "Extremely common Indian OPD cough syrup. Check exact strength (LS vs expectorant variants).",
+    referenceSource: "Brand label / IAP caution",
+    renalAdjustment: false,
+    formulations: [
+      f(
+        "Syrup",
+        "Levosalbutamol 1 mg + Ambroxol 30 mg + Guaifenesin 50 mg / 5 ml (typical LS)",
+        1,
+        5,
+        ["Ascoril LS", "Bro-Zedex LS", "Alex LS", "Tossex LS"],
+        { packSizes: ["60 ml", "100 ml"] },
+      ),
+    ],
+  },
+  {
+    id: "dextromethorphan_po",
+    name: "Dextromethorphan",
+    category: "Antitussive",
+    recommendedDose: "≈0.5 mg/kg/dose q6–8h (max often 10–20 mg/dose by age). Avoid <2–4 y unless advised.",
+    defaultDoseMgPerKg: 0.5,
+    maxDosePerDayMg: 60,
+    frequencyOptions: ["q6h", "q8h", "TDS"],
+    defaultFrequency: "q8h",
+    defaultDosesPerDay: 3,
+    route: ["PO"],
+    cautionsAndContraindications: ["Serotonin syndrome risk with MAOIs/SSRIs", "Sedation", "Avoid in young infants"],
+    instructions: "Often in Alex / Corex DX type brands — confirm DXM content vs codeine products.",
+    referenceSource: "Harriet Lane / brand label",
+    renalAdjustment: false,
+    formulations: [
+      f("Syrup", "15 mg/5 ml (varies by brand)", 15, 5, ["Alex", "Corex DX", "Respicure D", "Benadryl DR"], {
+        packSizes: ["50 ml", "100 ml"],
+      }),
+    ],
+  },
+  {
+    id: "fexofenadine_po",
+    name: "Fexofenadine",
+    category: "Antihistamine",
+    recommendedDose: "Age-banded (often 30 mg BD ≥6 y; suspension per label). Less sedating.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 120,
+    frequencyOptions: ["BD", "OD"],
+    defaultFrequency: "BD",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: ["Avoid fruit juice with dose (↓ absorption)", "Renal adjustment"],
+    instructions: "Allegra / Fexy common. Prefer for school-age kids needing less sedation.",
+    referenceSource: "Harriet Lane / brand label",
+    renalAdjustment: true,
+    formulations: [
+      f("Suspension", "30 mg/5 ml", 30, 5, ["Allegra", "Fexy", "Histafree"], { packSizes: ["60 ml", "100 ml"] }),
+      f("Tablet / DT", "30 / 60 / 120 mg", 30, 1, ["Allegra", "Fexy"], {}),
+    ],
+  },
+  {
+    id: "pantoprazole_po",
+    name: "Pantoprazole",
+    category: "GI - PPI",
+    recommendedDose: "≈1 mg/kg/day OD (often 10–20–40 mg age/weight banded).",
+    defaultDoseMgPerKg: 1,
+    maxDosePerDayMg: 40,
+    frequencyOptions: ["OD", "q24h"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO", "IV"],
+    cautionsAndContraindications: ["Hypersensitivity", "Long-term PPI — bone/infection cautions"],
+    instructions: "Before food. Pantocid / Pan common in Indian hospitals.",
+    referenceSource: "Harriet Lane / brand label",
+    renalAdjustment: false,
+    ivAdministration: {
+      giveSlowly: true,
+      note: "IV pantoprazole: reconstitute and infuse over 15 minutes typically — not rapid push.",
+    },
+    formulations: [
+      f("Tablet / DT", "20 mg / 40 mg", 20, 1, ["Pantocid", "Pan", "Pantop"], {}),
+      f("Injection (IV/IM)", "40 mg vial", 40, 1, ["Pantocid IV", "Pan IV"], {}),
+    ],
+  },
+  {
+    id: "lactulose_po",
+    name: "Lactulose",
+    category: "Laxative / Hepatic",
+    recommendedDose: "Constipation: start ≈1–2 ml/kg/day ÷ OD–BD; titrate to soft stools (not mg/kg — use label ml).",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 0,
+    frequencyOptions: ["OD", "BD", "TDS"],
+    defaultFrequency: "BD",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: ["Galactosemia", "Excessive diarrhea / electrolyte loss"],
+    instructions: "Duphalac / Loosz common. May take 24–48 h. Mix with water/juice. Dose in ml — not calculated as mg/kg here.",
+    referenceSource: "Harriet Lane",
+    renalAdjustment: false,
+    formulations: [
+      f("Syrup", "3.35 g/5 ml (dose in ml/kg — confirm label)", 3350, 5, ["Duphalac", "Loosz", "Lactihep"], {
+        packSizes: ["100 ml", "200 ml"],
+      }),
+    ],
+  },
+  {
+    id: "albendazole_po",
+    name: "Albendazole",
+    category: "Anthelmintic",
+    recommendedDose: "Soil-transmitted helminths: often 400 mg single dose (≥2 y); 200 mg if 12–24 mo — per IAP/WHO.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 400,
+    frequencyOptions: ["OD"],
+    defaultFrequency: "OD",
+    defaultDosesPerDay: 1,
+    route: ["PO"],
+    cautionsAndContraindications: ["Avoid in 1st trimester (adolescents)", "Hepatic caution in prolonged courses"],
+    instructions: "Chewable. With food improves absorption for tissue parasites.",
+    referenceSource: "IAP / WHO deworming",
+    renalAdjustment: false,
+    formulations: [
+      f("Tablet / DT", "400 mg chewable", 400, 1, ["Zentel", "Noworm", "Bandy"], {}),
+      f("Suspension", "200 mg/5 ml", 200, 5, ["Zentel", "Noworm"], { packSizes: ["10 ml"] }),
+    ],
+  },
+  {
+    id: "cefuroxime_po",
+    name: "Cefuroxime Axetil",
+    category: "Antibiotic - Oral",
+    recommendedDose: "20–30 mg/kg/day ÷ q12h (otitis/sinus often higher end).",
+    defaultDoseMgPerKg: 30,
+    maxDosePerDayMg: 1000,
+    frequencyOptions: ["q12h", "BD"],
+    defaultFrequency: "q12h",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: ["Penicillin/cephalosporin allergy", "Take with food"],
+    instructions: "Ceftum / Zinacef suspension — shake well; bitter taste common.",
+    referenceSource: "Harriet Lane / Nelson",
+    renalAdjustment: true,
+    formulations: [
+      f("Suspension (dry powder)", "125 mg/5 ml", 125, 5, ["Ceftum", "Zinnat", "Altacef"], {
+        packSizes: ["30 ml", "50 ml", "70 ml"],
+      }),
+      f("Suspension (dry powder)", "250 mg/5 ml", 250, 5, ["Ceftum", "Zinnat"], {
+        packSizes: ["50 ml", "70 ml"],
+      }),
+      f("Tablet / DT", "250 mg / 500 mg", 250, 1, ["Ceftum", "Zinnat"], {}),
+    ],
+  },
+  {
+    id: "clarithromycin_po",
+    name: "Clarithromycin",
+    category: "Antibiotic - Macrolide",
+    recommendedDose: "15 mg/kg/day ÷ q12h (max often 1 g/day).",
+    defaultDoseMgPerKg: 15,
+    maxDosePerDayMg: 1000,
+    frequencyOptions: ["q12h", "BD"],
+    defaultFrequency: "q12h",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: ["QT prolongation", "CYP3A4 interactions", "Hepatic impairment"],
+    instructions: "Claribid / Klacid. Take with/without food per brand; suspension — shake.",
+    referenceSource: "Harriet Lane",
+    renalAdjustment: true,
+    formulations: [
+      f("Suspension (dry powder)", "125 mg/5 ml", 125, 5, ["Claribid", "Klacid", "Crixan"], {
+        packSizes: ["30 ml", "50 ml"],
+      }),
+      f("Suspension (dry powder)", "250 mg/5 ml", 250, 5, ["Claribid", "Klacid"], { packSizes: ["50 ml"] }),
+      f("Tablet / DT", "250 mg / 500 mg", 250, 1, ["Claribid", "Klacid"], {}),
+    ],
+  },
+  {
+    id: "famotidine_po",
+    name: "Famotidine",
+    category: "GI - H2 Blocker",
+    recommendedDose: "≈0.5 mg/kg/dose BD (max often 20–40 mg/dose).",
+    defaultDoseMgPerKg: 1,
+    maxDosePerDayMg: 40,
+    frequencyOptions: ["BD", "q12h", "OD"],
+    defaultFrequency: "BD",
+    defaultDosesPerDay: 2,
+    route: ["PO", "IV"],
+    cautionsAndContraindications: ["Renal adjustment needed", "Confusion rare in high dose / renal failure"],
+    instructions: "Famocid / Pepcid generics. Useful when PPI not preferred.",
+    referenceSource: "Harriet Lane",
+    renalAdjustment: true,
+    formulations: [
+      f("Tablet / DT", "20 mg / 40 mg", 20, 1, ["Famocid", "Facid", "Pepcid"], {}),
+      f("Injection (IV/IM)", "20 mg/2 ml", 20, 2, ["Famocid IV"], {}),
+    ],
+  },
+  {
+    id: "domperidone_ppi_combo",
+    name: "Domperidone + PPI / antacid OPD adjuncts",
+    category: "GI - Combination (India)",
+    recommendedDose: "Prefer single-agent dosing; follow label if combo used short course.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 0,
+    frequencyOptions: ["OD", "BD", "TDS"],
+    defaultFrequency: "BD",
+    defaultDosesPerDay: 2,
+    route: ["PO"],
+    cautionsAndContraindications: ["QT risk with domperidone", "Avoid prolonged empiric PPI+domperidone"],
+    instructions: "Common pharmacy combos — calculate each component separately when possible.",
+    referenceSource: "Brand label / cardiac caution",
+    renalAdjustment: false,
+    formulations: [
+      f("Syrup", "Brand-specific combo (check label)", 1, 5, ["Domstal O", "Pantop-D (caps)", "Omez-D"], {
+        packSizes: ["30 ml", "capsules"],
+      }),
+    ],
+  },
+  {
+    id: "phenylephrine_cpm_combo",
+    name: "Phenylephrine + Chlorpheniramine (± Paracetamol)",
+    category: "Cold-Cough - Combination (India)",
+    recommendedDose: "Age-banded on Sinarest / Wikoryl / T-Minic label. Avoid <4–6 years when possible.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 0,
+    frequencyOptions: ["TDS", "q6h", "q8h"],
+    defaultFrequency: "TDS",
+    defaultDosesPerDay: 3,
+    route: ["PO"],
+    cautionsAndContraindications: [
+      "Sedation (CPM)",
+      "Hypertension / tachycardia (phenylephrine)",
+      "Do not stack with other PCM products",
+    ],
+    instructions: "Very common cold syrups in Indian pharmacies — prefer non-pharma care in toddlers.",
+    referenceSource: "IAP / FDA caution on OTC cold meds in young children",
+    renalAdjustment: false,
+    formulations: [
+      f("Syrup", "CPM + Phenylephrine ± PCM (brand-specific)", 1, 5, ["Sinarest", "Wikoryl", "T-Minic", "Coldact"], {
+        packSizes: ["60 ml"],
+      }),
+      f("Drops", "Infant drops (check strength carefully)", 1, 1, ["T-Minic drops", "Wikoryl drops"], {
+        dropperCapacityMl: 1,
+        dropsPerMl: 20,
+        packSizes: ["15 ml"],
       }),
     ],
   },
@@ -604,17 +1223,17 @@ export const pediatricDrugsDB: PediatricDrug[] = [
   },
   {
     id: "salbutamol_inh",
-    name: "Salbutamol (Albuterol)",
-    category: "Respiratory",
-    recommendedDose: "Prefer MDI+spacer / neb; oral syrup if used ~0.1–0.15 mg/kg/dose.",
+    name: "Salbutamol / Levosalbutamol (Albuterol)",
+    category: "Bronchodilator",
+    recommendedDose: "Prefer MDI+spacer / neb; oral syrup if used ~0.1–0.15 mg/kg/dose (salbutamol) or ~0.05 mg/kg/dose (levosalbutamol).",
     defaultDoseMgPerKg: 0.15,
     maxDosePerDayMg: 16,
-    frequencyOptions: ["q4h", "q6h", "q8h"],
+    frequencyOptions: ["q4h", "q6h", "q8h", "TDS"],
     defaultFrequency: "q6h",
     defaultDosesPerDay: 4,
     route: ["Inhalation", "PO", "IV", "Nebulization"],
-    cautionsAndContraindications: ["Tachycardia/tremor with overuse"],
-    instructions: "Use spacer with MDI. Neb: 2.5 mg/2.5 ml respules common.",
+    cautionsAndContraindications: ["Tachycardia/tremor with overuse", "Hypokalemia with frequent nebs"],
+    instructions: "Use spacer with MDI. Neb: 2.5 mg/2.5 ml respules common. Levolin = levosalbutamol.",
     referenceSource: "Harriet Lane / IAP STG",
     renalAdjustment: false,
     ivAdministration: {
@@ -622,9 +1241,11 @@ export const pediatricDrugsDB: PediatricDrug[] = [
       note: "IV salbutamol (severe asthma, ICU): controlled infusion only — not ward IV push.",
     },
     formulations: [
-      f("Syrup", "2 mg/5 ml", 2, 5, ["Asthalin", "Ventorlin"], { packSizes: ["100 ml"] }),
+      f("Syrup", "2 mg/5 ml (salbutamol)", 2, 5, ["Asthalin", "Ventorlin"], { packSizes: ["100 ml"] }),
+      f("Syrup", "1 mg/5 ml (levosalbutamol)", 1, 5, ["Levolin", "Levolin Syrup"], { packSizes: ["100 ml"] }),
       f("Inhalation / Neb", "2.5 mg/2.5 ml respule", 2.5, 2.5, ["Asthalin respules"], {}),
-      f("Inhalation / Neb", "MDI 100 mcg/puff", 0.1, 1, ["Asthalin inhaler"], {}),
+      f("Inhalation / Neb", "Levolin 0.31 / 0.63 / 1.25 mg respule", 0.63, 1, ["Levolin respules"], {}),
+      f("Inhalation / Neb", "MDI 100 mcg/puff", 0.1, 1, ["Asthalin inhaler", "Levolin inhaler"], {}),
     ],
   },
   {
@@ -904,15 +1525,25 @@ export const pediatricDrugsDB: PediatricDrug[] = [
 export function searchPediatricDrugs(query: string): PediatricDrug[] {
   const q = query.trim().toLowerCase();
   if (!q) return pediatricDrugsDB;
-  return pediatricDrugsDB.filter(
-    (d) =>
-      d.name.toLowerCase().includes(q) ||
-      d.category.toLowerCase().includes(q) ||
-      d.id.toLowerCase().includes(q) ||
-      d.formulations.some(
-        (x) =>
-          x.strengthLabel.toLowerCase().includes(q) ||
-          x.commonBrandsIndia.some((b) => b.toLowerCase().includes(q)),
-      ),
-  );
+  return pediatricDrugsDB.filter((d) => {
+    if (d.name.toLowerCase().includes(q)) return true;
+    if (d.category.toLowerCase().includes(q)) return true;
+    if (d.id.toLowerCase().includes(q)) return true;
+    if (d.instructions.toLowerCase().includes(q)) return true;
+    return d.formulations.some(
+      (x) =>
+        x.strengthLabel.toLowerCase().includes(q) ||
+        x.form.toLowerCase().includes(q) ||
+        x.commonBrandsIndia.some((b) => b.toLowerCase().includes(q)),
+    );
+  });
+}
+
+/** Flat brand list for a drug (search UI). */
+export function brandsForDrug(drug: PediatricDrug, max = 6): string[] {
+  const set = new Set<string>();
+  for (const f of drug.formulations) {
+    for (const b of f.commonBrandsIndia) set.add(b);
+  }
+  return Array.from(set).slice(0, max);
 }
