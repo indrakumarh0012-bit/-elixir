@@ -12,7 +12,8 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 Open http://127.0.0.1:5173/
 
-Deploy the new UI with **Vercel/Netlify** (root directory `web`) — not Streamlit Cloud.
+Deploy the new UI with **Netlify** (Chrome install) or **Vercel** — root directory `web`.  
+**Netlify step-by-step:** [`NEW_SMART_ELIXIR/NETLIFY_INSTALL_GUIDE.md`](./NEW_SMART_ELIXIR/NETLIFY_INSTALL_GUIDE.md)
 
 ## Old app
 
