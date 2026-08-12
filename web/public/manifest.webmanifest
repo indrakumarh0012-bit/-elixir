@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Smart-Elixir",
   "short_name": "Smart-Elixir",
   "description": "Clinical suite: summarizer, pediatric dosing, and creatinine clearance.",

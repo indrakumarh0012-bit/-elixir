@@ -1,5 +1,6 @@
 import { useState } from "react";
 import CreatinineClearance from "./components/CreatinineClearance";
+import InstallAppBanner from "./components/InstallAppBanner";
 import PatientAnalysisSummarizer from "./components/PatientAnalysisSummarizer";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 
@@ -40,6 +41,8 @@ export default function App() {
           </nav>
         </div>
       </header>
+
+      <InstallAppBanner />
 
       <main className="flex-1">
         {tab === "summarizer" && <PatientAnalysisSummarizer />}
