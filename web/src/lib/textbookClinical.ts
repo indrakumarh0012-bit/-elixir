@@ -1,5 +1,4 @@
-import { getGroqApiKey } from "./buildPerforma";
-import { groqChatCompletion, groqErrorMessage } from "./groqClient";
+import { canAttemptAiCall, groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { selectTextbooksForPatient } from "./selectTextbooks";
 import { stripModelThinking } from "./stripModelThinking";
 import {
@@ -213,8 +212,7 @@ async function chatComplete(
   user: string,
   opts?: { maxTokens?: number; temperature?: number },
 ): Promise<string> {
-  const key = getGroqApiKey();
-  if (!import.meta.env.PROD && !key) throw new Error("AI key required.");
+  if (!canAttemptAiCall()) throw new Error("AI not available.");
 
   const max_tokens = opts?.maxTokens ?? 2800;
   const temperature = opts?.temperature ?? 0.1;
@@ -222,18 +220,15 @@ async function chatComplete(
   let last = "No model available.";
   for (const model of TEXT_MODELS) {
     try {
-      const res = await groqChatCompletion(
-        {
-          model,
-          temperature,
-          max_tokens,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-        },
-        key,
-      );
+      const res = await groqChatCompletion({
+        model,
+        temperature,
+        max_tokens,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      });
       if (res.status === 404) {
         last = `Model ${model} unavailable.`;
         continue;

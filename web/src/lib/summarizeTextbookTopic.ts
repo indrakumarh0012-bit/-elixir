@@ -1,7 +1,6 @@
 import { citeBook } from "../data/textbookEditions";
 import type { MedicalTextbook } from "../data/medicalBooksDB";
-import { getGroqApiKey } from "./buildPerforma";
-import { groqChatCompletion, groqErrorMessage } from "./groqClient";
+import { canAttemptAiCall, groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 import { stripReferLanguage } from "./textbookClinicalShared";
 
@@ -21,26 +20,24 @@ You MAY end with one line: Ref: <exact book citation>.
 English digits. No markdown asterisks.`;
 
 async function chat(system: string, user: string): Promise<string> {
-  const key = getGroqApiKey();
-  if (!import.meta.env.PROD && !key) {
-    throw new Error("AI key not set. Save Groq key once in Summarizer (local dev), or deploy with GROQ_API_KEY.");
+  if (!canAttemptAiCall()) {
+    throw new Error(
+      "AI not available. Add GROQ_API_KEY on Netlify (website) or enter your Netlify URL in the setup banner (installed app).",
+    );
   }
 
   let last = "No model available.";
   for (const model of MODELS) {
     try {
-      const res = await groqChatCompletion(
-        {
-          model,
-          temperature: 0.15,
-          max_tokens: 3200,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-        },
-        key,
-      );
+      const res = await groqChatCompletion({
+        model,
+        temperature: 0.15,
+        max_tokens: 3200,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      });
       if (res.status === 404) {
         last = `Model ${model} unavailable.`;
         continue;

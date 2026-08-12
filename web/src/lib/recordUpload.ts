@@ -1,4 +1,4 @@
-import { getGroqApiKey } from "./buildPerforma";
+import { canAttemptAiCall } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 import {
   extractTextFromImageFile,
@@ -87,7 +87,7 @@ function readAsDataUrl(file: File): Promise<string> {
  */
 export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> {
   const id = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`;
-  const apiKey = getGroqApiKey();
+  const visionReady = canAttemptAiCall();
 
   if (file.size > MAX_UPLOAD_BYTES) {
     return {
@@ -120,7 +120,7 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
 
       // Scanned / empty text layer → vision (handles mild blur)
       if (text.trim().length < 40) {
-        if (!apiKey) {
+        if (!visionReady) {
           return {
             id,
             name: file.name,
@@ -128,11 +128,11 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
             kind: "pdf",
             status: "error",
             message:
-              "Scanned PDF needs AI key once (save key above) to read blurry/image pages.",
+              "Scanned PDF needs AI. On the website: add GROQ_API_KEY on Netlify. In the installed app: enter your Netlify URL in the setup banner.",
             extractedText: "",
           };
         }
-        text = await extractTextFromPdfViaVision(file, apiKey);
+        text = await extractTextFromPdfViaVision(file);
         viaVision = true;
       }
 
@@ -175,7 +175,7 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
   // Image — always vision (works on mild blur / phone photos)
   try {
     const previewUrl = await readAsDataUrl(file);
-    if (!apiKey) {
+    if (!visionReady) {
       return {
         id,
         name: file.name,
@@ -184,12 +184,12 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
         status: "error",
         previewUrl,
         message:
-          "Image needs AI key once (save key above) to extract clinical text.",
+          "Image upload needs AI. On the website: add GROQ_API_KEY on Netlify. In the installed app: enter your Netlify URL in the setup banner.",
         extractedText: "",
       };
     }
 
-    const text = await extractTextFromImageFile(file, apiKey);
+    const text = await extractTextFromImageFile(file);
     if (!text.trim()) {
       return {
         id,

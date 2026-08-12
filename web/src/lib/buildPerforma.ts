@@ -4,7 +4,7 @@ import {
 } from "../summary/extractionPrompt";
 import { parsePatientSummariesJson } from "../summary/parsePatientSummary";
 import type { PatientSummary } from "../summary/types";
-import { groqChatCompletion, groqErrorMessage } from "./groqClient";
+import { canAttemptAiCall, groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 import { enrichPatientFromTextbooks } from "./textbookClinical";
 
@@ -47,12 +47,11 @@ export async function analyzeNotesToPerforma(
     };
   }
 
-  const key = getGroqApiKey();
-  if (!import.meta.env.PROD && !key) {
+  if (!canAttemptAiCall() && !import.meta.env.PROD) {
     return {
       ok: false,
       error:
-        "AI key not set. Owner: save Groq key once below (local dev), or deploy with GROQ_API_KEY on the server.",
+        "AI key not set. Save Groq key below (local dev), or deploy with GROQ_API_KEY on Netlify.",
     };
   }
 

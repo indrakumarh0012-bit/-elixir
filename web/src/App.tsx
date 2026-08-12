@@ -1,5 +1,6 @@
 import { useState } from "react";
 import CreatinineClearance from "./components/CreatinineClearance";
+import AiSetupBanner from "./components/AiSetupBanner";
 import InstallAppBanner from "./components/InstallAppBanner";
 import PatientAnalysisSummarizer from "./components/PatientAnalysisSummarizer";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
@@ -42,6 +43,7 @@ export default function App() {
         </div>
       </header>
 
+      <AiSetupBanner />
       <InstallAppBanner />
 
       <main className="flex-1">
