@@ -1,5 +1,4 @@
-import { getGroqApiKey } from "./buildPerforma";
-import { groqChatCompletion, groqErrorMessage } from "./groqClient";
+import { canAttemptAiCall, groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 const VISION_MODEL = "qwen/qwen3.6-27b";
 
@@ -143,31 +142,29 @@ function isTokenLimitError(status: number, body: string): boolean {
 
 export async function extractTextFromImageDataUrl(
   dataUrl: string,
-  apiKey?: string,
+  _apiKey?: string,
   prompt: string = VISION_PROMPT,
 ): Promise<string> {
-  const key = apiKey || getGroqApiKey();
-  if (!import.meta.env.PROD && !key) {
-    throw new Error("AI key required to read images / scanned pages.");
+  if (!canAttemptAiCall()) {
+    throw new Error(
+      "AI not available for image reading. Add GROQ_API_KEY on Netlify or enter your site URL in the setup banner.",
+    );
   }
 
-  const res = await groqChatCompletion(
-    {
-      model: VISION_MODEL,
-      temperature: 0.05,
-      max_tokens: MAX_COMPLETION_TOKENS,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    },
-    key,
-  );
+  const res = await groqChatCompletion({
+    model: VISION_MODEL,
+    temperature: 0.05,
+    max_tokens: MAX_COMPLETION_TOKENS,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: dataUrl } },
+        ],
+      },
+    ],
+  });
 
   if (!res.ok) {
     const err = await res.text();
