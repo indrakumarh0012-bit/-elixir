@@ -129,7 +129,7 @@ export default function ReferenceLibrary() {
         </header>
 
         <div className="mb-4">
-          <GroqKeySetupCard compact />
+          <GroqKeySetupCard variant="compact" />
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

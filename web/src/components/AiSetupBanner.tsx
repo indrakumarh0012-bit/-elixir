@@ -40,7 +40,7 @@ export default function AiSetupBanner() {
             </button>
           </div>
         )}
-        <GroqKeySetupCard compact />
+        <GroqKeySetupCard variant="compact" />
         <button
           type="button"
           onClick={() => setHidden(true)}

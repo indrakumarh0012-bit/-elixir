@@ -170,9 +170,12 @@ export default function PatientAnalysisSummarizer() {
   return (
     <div className="bg-slate-50">
       <div className="border-b border-slate-200 bg-white print:hidden">
-        <div className="mx-auto max-w-7xl px-3 py-3 md:px-6">
+        <div className="mx-auto max-w-7xl space-y-3 px-3 py-3 md:px-6">
           <h1 className="text-xl font-bold text-slate-900">Summarizer</h1>
-          <div className="mt-3 flex flex-wrap gap-2">
+
+          <GroqKeySetupCard />
+
+          <div className="flex flex-wrap gap-2">
             {panes.map((p) => (
               <button
                 key={p.id}
@@ -196,8 +199,6 @@ export default function PatientAnalysisSummarizer() {
 
       {pane === "history" && (
         <div className="mx-auto max-w-7xl space-y-4 px-3 py-4 md:px-6">
-          <GroqKeySetupCard />
-
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 print:hidden">
             <aside className="lg:col-span-2">
               <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
