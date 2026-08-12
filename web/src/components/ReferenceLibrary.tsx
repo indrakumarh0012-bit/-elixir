@@ -7,6 +7,7 @@ import {
 } from "../data/medicalBooksDB";
 import { citeBook } from "../data/textbookEditions";
 import { summarizeTextbookTopic } from "../lib/summarizeTextbookTopic";
+import ColorfulClinicalPoints from "./ColorfulClinicalPoints";
 
 function levelBadgeClass(level: MedicalTextbook["level"]): string {
   if (level === "UG Standard") return "bg-emerald-100 text-emerald-800 border-emerald-200";
@@ -265,11 +266,14 @@ export default function ReferenceLibrary() {
             )}
 
             {summary && (
-              <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50/40 p-4">
+              <div className="mt-5 rounded-xl border border-teal-200 bg-gradient-to-b from-teal-50/80 to-white p-4">
                 <h3 className="text-sm font-bold text-teal-900">Textbook summary</h3>
-                <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-800">
-                  {summary}
-                </pre>
+                <p className="mt-1 text-xs text-teal-800">
+                  Structured clinical teaching from {citeBook(selectedBook.id, selectedBook.title)}
+                </p>
+                <div className="mt-4">
+                  <ColorfulClinicalPoints text={summary} emptyHint="" />
+                </div>
               </div>
             )}
           </div>

@@ -12,11 +12,13 @@ const MODELS = [
 ] as const;
 
 const RULES = `You teach from ONE named latest-edition textbook.
-WRITE detailed authentic clinical content (mechanisms, diagnosis approach, key management principles, red flags, monitoring).
-FORBIDDEN as a substitute for content: "refer to", "see chapter", "consult the book", "confirm in", "read the textbook", "this is only a scaffold".
+WRITE specific, textbook-faithful clinical teaching — not vague overviews.
+Every point must name concrete findings, doses, routes, frequencies, durations, monitoring, and escalation triggers when the topic involves treatment.
+Use standard clinical terminology for the concept (e.g. "oral amoxicillin 40–90 mg/kg/day divided q8–12h", "IV ceftriaxone 50–100 mg/kg/day", "target SpO2 ≥94%", "furosemide 20–40 mg IV bolus").
+FORBIDDEN: "refer to book", "see chapter", "consult the text", "as per guidelines" without giving the actual guideline content, generic phrases like "supportive care" without specifics.
+Structure with clear section headings. Use numbered points under each heading.
 You MAY end with one line: Ref: <exact book citation>.
-Use conservative textbook consensus only. Do not invent page numbers, trials, or rare unverified claims.
-English digits. No markdown asterisks or dash bullets — use numbered points.`;
+English digits. No markdown asterisks.`;
 
 async function chat(system: string, user: string): Promise<string> {
   const key = getGroqApiKey();
@@ -96,18 +98,21 @@ Level: ${book.level}
 Book focus: ${book.description}
 Related themes in this book: ${book.keyTopics.join("; ")}`;
 
-  const format = `Output format:
-Title line: ${t} — ${citation}
+  const format = `Output format — use these exact section headings:
 
-Then numbered detailed teaching (8–14 points), covering as relevant:
-1–3 pathophysiology / core concepts
-4–6 clinical features / diagnosis approach / key investigations
-7–10 management principles (first-line, supportive, monitoring)
-11–12 complications / red flags / when to escalate
-Optional short “Exam pearls” numbered block if UG/PG exam-relevant.
+1. Definition and core concept
+2. Pathophysiology / mechanism
+3. Clinical features and red flags
+4. Diagnosis and key investigations
+5. Treatment — first-line (name drug, dose, route, frequency, duration)
+6. Treatment — alternatives and when to escalate
+7. Monitoring and complications
+8. Exam pearls (if UG/PG relevant)
 
+Under each heading write 2–5 numbered, specific, textbook-standard points.
+Include exact drug names, doses, routes, and intervals wherever treatment is discussed.
 End with exactly: Ref: ${citation}
-No fluff. No “refer to book” lines.`;
+No fluff. No "refer to book" lines.`;
 
   let out = stripReferLanguage(
     await chat(
