@@ -12,12 +12,30 @@ Share Smart-Elixir as an installable Android app (`.apk`).
 
 ## Option A — Download APK from GitHub (recommended)
 
-1. Deploy `web/` to **Vercel** or **Netlify** first (see `PRODUCTION_DEPLOY.md`).
+### Quick download (latest build)
+
+1. Open **[Actions → Build Android APK](https://github.com/indrakumarh0012-bit/-elixir/actions/workflows/android-apk.yml)**.
+2. Click the latest green run → scroll to **Artifacts** → download **Smart-Elixir-debug-apk**.
+3. Unzip and share `app-debug.apk` (rename to `Smart-Elixir.apk` if you like).
+
+### Permanent release link
+
+1. Open **Actions → Release Android APK → Run workflow** (tag e.g. `v0.1.0`).
+2. When done, open **Releases** on GitHub — the APK is attached to that release.
+
+### Enable AI Summarizer in the APK
+
+1. Deploy `web/` to **Vercel** or **Netlify** (see `PRODUCTION_DEPLOY.md`).
 2. In GitHub → repo **Settings → Secrets → Actions**, add:
    - `VITE_API_BASE_URL` = your live HTTPS URL (e.g. `https://smart-elixir.vercel.app`)
-3. Open **Actions** → **Build Android APK** → **Run workflow**.
-4. When finished, download **Smart-Elixir-debug-apk** from the run artifacts.
-5. Share `app-debug.apk` — users enable **Install unknown apps** and open the file.
+3. Re-run **Build Android APK** or **Release Android APK**.
+
+### Install on Android
+
+Share the `.apk` file (WhatsApp, Drive, email). On the phone:
+
+1. Open the file → if blocked, go to **Settings → Security → Install unknown apps** and allow your file manager or browser.
+2. Tap **Install** → open **Smart-Elixir** from the home screen.
 
 ## Option B — Build APK on your PC
 
