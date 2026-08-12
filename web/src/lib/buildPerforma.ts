@@ -4,12 +4,11 @@ import {
 } from "../summary/extractionPrompt";
 import { parsePatientSummariesJson } from "../summary/parsePatientSummary";
 import type { PatientSummary } from "../summary/types";
-import { canAttemptAiCall, groqChatCompletion, groqErrorMessage } from "./groqClient";
+import { groqChatCompletion, groqErrorMessage, isGroqConfigured } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 import { enrichPatientFromTextbooks } from "./textbookClinical";
 
 export function getGroqApiKey(): string {
-  if (import.meta.env.PROD) return "";
   const fromEnv = (import.meta.env.VITE_GROQ_API_KEY as string | undefined)?.trim();
   if (fromEnv) return fromEnv;
   try {
@@ -47,11 +46,11 @@ export async function analyzeNotesToPerforma(
     };
   }
 
-  if (!canAttemptAiCall() && !import.meta.env.PROD) {
+  if (!(await isGroqConfigured())) {
     return {
       ok: false,
       error:
-        "AI key not set. Save Groq key below (local dev), or deploy with GROQ_API_KEY on Netlify.",
+        "AI not connected. Paste your Groq key once in the yellow banner at the top (free from console.groq.com).",
     };
   }
 

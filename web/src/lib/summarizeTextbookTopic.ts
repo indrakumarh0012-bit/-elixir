@@ -22,7 +22,7 @@ English digits. No markdown asterisks.`;
 async function chat(system: string, user: string): Promise<string> {
   if (!canAttemptAiCall()) {
     throw new Error(
-      "AI not available. Add GROQ_API_KEY on Netlify (website) or enter your Netlify URL in the setup banner (installed app).",
+      "AI not available. Paste your Groq key in the yellow banner at the top.",
     );
   }
 

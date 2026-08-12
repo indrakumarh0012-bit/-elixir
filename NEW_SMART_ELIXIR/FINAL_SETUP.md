@@ -13,17 +13,34 @@ Do these **3 steps once**. After that, Summarizer, Books, image upload, Ped Dose
    - Publish: **`dist`**
 3. Deploy once (may fail AI until step 2 — that's OK)
 
-## Step 2 — Add Groq key (2 min)
+## Step 2 — Connect AI (pick one — no Netlify upgrade needed)
+
+### Option A — Paste Groq key in the app (easiest)
 
 **Click-by-click guide:** [`NETLIFY_ADD_API_KEY.md`](./NETLIFY_ADD_API_KEY.md)
 
 Short version:
 
 1. Get free key: https://console.groq.com/keys (`gsk_…`)
+<<<<<<< Updated upstream
 2. Netlify → open your site → **Project configuration** → **Environment variables**
 3. **Add a variable** → Key: `GROQ_API_KEY`, Value: your `gsk_…` key
 4. **Deploys** → **Trigger deploy** → **Deploy site**
 5. Test: `https://YOUR-SITE.netlify.app/api/groq` → must show `"configured":true`
+=======
+2. Open your Netlify site on your phone
+3. Yellow banner at top → paste key → **Save Groq key**
+4. Done — Summarizer, Books, and image upload all work
+
+Key stays on **your device only**. No Netlify paid plan required.
+
+### Option B — Netlify server key (if your plan allows env variables)
+
+1. Netlify → **Project configuration** → **Environment variables**
+2. Add `GROQ_API_KEY` = your `gsk_…` key
+3. **Trigger deploy**
+4. Test: `https://YOUR-SITE.netlify.app/api/groq` → `"configured":true`
+>>>>>>> Stashed changes
 
 ## Step 3 — Install from Chrome (1 min)
 
