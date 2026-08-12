@@ -8,6 +8,7 @@ const CURSOR_VM_HOSTS = [
 ]
 
 export default defineConfig({
+  base: './',
   plugins: [react(), tailwindcss()],
   server: {
     host: true,
