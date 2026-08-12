@@ -128,7 +128,7 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
             kind: "pdf",
             status: "error",
             message:
-              "Scanned PDF needs AI. On the website: add GROQ_API_KEY on Netlify. In the installed app: enter your Netlify URL in the setup banner.",
+              "Scanned PDF needs AI. Paste your Groq key in the yellow banner at the top.",
             extractedText: "",
           };
         }
@@ -183,8 +183,8 @@ export async function ingestRecordFile(file: File): Promise<UploadedRecordFile> 
         kind: "image",
         status: "error",
         previewUrl,
-        message:
-          "Image upload needs AI. On the website: add GROQ_API_KEY on Netlify. In the installed app: enter your Netlify URL in the setup banner.",
+            message:
+              "Image upload needs AI. Paste your Groq key in the yellow banner at the top (free from console.groq.com).",
         extractedText: "",
       };
     }
