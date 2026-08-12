@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ALL_SPECIALTIES,
   getSpecialties,
@@ -6,10 +6,7 @@ import {
 } from "../data/medicalBooksDB";
 import {
   analyzeNotesToPerforma,
-  getGroqApiKey,
-  saveGroqApiKey,
 } from "../lib/buildPerforma";
-import { isGroqConfigured } from "../lib/groqClient";
 import {
   ACCEPT_ATTR,
   formatBytes,
@@ -29,6 +26,7 @@ import {
 } from "../summary/summaryArchive";
 import type { PatientSummary } from "../summary/types";
 import PatientPerformaPanel from "./PatientPerformaPanel";
+import GroqKeySetupCard from "./GroqKeySetupCard";
 import ReferenceLibrary from "./ReferenceLibrary";
 import RegimenAnalyzerUI from "./RegimenAnalyzerUI";
 
@@ -63,19 +61,6 @@ export default function PatientAnalysisSummarizer() {
   const [archive, setArchive] = useState<ArchivedSummary[]>(() =>
     loadSummaryArchive(),
   );
-
-  const [keyReady, setKeyReady] = useState(() => Boolean(getGroqApiKey()));
-  const [keyDraft, setKeyDraft] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    isGroqConfigured().then((ready) => {
-      if (active) setKeyReady(ready);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const performaRef = useRef<HTMLDivElement>(null);
 
@@ -211,33 +196,7 @@ export default function PatientAnalysisSummarizer() {
 
       {pane === "history" && (
         <div className="mx-auto max-w-7xl space-y-4 px-3 py-4 md:px-6">
-          {!import.meta.env.PROD && !keyReady && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 print:hidden">
-              <p className="text-sm font-semibold text-amber-950">
-                Groq API key (local development only)
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <input
-                  type="password"
-                  value={keyDraft}
-                  onChange={(e) => setKeyDraft(e.target.value)}
-                  placeholder="gsk_…"
-                  className="min-w-[220px] flex-1 rounded-lg border border-amber-300 px-3 py-2 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    saveGroqApiKey(keyDraft);
-                    setKeyReady(Boolean(getGroqApiKey()));
-                    setKeyDraft("");
-                  }}
-                  className="rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Save key
-                </button>
-              </div>
-            </div>
-          )}
+          <GroqKeySetupCard />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 print:hidden">
             <aside className="lg:col-span-2">

@@ -56,6 +56,18 @@ export async function groqChatCompletion(
   body: GroqChatRequest,
   apiKey?: string,
 ): Promise<Response> {
+  const key = apiKey || getGroqApiKey();
+  if (key) {
+    return fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
   if (usesServerProxy() && (await isServerProxyConfigured())) {
     return fetch(proxyUrl(PROXY_PATH), {
       method: "POST",
@@ -64,26 +76,11 @@ export async function groqChatCompletion(
     });
   }
 
-  const key = apiKey || getGroqApiKey();
-  if (!key) {
-    if (Capacitor.isNativePlatform()) {
-      throw new Error(
-        "AI not connected. Use the yellow banner: enter your Netlify URL, or paste your Groq key.",
-      );
-    }
-    throw new Error(
-      "AI not connected. Use the yellow banner at the top to paste your Groq API key once (free from console.groq.com).",
-    );
-  }
-
-  return fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  throw new Error(
+    Capacitor.isNativePlatform()
+      ? "AI not connected. Paste your Groq key in the setup box (gsk_…)."
+      : "AI not connected. Scroll up and paste your Groq key in the setup box (starts with gsk_).",
+  );
 }
 
 export function groqErrorMessage(status: number, errText: string): string {
