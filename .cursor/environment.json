@@ -1,6 +1,6 @@
 {
   "name": "Smart-Elixir",
-  "install": ".cursor/scripts/cloud-agent-install.sh",
+  "install": "bash .cursor/scripts/cloud-agent-install.sh",
   "terminals": [
     {
       "name": "web-dev",
