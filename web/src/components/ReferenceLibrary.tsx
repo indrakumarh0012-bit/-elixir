@@ -8,6 +8,7 @@ import {
 import { citeBook } from "../data/textbookEditions";
 import { summarizeTextbookTopic } from "../lib/summarizeTextbookTopic";
 import ColorfulClinicalPoints from "./ColorfulClinicalPoints";
+import GroqKeySetupCard from "./GroqKeySetupCard";
 
 function levelBadgeClass(level: MedicalTextbook["level"]): string {
   if (level === "UG Standard") return "bg-emerald-100 text-emerald-800 border-emerald-200";
@@ -126,6 +127,10 @@ export default function ReferenceLibrary() {
             />
           </div>
         </header>
+
+        <div className="mb-4">
+          <GroqKeySetupCard compact />
+        </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredBooks.map((book) => (
