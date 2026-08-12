@@ -8,20 +8,20 @@ type AppTab = "summarizer" | "pedDose" | "crCl";
 export default function App() {
   const [tab, setTab] = useState<AppTab>("summarizer");
 
-  const tabs: { id: AppTab; label: string }[] = [
-    { id: "summarizer", label: "Summarizer" },
-    { id: "pedDose", label: "Ped Dose Calculator" },
-    { id: "crCl", label: "Creatinine Clearance" },
+  const tabs: { id: AppTab; label: string; shortLabel: string }[] = [
+    { id: "summarizer", label: "Summarizer", shortLabel: "Summary" },
+    { id: "pedDose", label: "Ped Dose Calculator", shortLabel: "Ped Dose" },
+    { id: "crCl", label: "Creatinine Clearance", shortLabel: "CrCl" },
   ];
 
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-[var(--line)] bg-white">
+    <div className="flex min-h-screen flex-col">
+      <header className="app-header border-b border-[var(--line)] bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
           <p className="text-lg font-bold tracking-tight text-[var(--accent)]">
             Smart-Elixir
           </p>
-          <nav className="flex flex-wrap gap-2">
+          <nav className="flex flex-wrap gap-2" aria-label="Main navigation">
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -33,16 +33,25 @@ export default function App() {
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
-                {t.label}
+                <span className="hidden sm:inline">{t.label}</span>
+                <span className="sm:hidden">{t.shortLabel}</span>
               </button>
             ))}
           </nav>
         </div>
       </header>
 
-      {tab === "summarizer" && <PatientAnalysisSummarizer />}
-      {tab === "pedDose" && <PediatricDosageCalculator />}
-      {tab === "crCl" && <CreatinineClearance />}
-    </main>
+      <main className="flex-1">
+        {tab === "summarizer" && <PatientAnalysisSummarizer />}
+        {tab === "pedDose" && <PediatricDosageCalculator />}
+        {tab === "crCl" && <CreatinineClearance />}
+      </main>
+
+      <footer className="border-t border-[var(--line)] bg-white px-3 py-4 text-center text-xs leading-relaxed text-[var(--muted)] md:px-6">
+        Smart-Elixir is a clinical decision-support tool for licensed healthcare
+        professionals. It does not replace clinical judgment, diagnosis, or
+        emergency care. Verify all doses and plans before prescribing.
+      </footer>
+    </div>
   );
 }

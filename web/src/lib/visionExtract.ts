@@ -1,7 +1,6 @@
 import { getGroqApiKey } from "./buildPerforma";
+import { groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
-
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const VISION_MODEL = "qwen/qwen3.6-27b";
 
 /**
@@ -148,15 +147,12 @@ export async function extractTextFromImageDataUrl(
   prompt: string = VISION_PROMPT,
 ): Promise<string> {
   const key = apiKey || getGroqApiKey();
-  if (!key) throw new Error("AI key required to read images / scanned pages.");
+  if (!import.meta.env.PROD && !key) {
+    throw new Error("AI key required to read images / scanned pages.");
+  }
 
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  const res = await groqChatCompletion(
+    {
       model: VISION_MODEL,
       temperature: 0.05,
       max_tokens: MAX_COMPLETION_TOKENS,
@@ -169,8 +165,9 @@ export async function extractTextFromImageDataUrl(
           ],
         },
       ],
-    }),
-  });
+    },
+    key,
+  );
 
   if (!res.ok) {
     const err = await res.text();
@@ -179,9 +176,10 @@ export async function extractTextFromImageDataUrl(
         "Vision model qwen/qwen3.6-27b not available on this Groq key.",
       );
     }
-    const e = new Error(
-      `Vision read failed (${res.status}): ${err.slice(0, 220)}`,
-    ) as Error & { status?: number; body?: string };
+    const e = new Error(groqErrorMessage(res.status, err)) as Error & {
+      status?: number;
+      body?: string;
+    };
     e.status = res.status;
     e.body = err;
     throw e;

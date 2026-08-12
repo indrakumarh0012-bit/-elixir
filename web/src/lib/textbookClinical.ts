@@ -1,4 +1,5 @@
 import { getGroqApiKey } from "./buildPerforma";
+import { groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { selectTextbooksForPatient } from "./selectTextbooks";
 import { stripModelThinking } from "./stripModelThinking";
 import {
@@ -9,8 +10,6 @@ import type { PatientSummary } from "../summary/types";
 import { withSortedAdmissions } from "../summary/types";
 
 export { conditionsFromSummary } from "./textbookClinicalShared";
-
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const TEXT_MODELS = [
   "llama-3.3-70b-versatile",
@@ -215,7 +214,7 @@ async function chatComplete(
   opts?: { maxTokens?: number; temperature?: number },
 ): Promise<string> {
   const key = getGroqApiKey();
-  if (!key) throw new Error("AI key required.");
+  if (!import.meta.env.PROD && !key) throw new Error("AI key required.");
 
   const max_tokens = opts?.maxTokens ?? 2800;
   const temperature = opts?.temperature ?? 0.1;
@@ -223,13 +222,8 @@ async function chatComplete(
   let last = "No model available.";
   for (const model of TEXT_MODELS) {
     try {
-      const res = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const res = await groqChatCompletion(
+        {
           model,
           temperature,
           max_tokens,
@@ -237,8 +231,9 @@ async function chatComplete(
             { role: "system", content: system },
             { role: "user", content: user },
           ],
-        }),
-      });
+        },
+        key,
+      );
       if (res.status === 404) {
         last = `Model ${model} unavailable.`;
         continue;
@@ -246,7 +241,7 @@ async function chatComplete(
       if (!res.ok) {
         last = await res.text();
         if (res.status === 401 || res.status === 429) {
-          throw new Error(last.slice(0, 180));
+          throw new Error(groqErrorMessage(res.status, last));
         }
         continue;
       }

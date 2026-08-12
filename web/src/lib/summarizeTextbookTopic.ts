@@ -1,10 +1,9 @@
 import { citeBook } from "../data/textbookEditions";
 import type { MedicalTextbook } from "../data/medicalBooksDB";
 import { getGroqApiKey } from "./buildPerforma";
+import { groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 import { stripReferLanguage } from "./textbookClinicalShared";
-
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const MODELS = [
   "llama-3.3-70b-versatile",
@@ -21,20 +20,15 @@ English digits. No markdown asterisks or dash bullets — use numbered points.`;
 
 async function chat(system: string, user: string): Promise<string> {
   const key = getGroqApiKey();
-  if (!key) {
-    throw new Error("AI key not set. Save Groq key once in Summarizer, then try again.");
+  if (!import.meta.env.PROD && !key) {
+    throw new Error("AI key not set. Save Groq key once in Summarizer (local dev), or deploy with GROQ_API_KEY.");
   }
 
   let last = "No model available.";
   for (const model of MODELS) {
     try {
-      const res = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const res = await groqChatCompletion(
+        {
           model,
           temperature: 0.15,
           max_tokens: 3200,
@@ -42,8 +36,9 @@ async function chat(system: string, user: string): Promise<string> {
             { role: "system", content: system },
             { role: "user", content: user },
           ],
-        }),
-      });
+        },
+        key,
+      );
       if (res.status === 404) {
         last = `Model ${model} unavailable.`;
         continue;
@@ -51,7 +46,7 @@ async function chat(system: string, user: string): Promise<string> {
       if (!res.ok) {
         last = await res.text();
         if (res.status === 401 || res.status === 429) {
-          throw new Error(last.slice(0, 180));
+          throw new Error(groqErrorMessage(res.status, last));
         }
         continue;
       }

@@ -4,12 +4,12 @@ import {
 } from "../summary/extractionPrompt";
 import { parsePatientSummariesJson } from "../summary/parsePatientSummary";
 import type { PatientSummary } from "../summary/types";
+import { groqChatCompletion, groqErrorMessage } from "./groqClient";
 import { stripModelThinking } from "./stripModelThinking";
 import { enrichPatientFromTextbooks } from "./textbookClinical";
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-
 export function getGroqApiKey(): string {
+  if (import.meta.env.PROD) return "";
   const fromEnv = (import.meta.env.VITE_GROQ_API_KEY as string | undefined)?.trim();
   if (fromEnv) return fromEnv;
   try {
@@ -48,45 +48,32 @@ export async function analyzeNotesToPerforma(
   }
 
   const key = getGroqApiKey();
-  if (!key) {
+  if (!import.meta.env.PROD && !key) {
     return {
       ok: false,
       error:
-        "AI key not set. Owner: save Groq key once below, then upload again.",
+        "AI key not set. Owner: save Groq key once below (local dev), or deploy with GROQ_API_KEY on the server.",
     };
   }
 
   try {
-    const res = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.1,
-        messages: [
-          { role: "system", content: SYSTEM_EXTRACTION_PROMPT },
-          {
-            role: "user",
-            content: USER_EXTRACTION_PREFIX + text.slice(0, 28000),
-          },
-        ],
-      }),
+    const res = await groqChatCompletion({
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.1,
+      messages: [
+        { role: "system", content: SYSTEM_EXTRACTION_PROMPT },
+        {
+          role: "user",
+          content: USER_EXTRACTION_PREFIX + text.slice(0, 28000),
+        },
+      ],
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      if (res.status === 401) {
-        return {
-          ok: false,
-          error: "Invalid Groq API key. Update the key once and try again.",
-        };
-      }
       return {
         ok: false,
-        error: `Analysis failed (${res.status}). ${errText.slice(0, 160)}`,
+        error: groqErrorMessage(res.status, errText),
       };
     }
 

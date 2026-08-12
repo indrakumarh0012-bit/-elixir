@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ALL_SPECIALTIES,
   getSpecialties,
@@ -9,6 +9,7 @@ import {
   getGroqApiKey,
   saveGroqApiKey,
 } from "../lib/buildPerforma";
+import { isGroqConfigured } from "../lib/groqClient";
 import {
   ACCEPT_ATTR,
   formatBytes,
@@ -65,6 +66,16 @@ export default function PatientAnalysisSummarizer() {
 
   const [keyReady, setKeyReady] = useState(() => Boolean(getGroqApiKey()));
   const [keyDraft, setKeyDraft] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    isGroqConfigured().then((ready) => {
+      if (active) setKeyReady(ready);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const performaRef = useRef<HTMLDivElement>(null);
 
@@ -200,9 +211,11 @@ export default function PatientAnalysisSummarizer() {
 
       {pane === "history" && (
         <div className="mx-auto max-w-7xl space-y-4 px-3 py-4 md:px-6">
-          {!keyReady && (
+          {!import.meta.env.PROD && !keyReady && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 print:hidden">
-              <p className="text-sm font-semibold text-amber-950">Groq API key</p>
+              <p className="text-sm font-semibold text-amber-950">
+                Groq API key (local development only)
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <input
                   type="password"
