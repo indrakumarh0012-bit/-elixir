@@ -39,16 +39,22 @@ Deploy Smart-Elixir once on Netlify. After that, every `git push` to `main` rede
 2. Choose **GitHub**
 3. If asked, grant Netlify access to your repositories
 4. Select repo: **`indrakumarh0012-bit/-elixir`**
-5. Netlify shows build settings — enter **exactly** these values:
+5. Netlify shows build settings. The repo includes **`netlify.toml` at the root** — it sets `base = "web"` automatically.
+
+   **Easiest:** leave build settings at defaults and click **Deploy site**.
+
+   **Or** enter manually:
 
 | Setting | Value |
 | --- | --- |
 | **Branch to deploy** | `main` |
 | **Base directory** | `web` |
 | **Build command** | `npm run build` |
-| **Publish directory** | `web/dist` |
+| **Publish directory** | `dist` |
 
-> If Netlify auto-fills `dist` only, change it to **`web/dist`** because the base directory is `web`.
+> **Important:** The React app is in `web/`, not the repo root. The legacy `app.py` is Streamlit — ignore it for Netlify.
+>
+> If **Base directory** is empty, Netlify runs `npm` at the repo root and fails with “no package.json”.
 
 6. Click **Deploy site** (do not add the API key yet — add it in the next step)
 
@@ -163,10 +169,25 @@ They do **not** need:
 
 ## Part 4 — Troubleshooting
 
+### Build failed: “Could not read package.json” / ENOENT
+
+Netlify is building the **wrong folder** (repo root instead of `web/`).
+
+1. Pull latest `main` (includes root `netlify.toml`), **or** fix UI manually:
+2. **Site configuration** → **Build & deploy** → **Build settings** → **Edit**
+3. Set **Base directory** to `web`
+4. Set **Build command** to `npm run build`
+5. Set **Publish directory** to `dist` (not `web/dist` when base is already `web`)
+6. **Save** → **Deploys** → **Trigger deploy** → **Deploy site**
+
+Confirm the deploy log shows `base: /opt/build/repo/web`, not `/opt/build/repo`.
+
+### Other issues
+
 | Problem | Fix |
 | --- | --- |
 | Summarizer says “AI not configured” | Add `GROQ_API_KEY` in Netlify env vars → **Trigger deploy** |
-| `/api/groq` returns 404 | Base directory must be `web`; `netlify.toml` is inside `web/` |
+| `/api/groq` returns 404 | Base directory must be `web`; root `netlify.toml` must be on `main` |
 | Build fails on Netlify | Check **Deploy log** — usually `npm ci` / Node version; repo uses Node 22 |
 | Install button not shown | Use HTTPS URL (Netlify default), Chrome browser, visit site twice |
 | Blank page after install | Hard refresh once; clear site data and revisit |
@@ -188,9 +209,9 @@ They do **not** need:
 ```
 Repo:        indrakumarh0012-bit/-elixir
 Branch:      main
-Base dir:    web
-Build:       npm run build
-Publish:     web/dist
+Config:      netlify.toml (repo root, base = web)
+Build:       npm run build  (runs inside web/)
+Publish:     dist           (web/dist on disk)
 Env var:     GROQ_API_KEY = gsk_...
 ```
 

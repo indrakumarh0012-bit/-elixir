@@ -1,7 +1,10 @@
+# Smart-Elixir React app lives in web/ (not the legacy Streamlit app.py at repo root).
+# Netlify reads this file from the repository root automatically.
+
 [build]
+  base = "web"
   command = "npm run build"
   publish = "dist"
-  base = "/"
   functions = "netlify/functions"
 
 [[redirects]]
