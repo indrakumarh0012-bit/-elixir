@@ -15,12 +15,15 @@ Do these **3 steps once**. After that, Summarizer, Books, image upload, Ped Dose
 
 ## Step 2 — Add Groq key (2 min)
 
+**Click-by-click guide:** [`NETLIFY_ADD_API_KEY.md`](./NETLIFY_ADD_API_KEY.md)
+
+Short version:
+
 1. Get free key: https://console.groq.com/keys (`gsk_…`)
-2. Netlify → **Site configuration** → **Environment variables**
-3. Add **`GROQ_API_KEY`** = your `gsk_…` key
+2. Netlify → open your site → **Project configuration** → **Environment variables**
+3. **Add a variable** → Key: `GROQ_API_KEY`, Value: your `gsk_…` key
 4. **Deploys** → **Trigger deploy** → **Deploy site**
-5. Test: open `https://YOUR-SITE.netlify.app/api/groq`  
-   Must show: `{"configured":true,...}`
+5. Test: `https://YOUR-SITE.netlify.app/api/groq` → must show `"configured":true`
 
 ## Step 3 — Install from Chrome (1 min)
 
