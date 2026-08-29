@@ -316,7 +316,8 @@ export default function PediatricDosageCalculator() {
                 {(selectedFormulation.form === "Drops" ||
                   selectedFormulation.dropperCapacityMl) && (
                   <p className="mt-1 font-medium text-amber-900">
-                    Dropper ≈ {selectedFormulation.dropsPerMl ?? 20} drops/ml
+                    Dropper ≈ {selectedFormulation.dropsPerMl ?? 20} drops/ml — use
+                    the marked dropper from the pack, never a kitchen spoon.
                   </p>
                 )}
               </div>
@@ -406,9 +407,29 @@ export default function PediatricDosageCalculator() {
                         ): <strong>{volumeMl.toFixed(2)} ml</strong>
                       </p>
                       {drops != null && (
-                        <p className="mt-1">
-                          <strong>Approx. drops:</strong> {drops.toFixed(0)}
-                        </p>
+                        <div className="mt-1 space-y-0.5">
+                          <p>
+                            <strong>As drops:</strong> ≈ {Math.round(drops)} drops{" "}
+                            <span className="text-emerald-800">
+                              (dropper ≈ {dropsPerMl} drops/ml — always confirm on the bottle label)
+                            </span>
+                          </p>
+                          {(() => {
+                            const cap = selectedFormulation.dropperCapacityMl ?? 0;
+                            if (cap <= 0 || volumeMl <= cap) return null;
+                            const full = Math.floor(volumeMl / cap);
+                            const rem = volumeMl - full * cap;
+                            return (
+                              <p>
+                                <strong>Easy way:</strong> {full} full dropper
+                                {full > 1 ? "s" : ""} ({cap} ml each)
+                                {rem > 0.05
+                                  ? ` + fill to the ${rem.toFixed(1)} ml mark`
+                                  : ""}
+                              </p>
+                            );
+                          })()}
+                        </div>
                       )}
                     </div>
                   )}

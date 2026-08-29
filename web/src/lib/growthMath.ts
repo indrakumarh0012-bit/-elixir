@@ -1,0 +1,174 @@
+import {
+  STANDING_HEIGHT_FROM_MONTH,
+  WHO_HFA_BOYS,
+  WHO_HFA_GIRLS,
+  WHO_WFA_BOYS,
+  WHO_WFA_GIRLS,
+} from "../data/whoGrowthStandards";
+
+export type Sex = "male" | "female";
+export const WHO_MAX_MONTHS = 60;
+
+export type GrowthResult = {
+  z: number;
+  percentile: number;
+  median: number;
+  /** e.g. "WHO weight-for-age (0–5 y)" — shown so the user knows the source. */
+  reference: string;
+  /** "Length" below 24 months, "Height" from 24 months. */
+  measurement?: "Length (lying)" | "Height (standing)";
+  classification: string;
+  /** Colour band for the UI: normal / caution / alert. */
+  band: "normal" | "caution" | "alert";
+};
+
+/**
+ * LMS to z-score.
+ *   L != 0:  z = ((y/M)^L - 1) / (L*S)
+ *   L == 0:  z = ln(y/M) / S
+ */
+function lmsZ(y: number, l: number, m: number, s: number): number {
+  if (l === 0) return Math.log(y / m) / s;
+  return (Math.pow(y / m, l) - 1) / (l * s);
+}
+
+/**
+ * Beyond |z| = 3 the LMS curve is unreliable in the tails, so WHO replaces it
+ * with a linear extrapolation off the 2SD–3SD gap. Applied to weight-based
+ * indicators only; height-for-age keeps the raw LMS value.
+ */
+function whoTailCorrection(
+  y: number,
+  z: number,
+  sd3neg: number,
+  sd2neg: number,
+  sd2pos: number,
+  sd3pos: number,
+): number {
+  if (z > 3) {
+    const gap = sd3pos - sd2pos;
+    return gap > 0 ? 3 + (y - sd3pos) / gap : z;
+  }
+  if (z < -3) {
+    const gap = sd2neg - sd3neg;
+    return gap > 0 ? -3 + (y - sd3neg) / gap : z;
+  }
+  return z;
+}
+
+/** Normal CDF (Abramowitz & Stegun 26.2.17) → percentile 0–100. */
+export function zToPercentile(z: number): number {
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const y =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) *
+      t +
+      0.254829592) *
+      t *
+      Math.exp(-x * x);
+  return 50 * (1 + sign * y);
+}
+
+function round(n: number, dp: number): number {
+  const f = 10 ** dp;
+  return Math.round(n * f) / f;
+}
+
+/** Weight-for-age, WHO 0–60 months. Returns null outside that range. */
+export function weightForAge(
+  weightKg: number,
+  ageMonths: number,
+  sex: Sex,
+): GrowthResult | null {
+  const month = Math.floor(ageMonths);
+  if (!Number.isFinite(weightKg) || weightKg <= 0) return null;
+  if (month < 0 || month > WHO_MAX_MONTHS) return null;
+
+  const table = sex === "male" ? WHO_WFA_BOYS : WHO_WFA_GIRLS;
+  const [, l, m, s, sd3neg, sd2neg, sd2pos, sd3pos] = table[month];
+  const z = whoTailCorrection(
+    weightKg,
+    lmsZ(weightKg, l, m, s),
+    sd3neg,
+    sd2neg,
+    sd2pos,
+    sd3pos,
+  );
+
+  let classification: string;
+  let band: GrowthResult["band"];
+  if (z < -3) {
+    classification = "Severely underweight";
+    band = "alert";
+  } else if (z < -2) {
+    classification = "Underweight";
+    band = "caution";
+  } else if (z <= 2) {
+    classification = "Normal weight for age";
+    band = "normal";
+  } else {
+    // WHO: high weight-for-age is not itself a diagnosis; assess with BMI.
+    classification = "Above +2 SD — assess with weight-for-height / BMI";
+    band = "caution";
+  }
+
+  return {
+    z: round(z, 2),
+    percentile: round(zToPercentile(z), 1),
+    median: m,
+    reference: "WHO Child Growth Standards, weight-for-age (0–5 y)",
+    classification,
+    band,
+  };
+}
+
+/** Length/height-for-age, WHO 0–60 months. Returns null outside that range. */
+export function heightForAge(
+  heightCm: number,
+  ageMonths: number,
+  sex: Sex,
+): GrowthResult | null {
+  const month = Math.floor(ageMonths);
+  if (!Number.isFinite(heightCm) || heightCm <= 0) return null;
+  if (month < 0 || month > WHO_MAX_MONTHS) return null;
+
+  const table = sex === "male" ? WHO_HFA_BOYS : WHO_HFA_GIRLS;
+  const [, l, m, s] = table[month];
+  const z = lmsZ(heightCm, l, m, s); // no tail correction for height-for-age
+
+  let classification: string;
+  let band: GrowthResult["band"];
+  if (z < -3) {
+    classification = "Severely stunted";
+    band = "alert";
+  } else if (z < -2) {
+    classification = "Stunted";
+    band = "caution";
+  } else if (z <= 3) {
+    classification = "Normal height for age";
+    band = "normal";
+  } else {
+    classification = "Very tall — consider endocrine review if unexpected";
+    band = "caution";
+  }
+
+  return {
+    z: round(z, 2),
+    percentile: round(zToPercentile(z), 1),
+    median: m,
+    reference: "WHO Child Growth Standards, length/height-for-age (0–5 y)",
+    measurement:
+      month < STANDING_HEIGHT_FROM_MONTH
+        ? "Length (lying)"
+        : "Height (standing)",
+    classification,
+    band,
+  };
+}
+
+/** Years + months → total completed months. */
+export function toMonths(years: number, months: number): number {
+  return (Number(years) || 0) * 12 + (Number(months) || 0);
+}

@@ -8,25 +8,11 @@ import {
 } from "../src/data/pediatricDrugs";
 import { estimateCrCl } from "../src/lib/creatinineClearanceMath";
 import { calculatePediatricDose } from "../src/lib/pediatricDoseMath";
-import { parsePathophysiologyFlat } from "../src/summary/formatClinicalPoints";
-import { formatPatientSummaryText } from "../src/summary/formatSummaryText";
-import { parsePatientSummariesJson } from "../src/summary/parsePatientSummary";
-import type { PatientSummary } from "../src/summary/types";
-import { withSortedAdmissions } from "../src/summary/types";
 
 type Fail = { tool: string; caseId: string; message: string };
 
 const fails: Fail[] = [];
-const pass = { summarizer: 0, pedDose: 0, crCl: 0 };
-const names = [
-  "Asha", "Ravi", "Meera", "Arjun", "Fatima", "Kabir", "Ananya", "Vikram",
-  "Priya", "Omar", "Sneha", "Dev", "Isha", "Rohan", "Zara", "Nikhil",
-];
-const diagnoses = [
-  "Community-acquired pneumonia", "Acute gastroenteritis", "Bronchiolitis",
-  "UTI", "Asthma exacerbation", "Febrile seizure", "Typhoid fever",
-  "Acute otitis media", "Viral fever", "Nephrotic syndrome",
-];
+const pass = { pedDose: 0, crCl: 0 };
 const brands = [
   "Ambroxyl", "Relent", "Calpol", "Meftal-P", "Augmentin", "Azithral",
   "Levolin", "Ascoril LS", "Ondem", "Montair", "Crocin", "Zifi",
@@ -34,116 +20,6 @@ const brands = [
 
 function fail(tool: string, caseId: string, message: string) {
   fails.push({ tool, caseId, message });
-}
-
-function makePatient(i: number): PatientSummary {
-  const sex = i % 3 === 0 ? "Female" : i % 3 === 1 ? "Male" : "Other";
-  const age = (i % 80) + 1;
-  const dx = diagnoses[i % diagnoses.length];
-  const drug = pediatricDrugsDB[i % pediatricDrugsDB.length];
-  return {
-    patientId: `DEMO-${String(i + 1).padStart(3, "0")}`,
-    hospitalId: `UHID${100000 + i}`,
-    name: `${names[i % names.length]} ${i + 1}`,
-    sex,
-    age,
-    comorbidities: i % 4 === 0 ? ["Type 2 diabetes"] : [],
-    diagnoses: [dx],
-    admissions: [
-      {
-        id: `a-${i}`,
-        admissionDate: `2024-${String((i % 12) + 1).padStart(2, "0")}-15`,
-        timestamp: Date.UTC(2024, i % 12, 15),
-        clinicalPresentation: [`Fever ${i % 5} days`, dx],
-        examinationFindings: i % 5 === 0 ? "" : "Vitals stable",
-        investigations: {
-          abnormal: i % 3 === 0 ? ["CRP elevated"] : [],
-          importantNormal: i % 2 === 0 ? ["CBC normal"] : [],
-        },
-        treatmentGiven: [
-          {
-            genericName: drug.name,
-            brandName: drug.formulations[0]?.commonBrandsIndia[0] || "",
-            contents: drug.formulations[0]?.strengthLabel || "",
-            drugClass: drug.category,
-            mechanismOfAction: "Standard textbook mechanism",
-            dosage: `${drug.defaultDoseMgPerKg} mg/kg/day`,
-            duration: "5 days",
-            instructions: drug.instructions,
-            cautions: drug.cautionsAndContraindications[0] || "Monitor",
-          },
-        ],
-        followUpAndAdvice: i % 7 === 0 ? [] : ["Review in 3 days"],
-      },
-    ],
-  };
-}
-
-function testSummarizer() {
-  console.log("\n=== SUMMARIZER: 100 demo patients + edge cases ===");
-  for (let i = 0; i < 100; i++) {
-    const id = `SUM-${i + 1}`;
-    const p = makePatient(i);
-    const sorted = withSortedAdmissions(p);
-    if (!sorted.hospitalId) fail("summarizer", id, "missing hospitalId");
-    if (!sorted.admissions.length) fail("summarizer", id, "no admissions");
-    if (sorted.admissions[0].treatmentGiven[0]?.genericName !== p.admissions[0].treatmentGiven[0].genericName) {
-      fail("summarizer", id, "drug name lost in normalize");
-    }
-    const text = formatPatientSummaryText(sorted);
-    if (!text.includes(sorted.name)) fail("summarizer", id, "format missing name");
-    if (!text.includes(sorted.hospitalId)) fail("summarizer", id, "format missing hospitalId");
-
-    const wrapped = JSON.stringify({ patients: [p] });
-    const parsed = parsePatientSummariesJson(wrapped);
-    if (!parsed.ok) fail("summarizer", id, `parse failed: ${parsed.error}`);
-    else if (parsed.patients.length !== 1) fail("summarizer", id, "wrong patient count");
-    else pass.summarizer++;
-  }
-
-  // Edge: multi-patient, fenced JSON, missing fields, bad sex
-  const multi = {
-    patients: [makePatient(0), makePatient(1), makePatient(2)],
-  };
-  const multiParsed = parsePatientSummariesJson(
-    "```json\n" + JSON.stringify(multi) + "\n```",
-  );
-  if (!multiParsed.ok || multiParsed.patients.length !== 3) {
-    fail("summarizer", "SUM-MULTI", "fenced multi-patient parse failed");
-  } else pass.summarizer++;
-
-  const broken = withSortedAdmissions({
-    admissions: [
-      {
-        // @ts-expect-error intentional incomplete
-        treatmentGiven: [{ genericName: "PCM" }],
-      },
-    ],
-  } as PatientSummary);
-  if (!broken.admissions[0].investigations.abnormal) {
-    fail("summarizer", "SUM-BROKEN", "investigations not defaulted");
-  } else if (broken.admissions[0].treatmentGiven[0].genericName !== "PCM") {
-    fail("summarizer", "SUM-BROKEN", "drug normalize failed");
-  } else pass.summarizer++;
-
-  const badSex = withSortedAdmissions({
-    ...makePatient(5),
-    sex: "Unknown" as PatientSummary["sex"],
-  });
-  if (badSex.sex !== "Other") fail("summarizer", "SUM-SEX", "bad sex not normalized");
-  else pass.summarizer++;
-
-  const patho = parsePathophysiologyFlat(
-    "1. Definition\n1. Cascade starts with endothelial injury.\n2. Inflammation amplifies edema.\nRef: Harrison 21st ed., Nelson 22nd ed.",
-  );
-  if (patho.points.length < 1) fail("summarizer", "SUM-PATHO", "patho points empty");
-  if (!patho.references.toLowerCase().includes("harrison")) {
-    fail("summarizer", "SUM-PATHO", "ref not parsed");
-  } else pass.summarizer++;
-
-  const emptyParse = parsePatientSummariesJson("");
-  if (emptyParse.ok) fail("summarizer", "SUM-EMPTY", "empty should fail");
-  else pass.summarizer++;
 }
 
 function testPedDose() {
@@ -296,12 +172,10 @@ function testCrCl() {
 }
 
 console.log("Smart-Elixir stress suite — 100+ demo patients × 3 tools");
-testSummarizer();
 testPedDose();
 testCrCl();
 
 console.log("\n========== RESULTS ==========");
-console.log(`Summarizer passes: ${pass.summarizer}`);
 console.log(`Ped Dose passes:   ${pass.pedDose}`);
 console.log(`CrCl passes:       ${pass.crCl}`);
 console.log(`Failures:          ${fails.length}`);

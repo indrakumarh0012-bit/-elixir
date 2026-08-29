@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Smart-Elixir",
   "short_name": "Smart-Elixir",
-  "description": "Clinical suite: summarizer, pediatric dosing, and creatinine clearance.",
+  "description": "Clinical calculators: pediatric dosing, WHO growth charts, creatinine clearance, and regimen review.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

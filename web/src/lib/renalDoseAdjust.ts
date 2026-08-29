@@ -100,6 +100,209 @@ const RENAL_DOSE_BANDS: Record<string, RenalDoseBand[]> = {
     { minCrCl: 30, action: "600 mg PO/IV q12h — standard; no routine adjustment." },
     { minCrCl: 0, maxCrCl: 29, action: "600 mg q12h with caution; monitor platelets and serotonin syndrome risk." },
   ],
+  // ---- Antivirals ----
+  "acyclovir-adult": [
+    { minCrCl: 25, action: "Zoster: 800 mg PO 5×/day — standard. Keep well hydrated." },
+    { minCrCl: 10, maxCrCl: 24, action: "800 mg PO q8h (reduce from 5 to 3 doses/day)." },
+    { minCrCl: 0, maxCrCl: 9, action: "800 mg PO q12h (half frequency); IV needs specialist dosing." },
+  ],
+  valacyclovir: [
+    { minCrCl: 50, action: "Zoster: 1 g PO TID — standard." },
+    { minCrCl: 30, maxCrCl: 49, action: "1 g PO q12h (two-thirds of standard)." },
+    { minCrCl: 10, maxCrCl: 29, action: "1 g PO q24h (one-third of standard)." },
+    { minCrCl: 0, maxCrCl: 9, action: "500 mg PO q24h (one-sixth); watch for confusion/hallucinations (accumulation neurotoxicity)." },
+  ],
+  famciclovir: [
+    { minCrCl: 60, action: "Zoster: 500 mg PO TID — standard." },
+    { minCrCl: 40, maxCrCl: 59, action: "500 mg PO q12h (two-thirds of standard daily dose)." },
+    { minCrCl: 20, maxCrCl: 39, action: "500 mg PO q24h (one-third of standard)." },
+    { minCrCl: 0, maxCrCl: 19, action: "250 mg PO q24h (one-sixth); after dialysis on dialysis days." },
+  ],
+  "oseltamivir-adult": [
+    { minCrCl: 60, action: "75 mg PO BD × 5 days — standard." },
+    { minCrCl: 31, maxCrCl: 59, action: "30 mg PO BD (reduce each dose to less than half)." },
+    { minCrCl: 11, maxCrCl: 30, action: "30 mg PO once daily (quarter of standard daily dose)." },
+    { minCrCl: 0, maxCrCl: 10, action: "Not recommended off dialysis; dialysis patients get per-session dosing." },
+  ],
+  // ---- Diabetes ----
+  metformin: [
+    { minCrCl: 60, action: "Up to 1 g BD — standard; no restriction." },
+    { minCrCl: 45, maxCrCl: 59, action: "Continue current dose; recheck renal function 3–6 monthly." },
+    { minCrCl: 30, maxCrCl: 44, action: "HALVE the dose (max 500 mg BD); do not start new; recheck every 3 months." },
+    { minCrCl: 0, maxCrCl: 29, action: "STOP metformin — lactic acidosis risk. Switch (e.g., low-dose DPP-4 inhibitor / insulin)." },
+  ],
+  sitagliptin: [
+    { minCrCl: 45, action: "100 mg PO daily — standard." },
+    { minCrCl: 30, maxCrCl: 44, action: "50 mg PO daily (half dose)." },
+    { minCrCl: 0, maxCrCl: 29, action: "25 mg PO daily (quarter dose); dialysis patients also 25 mg." },
+  ],
+  vildagliptin: [
+    { minCrCl: 50, action: "50 mg PO BD — standard." },
+    { minCrCl: 0, maxCrCl: 49, action: "50 mg PO once daily (half dose) at any lower CrCl including dialysis." },
+  ],
+  glimepiride: [
+    { minCrCl: 60, action: "1–4 mg PO daily — standard; take with breakfast." },
+    { minCrCl: 30, maxCrCl: 59, action: "Start 1 mg and titrate slowly — hypoglycemia lasts longer in CKD." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid — prolonged hypoglycemia; prefer linagliptin/teneligliptin (no adjustment) or insulin." },
+  ],
+  dapagliflozin: [
+    { minCrCl: 45, action: "10 mg PO daily — full glycemic effect." },
+    { minCrCl: 25, maxCrCl: 44, action: "May continue for heart/kidney protection but glucose-lowering is weak; do not initiate for glycemia alone." },
+    { minCrCl: 0, maxCrCl: 24, action: "Do not initiate; continuation only per nephrology/cardiology indication." },
+  ],
+  empagliflozin: [
+    { minCrCl: 45, action: "10–25 mg PO daily — standard." },
+    { minCrCl: 20, maxCrCl: 44, action: "10 mg daily for cardio-renal indication; weak glycemic effect." },
+    { minCrCl: 0, maxCrCl: 19, action: "Do not initiate." },
+  ],
+  // ---- Anticoagulants ----
+  apixaban: [
+    { minCrCl: 30, action: "5 mg PO BD; HALVE to 2.5 mg BD if any 2 of: age ≥ 80, weight ≤ 60 kg, creatinine ≥ 1.5 mg/dL." },
+    { minCrCl: 15, maxCrCl: 29, action: "2.5 mg PO BD (half dose)." },
+    { minCrCl: 0, maxCrCl: 14, action: "Avoid — insufficient evidence; specialist decision only." },
+  ],
+  rivaroxaban: [
+    { minCrCl: 50, action: "20 mg PO once daily WITH FOOD (AF dose)." },
+    { minCrCl: 15, maxCrCl: 49, action: "15 mg PO once daily with food (reduced dose)." },
+    { minCrCl: 0, maxCrCl: 14, action: "Avoid." },
+  ],
+  dabigatran: [
+    { minCrCl: 50, action: "150 mg PO BD (110 mg BD if ≥ 80 y or high bleeding risk)." },
+    { minCrCl: 30, maxCrCl: 49, action: "110 mg PO BD; check CrCl at least yearly." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid — accumulates; switch to warfarin or apixaban with specialist input." },
+  ],
+  warfarin: [
+    { minCrCl: 0, action: "Dose by INR, not by CrCl — but bleeding risk rises in CKD; keep INR monitoring tighter (2-weekly)." },
+  ],
+  // ---- Cardiac ----
+  digoxin: [
+    { minCrCl: 60, action: "0.125–0.25 mg PO daily; in elderly max 0.125 mg (Beers)." },
+    { minCrCl: 30, maxCrCl: 59, action: "0.125 mg daily (half the classic dose); check level after 1–2 weeks." },
+    { minCrCl: 0, maxCrCl: 29, action: "0.125 mg alternate days or level-guided only; toxicity presents as nausea, vision change, arrhythmia." },
+  ],
+  spironolactone: [
+    { minCrCl: 50, action: "25–50 mg PO daily — standard." },
+    { minCrCl: 30, maxCrCl: 49, action: "Max 25 mg daily (half ceiling); check K+ within 1 week of start/dose change." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid — hyperkalemia; if essential, 12.5–25 mg with close K+ monitoring." },
+  ],
+  enalapril: [
+    { minCrCl: 30, action: "2.5–20 mg PO BD — standard; check creatinine + K+ 1–2 weeks after start." },
+    { minCrCl: 10, maxCrCl: 29, action: "Start at 2.5 mg daily (half usual start); up-titrate slowly." },
+    { minCrCl: 0, maxCrCl: 9, action: "Specialist dosing; a creatinine rise > 30% after start needs review." },
+  ],
+  atenolol: [
+    { minCrCl: 35, action: "25–100 mg PO daily — standard." },
+    { minCrCl: 15, maxCrCl: 34, action: "Max 50 mg daily (half)." },
+    { minCrCl: 0, maxCrCl: 14, action: "Max 25 mg daily (quarter) — or switch to metoprolol (hepatically cleared)." },
+  ],
+  // ---- CNS ----
+  gabapentin: [
+    { minCrCl: 80, action: "300–1200 mg PO TID — standard range." },
+    { minCrCl: 50, maxCrCl: 79, action: "Max ~600 mg TID (1800 mg/day)." },
+    { minCrCl: 30, maxCrCl: 49, action: "Max ~300 mg TID (900 mg/day — about half)." },
+    { minCrCl: 15, maxCrCl: 29, action: "Max 300 mg BD (600 mg/day)." },
+    { minCrCl: 0, maxCrCl: 14, action: "300 mg once daily or less; sedation/dizziness = accumulation." },
+  ],
+  pregabalin: [
+    { minCrCl: 60, action: "150–600 mg/day in 2–3 doses — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "HALVE: 75–300 mg/day." },
+    { minCrCl: 15, maxCrCl: 29, action: "25–150 mg/day (quarter)." },
+    { minCrCl: 0, maxCrCl: 14, action: "25–75 mg/day single dose." },
+  ],
+  levetiracetam: [
+    { minCrCl: 80, action: "500–1500 mg PO BD — standard." },
+    { minCrCl: 50, maxCrCl: 79, action: "500–1000 mg BD." },
+    { minCrCl: 30, maxCrCl: 49, action: "250–750 mg BD (roughly half)." },
+    { minCrCl: 0, maxCrCl: 29, action: "250–500 mg BD; post-dialysis supplement on dialysis days." },
+  ],
+  memantine: [
+    { minCrCl: 30, action: "10 mg PO BD (after titration) — standard." },
+    { minCrCl: 5, maxCrCl: 29, action: "5 mg PO BD (half maintenance)." },
+    { minCrCl: 0, maxCrCl: 4, action: "Avoid — no data." },
+  ],
+  amantadine: [
+    { minCrCl: 50, action: "100 mg PO daily–BD — standard." },
+    { minCrCl: 30, maxCrCl: 49, action: "100 mg once daily (half)." },
+    { minCrCl: 15, maxCrCl: 29, action: "100 mg alternate days." },
+    { minCrCl: 0, maxCrCl: 14, action: "Avoid — confusion, myoclonus with accumulation." },
+  ],
+  pramipexole: [
+    { minCrCl: 50, action: "Standard TID titration." },
+    { minCrCl: 35, maxCrCl: 49, action: "Give BD instead of TID (two-thirds)." },
+    { minCrCl: 15, maxCrCl: 34, action: "Once daily (one-third)." },
+    { minCrCl: 0, maxCrCl: 14, action: "Avoid." },
+  ],
+  duloxetine: [
+    { minCrCl: 30, action: "20–60 mg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid — nausea and accumulation; choose sertraline (no renal adjustment) instead." },
+  ],
+  tramadol: [
+    { minCrCl: 30, action: "50–100 mg PO q6h PRN, max 400 mg/day." },
+    { minCrCl: 10, maxCrCl: 29, action: "Extend interval to q12h, max 200 mg/day (half); avoid extended-release forms." },
+    { minCrCl: 0, maxCrCl: 9, action: "Avoid if possible; seizure and serotonin risk with accumulation." },
+  ],
+  // ---- Others ----
+  allopurinol: [
+    { minCrCl: 60, action: "100–300 mg PO daily titrated to urate — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "Start 100 mg daily; titrate slowly to urate target (max ~200 mg)." },
+    { minCrCl: 0, maxCrCl: 29, action: "Start 50–100 mg alternate days–daily; slow titration (hypersensitivity risk rises with dose in CKD)." },
+  ],
+  colchicine: [
+    { minCrCl: 50, action: "Acute gout: 1 mg then 0.5 mg after 1 h (max 1.5 mg/course modern low-dose). Prophylaxis 0.5 mg BD." },
+    { minCrCl: 30, maxCrCl: 49, action: "Prophylaxis 0.5 mg once daily (half); avoid repeat acute courses within 14 days." },
+    { minCrCl: 10, maxCrCl: 29, action: "0.5 mg alternate days; watch for diarrhoea/myopathy = toxicity." },
+    { minCrCl: 0, maxCrCl: 9, action: "Avoid — fatal accumulation reported; never combine with clarithromycin." },
+  ],
+  cotrimoxazole: [
+    { minCrCl: 30, action: "960 mg PO BD — standard." },
+    { minCrCl: 15, maxCrCl: 29, action: "HALVE the dose after the first 3 days (480 mg BD); watch K+ (trimethoprim raises it)." },
+    { minCrCl: 0, maxCrCl: 14, action: "Avoid unless no alternative (PCP treatment = specialist dosing)." },
+  ],
+  famotidine: [
+    { minCrCl: 50, action: "20–40 mg PO HS — standard." },
+    { minCrCl: 0, maxCrCl: 49, action: "HALVE: 20 mg HS or 40 mg alternate nights — confusion in elderly CKD with full dose." },
+  ],
+  ranitidine: [
+    { minCrCl: 50, action: "150 mg PO BD — standard." },
+    { minCrCl: 0, maxCrCl: 49, action: "150 mg once daily (half)." },
+  ],
+  fluconazole: [
+    { minCrCl: 50, action: "Standard dose for indication (e.g., 150–400 mg/day)." },
+    { minCrCl: 0, maxCrCl: 49, action: "Give the usual first (loading) dose, then HALVE all subsequent doses." },
+  ],
+  amikacin: [
+    { minCrCl: 60, action: "15 mg/kg IV once daily with level monitoring on courses > 3 days." },
+    { minCrCl: 40, maxCrCl: 59, action: "15 mg/kg q36h — extend the interval, don't cut the dose (peak matters for kill)." },
+    { minCrCl: 20, maxCrCl: 39, action: "15 mg/kg q48h with trough levels." },
+    { minCrCl: 0, maxCrCl: 19, action: "Avoid; if essential, level-guided specialist dosing only." },
+  ],
+  alendronate: [
+    { minCrCl: 35, action: "70 mg PO once weekly — standard." },
+    { minCrCl: 0, maxCrCl: 34, action: "Avoid — not recommended below CrCl 35." },
+  ],
+  silodosin: [
+    { minCrCl: 50, action: "8 mg PO daily with food — standard." },
+    { minCrCl: 30, maxCrCl: 49, action: "4 mg PO daily (half)." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid." },
+  ],
+  solifenacin: [
+    { minCrCl: 30, action: "5–10 mg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "Max 5 mg daily (half ceiling)." },
+  ],
+  trimetazidine: [
+    { minCrCl: 60, action: "35 mg MR PO BD — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "35 mg once daily (half)." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid." },
+  ],
+  fenofibrate: [
+    { minCrCl: 60, action: "145–160 mg PO daily — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "Reduce to ~48–54 mg daily (a third) or alternate-day dosing; recheck lipids at 6–8 weeks." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid." },
+  ],
+  glibenclamide: [
+    { minCrCl: 60, action: "2.5–10 mg PO daily — but avoid in elderly regardless (Beers: prolonged hypoglycemia)." },
+    { minCrCl: 0, maxCrCl: 59, action: "Avoid — active metabolites accumulate; switch to gliclazide/short-acting or DPP-4 inhibitor." },
+  ],
 };
 
 function urgencyFor(crCl: number, limit?: number): RenalDoseReport["urgency"] {
