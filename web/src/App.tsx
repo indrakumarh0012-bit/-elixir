@@ -1,10 +1,11 @@
 import { useState } from "react";
 import CreatinineClearance from "./components/CreatinineClearance";
+import GrowthCalculator from "./components/GrowthCalculator";
 import InstallAppBanner from "./components/InstallAppBanner";
 import PatientAnalysisSummarizer from "./components/PatientAnalysisSummarizer";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 
-type AppTab = "summarizer" | "pedDose" | "crCl";
+type AppTab = "summarizer" | "pedDose" | "growth" | "crCl";
 
 export default function App() {
   const [tab, setTab] = useState<AppTab>("summarizer");
@@ -12,6 +13,7 @@ export default function App() {
   const tabs: { id: AppTab; label: string; shortLabel: string }[] = [
     { id: "summarizer", label: "Summarizer", shortLabel: "Summary" },
     { id: "pedDose", label: "Ped Dose Calculator", shortLabel: "Ped Dose" },
+    { id: "growth", label: "Growth Charts", shortLabel: "Growth" },
     { id: "crCl", label: "Creatinine Clearance", shortLabel: "CrCl" },
   ];
 
@@ -47,6 +49,7 @@ export default function App() {
       <main className="flex-1">
         {tab === "summarizer" && <PatientAnalysisSummarizer />}
         {tab === "pedDose" && <PediatricDosageCalculator />}
+        {tab === "growth" && <GrowthCalculator />}
         {tab === "crCl" && <CreatinineClearance />}
       </main>
 
