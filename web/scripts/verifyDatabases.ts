@@ -321,36 +321,61 @@ section("Z bands and 5-18 y reference");
   }
   console.log(`z-band cases: ${zp}/${zCases.length + zc.length} pass`);
 
-  // CDC self-consistency: feeding each month's median back must give z ≈ 0.
-  const cdc = await import("../src/data/cdcGrowthReference");
-  let cdcOk = 0, cdcN = 0;
-  const sweep: [readonly (readonly number[])[], "male" | "female", "h" | "w"][] = [
-    [cdc.CDC_HFA_BOYS, "male", "h"],
-    [cdc.CDC_HFA_GIRLS, "female", "h"],
-    [cdc.CDC_WFA_BOYS, "male", "w"],
-    [cdc.CDC_WFA_GIRLS, "female", "w"],
+  // IAP self-consistency: every published table value fed back must land on
+  // its own centile line, and every median must give z = 0.
+  const iap = await import("../src/data/iapGrowthReference");
+  const centLabel = ["3rd", "10th", "25th", "50th", "75th", "90th", "97th"];
+  let iapOk = 0, iapN = 0;
+  const sweeps: [typeof iap.IAP_HEIGHT_BOYS, "male" | "female", "h" | "w"][] = [
+    [iap.IAP_HEIGHT_BOYS, "male", "h"],
+    [iap.IAP_HEIGHT_GIRLS, "female", "h"],
+    [iap.IAP_WEIGHT_BOYS, "male", "w"],
+    [iap.IAP_WEIGHT_GIRLS, "female", "w"],
   ];
-  for (const [table, sex, kind] of sweep) {
-    for (const [month, , m] of table) {
-      const r = kind === "h" ? gm.heightForAge(m, month, sex) : gm.weightForAge(m, month, sex);
-      cdcN++;
-      if (r && Math.abs(r.z) < 0.01) cdcOk++;
-      else fail(`CDC median feedback ${kind}/${sex} m${month}: z=${r?.z}`);
+  for (const [table, sex, kind] of sweeps) {
+    for (const row of table) {
+      const months = Math.round(row[0] * 12);
+      if (months <= 60) continue; // 5.0 y row is below the IAP switchover
+      for (let c = 0; c < 7; c++) {
+        const x = row[1 + c];
+        const r = kind === "h" ? gm.heightForAge(x, months, sex) : gm.weightForAge(x, months, sex);
+        iapN++;
+        const want = `on the ${centLabel[c]} centile line`;
+        if (r && gm.centileBandLabel(r.percentile) === want) iapOk++;
+        else fail(`IAP ${kind}/${sex} age ${row[0]} P${centLabel[c]}: got "${r ? gm.centileBandLabel(r.percentile) : "null"}"`);
+      }
+      const med = kind === "h" ? gm.heightForAge(row[4], months, sex) : gm.weightForAge(row[4], months, sex);
+      iapN++;
+      if (med && Math.abs(med.z) < 0.01 && Math.abs(med.median - row[4]) < 0.01) iapOk++;
+      else fail(`IAP median ${kind}/${sex} age ${row[0]}: z=${med?.z}`);
     }
   }
-  console.log(`CDC median self-consistency: ${cdcOk}/${cdcN}`);
+  console.log(`IAP table self-consistency: ${iapOk}/${iapN}`);
 
-  // Known values: 18-y medians and classification behavior
-  const b18 = gm.heightForAge(176.2, 216, "male");
-  const g18 = gm.heightForAge(163.1, 216, "female");
-  if (!b18 || Math.abs(b18.z) > 0.02) fail(`boy 18y 176.2 cm should be ~z0, got ${b18?.z}`);
-  const short10 = gm.heightForAge(120, 120, "male"); // 10-y boy, 120 cm ≈ -2.5 SD
-  if (!short10 || short10.z > -2 || !/Stunted|short/i.test(short10.classification))
-    fail(`10y boy 120 cm should flag short stature, got ${short10?.z} ${short10?.classification}`);
-  const six = gm.weightForAge(20, 72, "male");
-  if (!six || six.band !== "normal") fail(`6y boy 20 kg should be normal, got ${six?.z}`);
-  if (six && !/CDC 2000/.test(six.reference)) fail("5-18y reference must say CDC 2000");
-  if (b18 && g18) console.log(`18-y medians OK (boy z=${b18.z}, girl z=${g18.z}); 6-y and 10-y spot cases OK`);
+  // Anchors from the paper's own 18-y international-comparison tables
+  const b18h = gm.heightForAge(173.6, 216, "male");
+  const g18h = gm.heightForAge(157.8, 216, "female");
+  const b18w = gm.weightForAge(61.6, 216, "male");
+  const g18w = gm.weightForAge(52.0, 216, "female");
+  for (const [name, r] of [["boy 18y 173.6 cm", b18h], ["girl 18y 157.8 cm", g18h], ["boy 18y 61.6 kg", b18w], ["girl 18y 52 kg", g18w]] as const) {
+    if (!r || Math.abs(r.percentile - 50) > 0.5) fail(`anchor ${name}: percentile ${r?.percentile}`);
+  }
+  if (b18h && !/IAP 2015/.test(b18h.reference)) fail("5-18y reference must cite IAP 2015");
+
+  // Between-lines and classification behavior
+  const between = gm.heightForAge(140, 144, "male"); // 12-y boy, 140 cm: P10=138.3, P25=143.3
+  if (!between || gm.centileBandLabel(between.percentile) !== "between the 10th and 25th centile lines")
+    fail(`12y boy 140 cm: got "${between ? gm.centileBandLabel(between.percentile) : "null"}"`);
+  const short = gm.heightForAge(128, 144, "male"); // below P3 (133.2)
+  if (!short || !/Short stature/.test(short.classification) || short.percentile >= 3)
+    fail(`12y boy 128 cm should be below 3rd centile: ${short?.classification}`);
+  const heavy = gm.weightForAge(70, 144, "male"); // above P97 (66.1)
+  if (!heavy || !/97th/.test(heavy.classification)) fail("12y boy 70 kg should flag >97th centile");
+  const interp = gm.heightForAge(150, 150, "male"); // 12.5 y exact row: P25=146.2, P50=151.4
+  if (!interp || gm.centileBandLabel(interp.percentile) !== "between the 25th and 50th centile lines")
+    fail(`12.5y boy 150 cm interpolation: ${interp ? gm.centileBandLabel(interp.percentile) : "null"}`);
+  console.log("IAP anchors, between-line placement and classifications OK");
+
   const over = gm.heightForAge(170, 220, "male");
   if (over !== null) fail("age > 216 months should return null");
 }
