@@ -1,9 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  ALL_SPECIALTIES,
-  getSpecialties,
-  medicalBooksDB,
-} from "../data/medicalBooksDB";
+import { ALL_SPECIALTIES, getSpecialties } from "../data/medicalBooksDB";
 import {
   analyzeNotesToPerforma,
 } from "../lib/buildPerforma";
@@ -27,10 +23,9 @@ import {
 import type { PatientSummary } from "../summary/types";
 import PatientPerformaPanel from "./PatientPerformaPanel";
 import GroqKeySetupCard from "./GroqKeySetupCard";
-import ReferenceLibrary from "./ReferenceLibrary";
 import RegimenAnalyzerUI from "./RegimenAnalyzerUI";
 
-type SummarizerPane = "history" | "saved" | "regimen" | "books";
+type SummarizerPane = "history" | "saved" | "regimen";
 
 function printCurrentPerforma() {
   window.print();
@@ -50,7 +45,6 @@ export default function PatientAnalysisSummarizer() {
   /** Text read out of uploaded files. Kept out of the paste box (it is raw OCR)
    *  but retained so a failed analysis can be retried without re-uploading. */
   const [extractedText, setExtractedText] = useState("");
-  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
   const [uploads, setUploads] = useState<UploadedRecordFile[]>([]);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -67,23 +61,12 @@ export default function PatientAnalysisSummarizer() {
 
   const performaRef = useRef<HTMLDivElement>(null);
 
-  const specialtyBooks = useMemo(
-    () => medicalBooksDB.filter((b) => b.specialty === specialty),
-    [specialty],
-  );
-
   /** Typed notes win; otherwise fall back to what we read out of the uploads. */
   const analysisSource = pastHistory.trim() || extractedText;
 
   const current =
     patients[patientIndex] ?? EMPTY_PATIENT_SUMMARY;
   const patientCount = patients.length;
-
-  const toggleBook = (id: string) => {
-    setSelectedBookIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  };
 
   const flash = (msg: string) => {
     setActionMsg(msg);
@@ -167,7 +150,6 @@ export default function PatientAnalysisSummarizer() {
     { id: "history", label: "Past History" },
     { id: "saved", label: "Saved" },
     { id: "regimen", label: "Regimen" },
-    { id: "books", label: "Books" },
   ];
 
   const hasActiveSummary = Boolean(
@@ -212,10 +194,7 @@ export default function PatientAnalysisSummarizer() {
                 <h2 className="text-sm font-bold text-slate-500">Specialty</h2>
                 <select
                   value={specialty}
-                  onChange={(e) => {
-                    setSpecialty(e.target.value);
-                    setSelectedBookIds([]);
-                  }}
+                  onChange={(e) => setSpecialty(e.target.value)}
                   className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                 >
                   {specialties.map((s) => (
@@ -224,27 +203,6 @@ export default function PatientAnalysisSummarizer() {
                     </option>
                   ))}
                 </select>
-                <p className="mt-3 text-sm font-semibold text-slate-800">Books</p>
-                <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-                  {specialtyBooks.map((book) => {
-                    const on = selectedBookIds.includes(book.id);
-                    return (
-                      <li key={book.id}>
-                        <button
-                          type="button"
-                          onClick={() => toggleBook(book.id)}
-                          className={`w-full rounded-lg border px-3 py-2 text-left text-sm font-semibold ${
-                            on
-                              ? "border-blue-600 bg-blue-50 text-blue-900"
-                              : "border-slate-200 bg-white text-slate-900"
-                          }`}
-                        >
-                          {book.title}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
               </div>
             </aside>
 
@@ -505,11 +463,6 @@ export default function PatientAnalysisSummarizer() {
       {pane === "regimen" && (
         <div className="print:hidden">
           <RegimenAnalyzerUI />
-        </div>
-      )}
-      {pane === "books" && (
-        <div className="print:hidden">
-          <ReferenceLibrary />
         </div>
       )}
     </div>
