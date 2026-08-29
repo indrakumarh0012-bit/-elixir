@@ -3,6 +3,7 @@ import { buildRenalDoseReport } from "../lib/renalDoseAdjust";
 import type {
   AgeCategory,
   AnticholinergicBurden,
+  DiseaseDrugAlert,
   DrugPointAnalysis,
   TherapeuticDuplication,
   DrugRecord,
@@ -74,19 +75,250 @@ function evaluateStartCriteria(
   currentMeds: DrugRecord[],
 ): StartFinding[] {
   const alerts: StartFinding[] = [];
-  const hasHF = patient.conditions.some((c) =>
-    c.toLowerCase().includes("heart failure"),
-  );
-  if (hasHF && !currentMeds.some(isAceInhibitor)) {
+  const has = (re: RegExp) => patient.conditions.some((c) => re.test(c));
+  const onClass = (re: RegExp) => currentMeds.some((d) => re.test(d.class));
+  const onId = (re: RegExp) => currentMeds.some((d) => re.test(d.id));
+
+  if (has(/heart failure/i) && !currentMeds.some(isAceInhibitor) && !onId(/sacubitril/)) {
     alerts.push({
       relatedCondition: "Heart Failure",
       ruleDescription:
-        "START: ACE inhibitor indicated in symptomatic heart failure with reduced ejection fraction (unless contraindicated).",
+        "START: ACE inhibitor (or ARNI) indicated in heart failure with reduced ejection fraction unless contraindicated.",
       recommendation:
-        "Consider starting an ACE inhibitor (e.g., Enalapril or Ramipril) if not contraindicated; titrate and monitor K+/creatinine.",
+        "Consider an ACE inhibitor (Enalapril/Ramipril) or ARNI; titrate and monitor K+/creatinine.",
+    });
+  }
+  if (has(/heart failure/i) && !onId(/metoprolol|bisoprolol|carvedilol/)) {
+    alerts.push({
+      relatedCondition: "Heart Failure",
+      ruleDescription:
+        "START: evidence-based beta-blocker (bisoprolol, carvedilol, metoprolol succinate) in stable HFrEF.",
+      recommendation: "Start low and up-titrate 2-weekly once euvolemic.",
+    });
+  }
+  if (has(/atrial fibrillation/i) && !onId(/warfarin|apixaban|rivaroxaban|dabigatran/)) {
+    alerts.push({
+      relatedCondition: "Atrial Fibrillation",
+      ruleDescription:
+        "START: oral anticoagulation in AF with CHA2DS2-VASc ≥ 2 (score ≥ 2 is near-universal at ≥ 65 y). Antiplatelets are NOT adequate for AF stroke prevention.",
+      recommendation: "Consider a DOAC (apixaban preferred in elderly/CKD) or warfarin.",
+    });
+  }
+  if (has(/CAD|ACS|Post-MI/i) && !onId(/atorvastatin|rosuvastatin/)) {
+    alerts.push({
+      relatedCondition: "CAD / Post-MI",
+      ruleDescription: "START: statin for secondary prevention in documented atherosclerotic disease.",
+      recommendation: "High-intensity statin (Atorvastatin 40-80 / Rosuvastatin 20) unless limited life expectancy.",
+    });
+  }
+  if (has(/CAD|ACS|Post-MI|Stroke|TIA/i) && !onId(/aspirin|clopidogrel|ticagrelor|warfarin|apixaban|rivaroxaban|dabigatran/)) {
+    alerts.push({
+      relatedCondition: "CAD / Stroke / TIA",
+      ruleDescription:
+        "START: antiplatelet for secondary prevention of atherosclerotic events (or anticoagulant if cardioembolic).",
+      recommendation: "Aspirin 75 mg or Clopidogrel 75 mg daily unless bleeding contraindication.",
+    });
+  }
+  if (has(/osteoporosis|fragility fracture|hip fracture/i) && !onId(/alendronate/)) {
+    alerts.push({
+      relatedCondition: "Osteoporosis / Fragility Fracture",
+      ruleDescription:
+        "START: bisphosphonate plus calcium/vitamin D after fragility fracture or documented osteoporosis.",
+      recommendation: "Alendronate 70 mg weekly (check CrCl ≥ 35) + calcium/vitamin D.",
+    });
+  }
+  if (has(/diabetic nephropathy|diabetes.*CKD|CKD.*diabet/i) && !currentMeds.some(isAceInhibitor) && !onId(/telmisartan|losartan|olmesartan/)) {
+    alerts.push({
+      relatedCondition: "Diabetic Kidney Disease",
+      ruleDescription: "START: ACE inhibitor or ARB in diabetes with nephropathy/albuminuria.",
+      recommendation: "One (never both) of ACEI/ARB; monitor K+ and creatinine after start.",
+    });
+  }
+  if (has(/COPD/i) && !onId(/tiotropium|ipratropium|salbutamol|budesonide/) && !onClass(/bronchodilator|LAMA|SAMA/i)) {
+    alerts.push({
+      relatedCondition: "COPD",
+      ruleDescription: "START: regular inhaled bronchodilator (LAMA/LABA) in symptomatic COPD.",
+      recommendation: "e.g., Tiotropium 18 mcg daily; check inhaler technique.",
     });
   }
   return alerts;
+}
+
+/**
+ * STOPP-style disease-drug rules: drugs that are risky or wrong for one of
+ * this patient's stated conditions.
+ */
+const DISEASE_DRUG_RULES: {
+  drugId: RegExp;
+  condition: RegExp;
+  severity: "High" | "Moderate";
+  rule: string;
+  recommendation: string;
+}[] = [
+  {
+    drugId: /^(ibuprofen|diclofenac|naproxen|etoricoxib|indomethacin|aspirin)$/,
+    condition: /heart failure/i,
+    severity: "High",
+    rule: "NSAIDs cause fluid retention and worsen heart failure (STOPP).",
+    recommendation: "Avoid; use paracetamol/topical NSAID for pain.",
+  },
+  {
+    drugId: /^(ibuprofen|diclofenac|naproxen|etoricoxib|indomethacin)$/,
+    condition: /CKD|nephropathy|ESRD/i,
+    severity: "High",
+    rule: "NSAIDs reduce renal perfusion — AKI on CKD (STOPP).",
+    recommendation: "Avoid NSAIDs in CKD; paracetamol first.",
+  },
+  {
+    drugId: /^(ibuprofen|diclofenac|naproxen|etoricoxib|indomethacin|aspirin)$/,
+    condition: /peptic ulcer|GI bleed/i,
+    severity: "High",
+    rule: "NSAID/aspirin with ulcer or GI-bleed history — rebleeding risk (STOPP).",
+    recommendation: "Avoid, or only with PPI cover after clear indication review.",
+  },
+  {
+    drugId: /^(verapamil|diltiazem)$/,
+    condition: /heart failure/i,
+    severity: "High",
+    rule: "Non-DHP calcium blockers are negatively inotropic — worsen HFrEF (STOPP/Beers).",
+    recommendation: "Stop; use beta-blocker for rate control in HF.",
+  },
+  {
+    drugId: /^pioglitazone$/,
+    condition: /heart failure/i,
+    severity: "High",
+    rule: "Pioglitazone causes fluid retention — contraindicated in heart failure.",
+    recommendation: "Stop; switch to a DPP-4 inhibitor / SGLT2i / insulin.",
+  },
+  {
+    drugId: /^(risperidone|quetiapine|olanzapine|haloperidol)$/,
+    condition: /dementia/i,
+    severity: "High",
+    rule: "Antipsychotics in dementia increase stroke and mortality (Beers).",
+    recommendation: "Use only for dangerous agitation/psychosis after non-drug measures; lowest dose, shortest time.",
+  },
+  {
+    drugId: /^(oxybutynin|solifenacin|trihexyphenidyl|amitriptyline|chlorpheniramine|pheniramine)$/,
+    condition: /dementia|cognitive/i,
+    severity: "High",
+    rule: "Anticholinergics worsen cognition in dementia (Beers).",
+    recommendation: "Deprescribe; use non-anticholinergic alternatives.",
+  },
+  {
+    drugId: /^(oxybutynin|solifenacin|trihexyphenidyl|amitriptyline)$/,
+    condition: /glaucoma/i,
+    severity: "Moderate",
+    rule: "Anticholinergics can precipitate angle-closure in glaucoma.",
+    recommendation: "Confirm glaucoma type with ophthalmology before continuing.",
+  },
+  {
+    drugId: /^(oxybutynin|solifenacin|amitriptyline|chlorpheniramine)$/,
+    condition: /urinary retention|BPH/i,
+    severity: "Moderate",
+    rule: "Anticholinergics worsen outflow obstruction — retention risk.",
+    recommendation: "Avoid in BPH with significant residual volume.",
+  },
+  {
+    drugId: /^(zolpidem|clonazepam|alprazolam|lorazepam|diazepam-adult)$/,
+    condition: /fall|frailty|syncope|dizziness/i,
+    severity: "High",
+    rule: "Sedative-hypnotics in fallers — falls and fracture (STOPP).",
+    recommendation: "Taper and stop; sleep hygiene / non-drug measures.",
+  },
+  {
+    drugId: /^(tramadol|amitriptyline)$/,
+    condition: /fall|frailty/i,
+    severity: "Moderate",
+    rule: "Sedating analgesics add to fall risk.",
+    recommendation: "Prefer paracetamol/topical agents; review need.",
+  },
+  {
+    drugId: /^(trimetazidine|flunarizine|cinnarizine|metoclopramide|risperidone|haloperidol|olanzapine)$/,
+    condition: /parkinson/i,
+    severity: "High",
+    rule: "Dopamine-blocking / parkinsonism-inducing drugs worsen Parkinson disease.",
+    recommendation: "Stop; if antiemetic needed use domperidone (peripheral).",
+  },
+  {
+    drugId: /^(prednisolone|dexamethasone|hydrocortisone)$/,
+    condition: /osteoporosis|fragility fracture/i,
+    severity: "Moderate",
+    rule: "Systemic corticosteroids accelerate bone loss on top of osteoporosis.",
+    recommendation: "Lowest dose/shortest course; ensure bisphosphonate + calcium/vitamin D cover.",
+  },
+  {
+    drugId: /^(prednisolone|dexamethasone)$/,
+    condition: /diabet/i,
+    severity: "Moderate",
+    rule: "Corticosteroids raise glucose — expect control to worsen.",
+    recommendation: "Intensify monitoring; adjust hypoglycemics during the course.",
+  },
+  {
+    drugId: /^(tamsulosin|silodosin|prazosin)$/,
+    condition: /orthostatic hypotension|syncope|fall/i,
+    severity: "Moderate",
+    rule: "Alpha-blockers aggravate orthostatic drops — falls and syncope.",
+    recommendation: "Night-time dosing, postural BP checks; review combination antihypertensives.",
+  },
+  {
+    drugId: /^(atenolol|metoprolol|bisoprolol|carvedilol)$/,
+    condition: /bradyarrhythmia|heart block/i,
+    severity: "High",
+    rule: "Beta-blockade on conduction disease — bradycardia/complete block risk.",
+    recommendation: "Cardiology review before continuing; ECG.",
+  },
+  {
+    drugId: /^(glibenclamide|glimepiride)$/,
+    condition: /recurrent hypoglycemia/i,
+    severity: "High",
+    rule: "Sulfonylureas in a patient with recurrent hypoglycemia — dangerous.",
+    recommendation: "Switch to DPP-4 inhibitor or other low-hypoglycemia agent.",
+  },
+  {
+    drugId: /^(metformin)$/,
+    condition: /cirrhosis|liver disease/i,
+    severity: "Moderate",
+    rule: "Advanced liver disease raises lactic acidosis risk on metformin.",
+    recommendation: "Avoid in decompensated cirrhosis; specialist decision.",
+  },
+  {
+    drugId: /^(theophylline|doxofylline)$/,
+    condition: /epilepsy|seizure/i,
+    severity: "Moderate",
+    rule: "Xanthines lower seizure threshold.",
+    recommendation: "Prefer inhaled therapy; review need.",
+  },
+  {
+    drugId: /^(tiotropium|ipratropium)$/,
+    condition: /glaucoma/i,
+    severity: "Moderate",
+    rule: "Inhaled anticholinergics can worsen angle-closure if mist reaches the eye.",
+    recommendation: "Use mouthpiece/spacer correctly; ophthalmology if eye pain/haloes.",
+  },
+];
+
+function findDiseaseDrugAlerts(
+  patient: PatientProfile,
+  meds: DrugRecord[],
+): DiseaseDrugAlert[] {
+  const out: DiseaseDrugAlert[] = [];
+  for (const rule of DISEASE_DRUG_RULES) {
+    const cond = patient.conditions.find((c) => rule.condition.test(c));
+    if (!cond) continue;
+    for (const d of meds) {
+      if (rule.drugId.test(d.id)) {
+        out.push({
+          severity: rule.severity,
+          drugId: d.id,
+          drugName: d.name,
+          condition: cond,
+          rule: rule.rule,
+          recommendation: rule.recommendation,
+        });
+      }
+    }
+  }
+  return out;
 }
 
 function pediatricDoses(
@@ -291,6 +523,7 @@ function buildDrugDetails(
   interactions: InteractionFinding[],
   crCl: number | null,
   ageCategory: AgeCategory,
+  diseaseDrug: DiseaseDrugAlert[] = [],
 ): DrugPointAnalysis[] {
   return meds.map((d) => {
     const guidelines = d.geriatricGuidelines ?? [];
@@ -300,6 +533,10 @@ function buildDrugDetails(
     const stoppPoints = guidelines
       .filter((g) => g.type === "STOPP")
       .map((g) => `${g.ruleDescription} → ${g.recommendation}.`);
+    const myDiseaseAlerts = diseaseDrug.filter((a) => a.drugId === d.id);
+    for (const a of myDiseaseAlerts) {
+      stoppPoints.push(`For this patient's ${a.condition}: ${a.rule} → ${a.recommendation}`);
+    }
     const startPoints = guidelines
       .filter((g) => g.type === "START")
       .map((g) => `${g.ruleDescription} → ${g.recommendation}.`);
@@ -327,8 +564,9 @@ function buildDrugDetails(
     // outranks the generic urgency thresholds (e.g. metformin stops at CrCl 30,
     // well above the generic "avoid below 10" cutoff).
     const renalSaysStop = /\b(STOP|Avoid)\b/.test(renalPoints.join(" "));
+    const diseaseHigh = myDiseaseAlerts.some((a) => a.severity === "High");
     let verdict: DrugPointAnalysis["verdict"] = "continue";
-    if (hasContra || beersAvoid || renalUrgency === "avoid" || renalSaysStop)
+    if (hasContra || beersAvoid || renalUrgency === "avoid" || renalSaysStop || diseaseHigh)
       verdict = "stop-or-review";
     else if (renalUrgency === "adjust") verdict = "adjust";
     else if (
@@ -382,6 +620,7 @@ export function analyzeRegimen(
     ageCategory === "pediatric" ? pediatricDoses(patient, currentMeds) : [];
 
   const renal = renalAlerts(estimatedCrClMlMin, currentMeds);
+  const diseaseDrug = findDiseaseDrugAlerts(patient, currentMeds);
   const polypharmacyAlerts = analyzePolypharmacy(
     patient,
     currentMeds,
@@ -395,9 +634,10 @@ export function analyzeRegimen(
     medicationCount: currentMeds.length,
     interactions,
     geriatricAlerts,
-    drugDetails: buildDrugDetails(currentMeds, interactions, estimatedCrClMlMin, ageCategory),
+    drugDetails: buildDrugDetails(currentMeds, interactions, estimatedCrClMlMin, ageCategory, diseaseDrug),
     therapeuticDuplications: findDuplications(currentMeds),
     anticholinergicBurden: anticholinergicBurden(currentMeds, ageCategory),
+    diseaseDrugAlerts: diseaseDrug,
     startAlerts: startFiltered,
     pediatricDoses: pediatricDoseFindings,
     renalAlerts: renal,

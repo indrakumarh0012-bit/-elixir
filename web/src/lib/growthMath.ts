@@ -266,12 +266,12 @@ export function centileBandLabel(percentile: number): string {
  */
 export function zBandLabel(z: number): string {
   const lines = [-3, -2, -1, 0, 1, 2, 3];
-  const name = (n: number) => (n > 0 ? `+${n}` : `${n}`.replace("-", "\u2212"));
+  const name = (n: number) => `${n}`.replace("-", "\u2212");
   for (const line of lines) {
     if (Math.abs(z - line) < 0.05) return `on the ${name(line)} SD line`;
   }
   if (z < -3) return "below the −3 SD line";
-  if (z > 3) return "above the +3 SD line";
+  if (z > 3) return "above the 3 SD line";
   for (let i = 0; i < lines.length - 1; i++) {
     if (z > lines[i] && z < lines[i + 1]) {
       return `between the ${name(lines[i])} and ${name(lines[i + 1])} SD lines`;
@@ -280,15 +280,15 @@ export function zBandLabel(z: number): string {
   return "";
 }
 
-/** Compact z form for the stat tile: "0", "−2 to −1", "<−3", ">+3". */
+/** Compact z form for the stat tile: "0", "−2 to −1", "<−3", ">3". */
 export function zBandCompact(z: number): string {
   const lines = [-3, -2, -1, 0, 1, 2, 3];
-  const name = (n: number) => (n > 0 ? `+${n}` : `${n}`.replace("-", "\u2212"));
+  const name = (n: number) => `${n}`.replace("-", "\u2212");
   for (const line of lines) {
     if (Math.abs(z - line) < 0.05) return name(line);
   }
   if (z < -3) return "<−3";
-  if (z > 3) return ">+3";
+  if (z > 3) return ">3";
   for (let i = 0; i < lines.length - 1; i++) {
     if (z > lines[i] && z < lines[i + 1]) return `${name(lines[i])} to ${name(lines[i + 1])}`;
   }

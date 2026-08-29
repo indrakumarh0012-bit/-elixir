@@ -256,6 +256,44 @@ section("Growth centile bands");
   console.log(`compact centile cases: ${cpass}/${compact.length} pass`);
 }
 
+// ---------- 5e. Conditions catalog + disease-drug + START rules ----------
+section("Conditions, disease-drug and START rules");
+{
+  const { CONDITIONS_CATALOG } = await import("../src/clinical/clinicalData");
+  const set = new Set(CONDITIONS_CATALOG.map((c) => c.toLowerCase()));
+  if (CONDITIONS_CATALOG.length < 100) fail(`conditions catalog only ${CONDITIONS_CATALOG.length} (< 100)`);
+  if (set.size !== CONDITIONS_CATALOG.length) fail("duplicate conditions in catalog");
+  console.log(`conditions catalog: ${CONDITIONS_CATALOG.length} unique entries`);
+
+  const rx = (ids: string[]) => ids.map((i) => getDrugById(i)!).filter(Boolean);
+  const base = { ageYears: 78, weightKg: 60, creatinineMgDl: 1.0, sex: "Male" as const };
+
+  const hf = analyzeRegimen({ ...base, conditions: ["Heart Failure (HFrEF)"] }, rx(["ibuprofen", "verapamil", "pioglitazone"]));
+  if (hf.diseaseDrugAlerts.filter((a) => a.severity === "High").length !== 3)
+    fail(`HF triple: got ${hf.diseaseDrugAlerts.length} alerts, want 3 High`);
+  if (!hf.drugDetails.every((d) => d.verdict === "stop-or-review"))
+    fail("HF triple: all three should be stop-or-review");
+  if (hf.startAlerts.length < 2) fail("HF with no HF meds should START ACEI + beta-blocker");
+
+  const af = analyzeRegimen({ ...base, conditions: ["Atrial Fibrillation"] }, rx(["paracetamol"]));
+  if (!af.startAlerts.some((a) => /anticoagulation/i.test(a.ruleDescription)))
+    fail("AF without OAC should trigger START anticoagulant");
+  const afTreated = analyzeRegimen({ ...base, conditions: ["Atrial Fibrillation"] }, rx(["apixaban"]));
+  if (afTreated.startAlerts.some((a) => /anticoagulation/i.test(a.ruleDescription)))
+    fail("AF on apixaban should NOT trigger the START rule");
+
+  const pd = analyzeRegimen({ ...base, conditions: ["Parkinson Disease"] }, rx(["flunarizine", "metoclopramide"]));
+  if (pd.diseaseDrugAlerts.length !== 2) fail("Parkinson + flunarizine/metoclopramide should give 2 alerts");
+
+  const falls = analyzeRegimen({ ...base, conditions: ["Recurrent Falls"] }, rx(["zolpidem", "lorazepam"]));
+  if (falls.diseaseDrugAlerts.filter((a) => a.severity === "High").length !== 2)
+    fail("Falls + 2 hypnotics should give 2 High alerts");
+
+  const clean = analyzeRegimen({ ...base, conditions: ["Hypothyroidism"] }, rx(["thyroxine"]));
+  if (clean.diseaseDrugAlerts.length !== 0) fail("thyroxine + hypothyroidism should give no disease-drug alert");
+  console.log("disease-drug rules: HF/Parkinson/falls fire, treated-AF suppressed, benign regimen clean");
+}
+
 // ---------- 5d. Z-band labels + CDC 5-18y reference ----------
 section("Z bands and 5-18 y reference");
 {
@@ -265,9 +303,9 @@ section("Z bands and 5-18 y reference");
     [-1.14, "between the −2 and −1 SD lines"],
     [-2.6, "between the −3 and −2 SD lines"],
     [-3.4, "below the −3 SD line"],
-    [1.02, "on the +1 SD line"],
-    [2.5, "between the +2 and +3 SD lines"],
-    [3.6, "above the +3 SD line"],
+    [1.02, "on the 1 SD line"],
+    [2.5, "between the 2 and 3 SD lines"],
+    [3.6, "above the 3 SD line"],
   ];
   let zp = 0;
   for (const [z, want] of zCases) {
@@ -275,7 +313,7 @@ section("Z bands and 5-18 y reference");
     if (got === want) zp++;
     else fail(`zBand ${z}: want "${want}" got "${got}"`);
   }
-  const zc: [number, string][] = [[0, "0"], [-1.14, "−2 to −1"], [-3.4, "<−3"], [2.5, "+2 to +3"]];
+  const zc: [number, string][] = [[0, "0"], [-1.14, "−2 to −1"], [-3.4, "<−3"], [2.5, "2 to 3"]];
   for (const [z, want] of zc) {
     const got = gm.zBandCompact(z);
     if (got === want) zp++;

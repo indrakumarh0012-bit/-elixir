@@ -93,6 +93,16 @@ export interface AnticholinergicBurden {
   note: string;
 }
 
+/** A drug that is risky or wrong for one of this patient's conditions. */
+export interface DiseaseDrugAlert {
+  severity: "High" | "Moderate";
+  drugId: string;
+  drugName: string;
+  condition: string;
+  rule: string;
+  recommendation: string;
+}
+
 export interface PolypharmacyFinding {
   severity: "High" | "Moderate" | "Info";
   title: string;
@@ -109,6 +119,7 @@ export interface RegimenAnalysisReport {
   drugDetails: DrugPointAnalysis[];
   therapeuticDuplications: TherapeuticDuplication[];
   anticholinergicBurden: AnticholinergicBurden;
+  diseaseDrugAlerts: DiseaseDrugAlert[];
   startAlerts: StartFinding[];
   pediatricDoses: PediatricDoseFinding[];
   renalAlerts: RenalFinding[];
