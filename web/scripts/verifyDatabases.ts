@@ -236,6 +236,24 @@ section("Growth centile bands");
     else fail(`centile ${pct.toFixed(2)}: want "${want}" got "${got}"`);
   }
   console.log(`centile band cases: ${pass}/${cases.length} pass`);
+
+  const { centileBandCompact } = await import("../src/lib/growthMath");
+  const compact: [number, string][] = [
+    [zToPercentile(0), "50th"],
+    [zToPercentile(-1), "10th–25th"],
+    [zToPercentile(-2), "<3rd"],
+    [zToPercentile(2.5), ">97th"],
+    [25.2, "25th"],
+    [60, "50th–75th"],
+    [5, "3rd–10th"],
+  ];
+  let cpass = 0;
+  for (const [pct, want] of compact) {
+    const got = centileBandCompact(pct);
+    if (got === want) cpass++;
+    else fail(`compact centile ${pct.toFixed(2)}: want "${want}" got "${got}"`);
+  }
+  console.log(`compact centile cases: ${cpass}/${compact.length} pass`);
 }
 
 // ---------- 6. Pediatric DB integrity ----------

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  centileBandCompact,
   centileBandLabel,
   heightForAge,
   toMonths,
@@ -76,9 +77,11 @@ function ResultCard({
         </div>
         <div className="rounded-md bg-white/70 px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
-            Percentile
+            Centile
           </dt>
-          <dd className="text-lg font-bold">{result.percentile}</dd>
+          <dd className="text-lg font-bold">
+            {centileBandCompact(result.percentile)}
+          </dd>
         </div>
         <div className="rounded-md bg-white/70 px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
