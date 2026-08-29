@@ -13,7 +13,7 @@ export default function App() {
     { id: "pedDose", label: "Ped Dose Calculator", shortLabel: "Ped Dose" },
     { id: "growth", label: "Growth Charts", shortLabel: "Growth" },
     { id: "crCl", label: "Creatinine Clearance", shortLabel: "CrCl" },
-    { id: "regimen", label: "Regimen / Polypharmacy", shortLabel: "Regimen" },
+    { id: "regimen", label: "Polypharmacy", shortLabel: "Polypharm" },
   ];
 
   return (

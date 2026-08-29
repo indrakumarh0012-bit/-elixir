@@ -11,7 +11,8 @@
     "android:open": "npx cap open android",
     "lint": "oxlint",
     "preview": "vite preview",
-    "stress": "tsx scripts/stressDemoPatients.ts"
+    "stress": "tsx scripts/stressDemoPatients.ts",
+    "verify": "tsx scripts/verifyDatabases.ts"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
