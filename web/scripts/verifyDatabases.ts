@@ -50,7 +50,8 @@ section("Renal band coverage sweep");
 {
   const renalDrugs = searchRenalDrugs("");
   // searchRenalDrugs caps at 40 — go direct:
-  const all = drugsDB.filter((d) => d.renalAdjustmentLimit != null);
+  const all = drugsDB.filter((d) => d.renalAdjustmentLimit != null || d.renalNote);
+  if (drugsDB.length < 230) fail(`drugsDB only ${drugsDB.length} (< 230)`);
   let checked = 0;
   for (const drug of all) {
     for (let crCl = 0; crCl <= 130; crCl += 5) {
@@ -108,6 +109,35 @@ section("Renal spot cases");
     ["warfarin", 20, /INR/],
     ["nitrofurantoin", 70, /100 mg PO BID/], ["nitrofurantoin", 40, /Avoid/],
     ["meropenem", 60, /1 g IV q8h/], ["meropenem", 30, /q12h/], ["meropenem", 15, /500 mg IV q12h/], ["meropenem", 5, /q24h/],
+    ["ganciclovir", 80, /5 mg\/kg IV q12h/], ["ganciclovir", 60, /2\.5 mg\/kg q12h/], ["ganciclovir", 30, /2\.5 mg\/kg q24h/], ["ganciclovir", 15, /1\.25 mg\/kg q24h/],
+    ["valganciclovir", 70, /900 mg PO BD/], ["valganciclovir", 50, /450 mg BD/], ["valganciclovir", 30, /450 mg OD/], ["valganciclovir", 15, /alternate days/],
+    ["entecavir", 60, /0\.5 mg PO daily/], ["entecavir", 40, /HALVE/], ["entecavir", 20, /0\.15 mg/], ["entecavir", 5, /weekly/],
+    ["tenofovir-df", 60, /300 mg PO daily/], ["tenofovir-df", 40, /q48h/], ["tenofovir-df", 20, /twice weekly/],
+    ["lamivudine", 60, /300 mg PO daily/], ["lamivudine", 40, /150 mg daily/], ["lamivudine", 20, /100 mg daily/],
+    ["flucytosine", 50, /q6h/], ["flucytosine", 30, /q12h/], ["flucytosine", 15, /q24h/], ["flucytosine", 5, /q48h/],
+    ["cefepime", 70, /q8–12h/], ["cefepime", 45, /2 g q12h/], ["cefepime", 20, /2 g q24h/], ["cefepime", 5, /1 g q24h/],
+    ["ceftazidime", 60, /q8h/], ["ceftazidime", 40, /q12h/], ["ceftazidime", 20, /q24h/],
+    ["colistin", 90, /9 MU\/day/], ["colistin", 60, /7\.5–9 MU/], ["colistin", 40, /5\.5–7\.5 MU/], ["colistin", 20, /4\.5–5\.5 MU/],
+    ["teicoplanin", 70, /q24h/], ["teicoplanin", 45, /HALVE maintenance/], ["teicoplanin", 20, /q72h/],
+    ["daptomycin", 50, /q24h/], ["daptomycin", 20, /q48h/],
+    ["ertapenem", 50, /1 g IV q24h/], ["ertapenem", 20, /500 mg q24h/],
+    ["imipenem-cilastatin", 70, /q6h/], ["imipenem-cilastatin", 40, /500 mg q8h/], ["imipenem-cilastatin", 20, /500 mg q12h/], ["imipenem-cilastatin", 5, /Avoid/],
+    ["ethambutol", 50, /daily/], ["ethambutol", 20, /THREE times per week/],
+    ["pyrazinamide", 50, /daily/], ["pyrazinamide", 20, /three times per week/],
+    ["streptomycin", 50, /15 mg\/kg IM daily/], ["streptomycin", 20, /2–3 times per week/],
+    ["clarithromycin", 50, /BD/], ["clarithromycin", 20, /HALVE/],
+    ["enoxaparin", 50, /q12h/], ["enoxaparin", 20, /ONCE daily/],
+    ["fondaparinux", 60, /Standard/], ["fondaparinux", 40, /1\.5 mg/], ["fondaparinux", 20, /CONTRAINDICATED/],
+    ["baclofen", 70, /Standard titration/], ["baclofen", 45, /HALVE/], ["baclofen", 20, /Avoid/],
+    ["topiramate", 80, /BD/], ["topiramate", 50, /HALVE/],
+    ["sotalol", 70, /q12h/], ["sotalol", 50, /q24h/], ["sotalol", 20, /Avoid/],
+    ["morphine", 60, /Standard dosing/], ["morphine", 30, /25–50%/], ["morphine", 5, /fentanyl/],
+    ["metoclopramide", 50, /TID/], ["metoclopramide", 20, /HALVE/],
+    ["hydrochlorothiazide", 50, /12\.5–25 mg/], ["hydrochlorothiazide", 20, /loop diuretic/],
+    ["voriconazole", 70, /q12h/], ["voriconazole", 30, /ORAL/],
+    ["remdesivir", 50, /100 mg daily/], ["remdesivir", 20, /specialist decision/],
+    ["zidovudine", 50, /300 mg PO BD/], ["zidovudine", 5, /100 mg q6–8h/],
+    ["acarbose", 50, /TID/], ["acarbose", 10, /Avoid/],
   ];
   let pass = 0;
   for (const [id, crCl, re] of expect) {
@@ -119,6 +149,19 @@ section("Renal spot cases");
     else fail(`${id} @ CrCl ${crCl}: expected ${re} — got "${text.slice(0, 120)}"`);
   }
   console.log(`renal spot cases: ${pass}/${expect.length} pass`);
+
+  // No-adjustment drugs must appear in renal search with a green answer
+  const noAdj = ["caspofungin", "micafungin", "anidulafungin", "linagliptin", "dolutegravir", "tenofovir-af", "tigecycline", "isoniazid", "rifampicin", "polymyxin-b", "posaconazole"];
+  let na = 0;
+  for (const id of noAdj) {
+    const d = getDrugById(id);
+    if (!d) { fail(`no-adjustment drug missing: ${id}`); continue; }
+    const rep = buildRenalDoseReport(d, 15);
+    const inSearch = searchRenalDrugs(d.name.split(" ")[0].toLowerCase()).some((x) => x.id === id);
+    if (rep.urgency === "none" && rep.recommendations.length > 0 && inSearch) na++;
+    else fail(`${id}: urgency=${rep.urgency}, recs=${rep.recommendations.length}, searchable=${inSearch}`);
+  }
+  console.log(`no-adjustment drugs searchable with green answer: ${na}/${noAdj.length}`);
 }
 
 // ---------- 5. 100 polypharmacy regimens ----------
