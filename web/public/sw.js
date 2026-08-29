@@ -1,7 +1,7 @@
 // Smart-Elixir service worker.
 // Bump CACHE_VERSION whenever the shell list below changes; activate() drops
 // every older cache, so a deploy never serves a half-stale shell.
-const CACHE_VERSION = 'smart-elixir-v1'
+const CACHE_VERSION = 'smart-elixir-v2'
 const SHELL = [
   '/',
   '/index.html',
