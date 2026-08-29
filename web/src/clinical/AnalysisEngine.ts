@@ -1,6 +1,10 @@
 import { drugsDB, getDrugById, interactionsDB } from "./clinicalData";
+import { buildRenalDoseReport } from "../lib/renalDoseAdjust";
 import type {
   AgeCategory,
+  AnticholinergicBurden,
+  DrugPointAnalysis,
+  TherapeuticDuplication,
   DrugRecord,
   GeriatricGuideline,
   InteractionFinding,
@@ -230,6 +234,126 @@ function analyzePolypharmacy(
 /**
  * Pure clinical regimen analyzer: DDIs, Beers/STOPP/START, pediatric dosing, renal + polypharmacy.
  */
+
+/** Systemic anticholinergics in the DB (inhaled LAMA/SAMA deliberately excluded). */
+const ANTICHOLINERGIC_IDS = new Set([
+  "oxybutynin",
+  "solifenacin",
+  "trihexyphenidyl",
+  "amitriptyline",
+  "chlorpheniramine",
+  "pheniramine",
+  "cinnarizine",
+]);
+
+function isAnticholinergic(d: DrugRecord): boolean {
+  return ANTICHOLINERGIC_IDS.has(d.id);
+}
+
+/** "NSAID (COX-2 selective)" and "NSAID" count as the same class for duplication. */
+function normalizedClass(d: DrugRecord): string {
+  return d.class.toLowerCase().split("(")[0].trim();
+}
+
+function findDuplications(meds: DrugRecord[]): TherapeuticDuplication[] {
+  const byClass = new Map<string, DrugRecord[]>();
+  for (const d of meds) {
+    const key = normalizedClass(d);
+    byClass.set(key, [...(byClass.get(key) ?? []), d]);
+  }
+  const out: TherapeuticDuplication[] = [];
+  for (const [key, list] of byClass) {
+    if (list.length >= 2) {
+      out.push({ className: list[0].class.split("(")[0].trim() || key, drugNames: list.map((d) => d.name) });
+    }
+  }
+  return out;
+}
+
+function anticholinergicBurden(meds: DrugRecord[], ageCategory: AgeCategory): AnticholinergicBurden {
+  const hits = meds.filter(isAnticholinergic);
+  let note = "No systemic anticholinergics in this regimen.";
+  if (hits.length === 1) {
+    note =
+      ageCategory === "geriatric"
+        ? "One anticholinergic — acceptable if clearly indicated; watch cognition, constipation, urinary retention."
+        : "One anticholinergic in the regimen.";
+  } else if (hits.length >= 2) {
+    note =
+      "Cumulative anticholinergic burden: additive confusion/delirium, falls, constipation and urinary retention risk" +
+      (ageCategory === "geriatric" ? " — in an elderly patient, actively deprescribe down to one or none." : ".");
+  }
+  return { count: hits.length, drugNames: hits.map((d) => d.name), note };
+}
+
+function buildDrugDetails(
+  meds: DrugRecord[],
+  interactions: InteractionFinding[],
+  crCl: number | null,
+  ageCategory: AgeCategory,
+): DrugPointAnalysis[] {
+  return meds.map((d) => {
+    const guidelines = d.geriatricGuidelines ?? [];
+    const beersPoints = guidelines
+      .filter((g) => g.type === "Beers")
+      .map((g) => `${g.ruleDescription} → ${g.recommendation}.`);
+    const stoppPoints = guidelines
+      .filter((g) => g.type === "STOPP")
+      .map((g) => `${g.ruleDescription} → ${g.recommendation}.`);
+    const startPoints = guidelines
+      .filter((g) => g.type === "START")
+      .map((g) => `${g.ruleDescription} → ${g.recommendation}.`);
+
+    const renalPoints: string[] = [];
+    let renalUrgency: "none" | "caution" | "adjust" | "avoid" = "none";
+    if (crCl != null && d.renalAdjustmentLimit != null) {
+      const rep = buildRenalDoseReport(d, crCl);
+      renalUrgency = rep.urgency;
+      renalPoints.push(...rep.recommendations);
+    }
+
+    const mine = interactions.filter(
+      (x) => x.interaction.drugAId === d.id || x.interaction.drugBId === d.id,
+    );
+    const interactionPoints = mine.map((x) => {
+      const other = x.interaction.drugAId === d.id ? x.drugBName : x.drugAName;
+      return `With ${other} — ${x.interaction.severity}: ${x.interaction.clinicalEffect} Action: ${x.interaction.managementAction}`;
+    });
+
+    const hasContra = mine.some((x) => x.interaction.severity === "Contraindicated");
+    const beersAvoid =
+      ageCategory === "geriatric" && beersPoints.some((p) => /avoid/i.test(p));
+    // The band text is the authority: a band that says STOP/Avoid at this CrCl
+    // outranks the generic urgency thresholds (e.g. metformin stops at CrCl 30,
+    // well above the generic "avoid below 10" cutoff).
+    const renalSaysStop = /\b(STOP|Avoid)\b/.test(renalPoints.join(" "));
+    let verdict: DrugPointAnalysis["verdict"] = "continue";
+    if (hasContra || beersAvoid || renalUrgency === "avoid" || renalSaysStop)
+      verdict = "stop-or-review";
+    else if (renalUrgency === "adjust") verdict = "adjust";
+    else if (
+      renalUrgency === "caution" ||
+      mine.length > 0 ||
+      (ageCategory === "geriatric" && (stoppPoints.length > 0 || isAnticholinergic(d)))
+    )
+      verdict = "caution";
+
+    return {
+      drugId: d.id,
+      drugName: d.name,
+      drugClass: d.class,
+      standardDose: d.standardDose,
+      beersPoints,
+      stoppPoints,
+      startPoints,
+      renalPoints,
+      interactionPoints,
+      anticholinergic: isAnticholinergic(d),
+      verdict,
+    };
+  });
+}
+
 export function analyzeRegimen(
   patient: PatientProfile,
   currentMeds: DrugRecord[],
@@ -271,6 +395,9 @@ export function analyzeRegimen(
     medicationCount: currentMeds.length,
     interactions,
     geriatricAlerts,
+    drugDetails: buildDrugDetails(currentMeds, interactions, estimatedCrClMlMin, ageCategory),
+    therapeuticDuplications: findDuplications(currentMeds),
+    anticholinergicBurden: anticholinergicBurden(currentMeds, ageCategory),
     startAlerts: startFiltered,
     pediatricDoses: pediatricDoseFindings,
     renalAlerts: renal,

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  centileBandLabel,
   heightForAge,
   toMonths,
   weightForAge,
@@ -86,6 +87,10 @@ function ResultCard({
           <dd className="text-lg font-bold">{result.median.toFixed(1)}</dd>
         </div>
       </dl>
+
+      <p className="mt-3 rounded-md bg-white/70 px-3 py-2 text-sm font-semibold">
+        On the chart: {centileBandLabel(result.percentile)}.
+      </p>
 
       <p className="mt-3 text-xs opacity-80">
         {result.reference}

@@ -64,6 +64,35 @@ export interface StartFinding {
   relatedCondition: string;
 }
 
+/** Point-wise, per-drug breakdown for the polypharmacy report. */
+export interface DrugPointAnalysis {
+  drugId: string;
+  drugName: string;
+  drugClass: string;
+  standardDose: string;
+  /** Beers criteria points: "rule — recommendation" */
+  beersPoints: string[];
+  stoppPoints: string[];
+  startPoints: string[];
+  /** Renal guidance at this patient's calculated CrCl */
+  renalPoints: string[];
+  /** Interactions this drug participates in within the current regimen */
+  interactionPoints: string[];
+  anticholinergic: boolean;
+  verdict: "stop-or-review" | "adjust" | "caution" | "continue";
+}
+
+export interface TherapeuticDuplication {
+  className: string;
+  drugNames: string[];
+}
+
+export interface AnticholinergicBurden {
+  count: number;
+  drugNames: string[];
+  note: string;
+}
+
 export interface PolypharmacyFinding {
   severity: "High" | "Moderate" | "Info";
   title: string;
@@ -77,6 +106,9 @@ export interface RegimenAnalysisReport {
   medicationCount: number;
   interactions: InteractionFinding[];
   geriatricAlerts: GeriatricGuideline[];
+  drugDetails: DrugPointAnalysis[];
+  therapeuticDuplications: TherapeuticDuplication[];
+  anticholinergicBurden: AnticholinergicBurden;
   startAlerts: StartFinding[];
   pediatricDoses: PediatricDoseFinding[];
   renalAlerts: RenalFinding[];
