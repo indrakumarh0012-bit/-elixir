@@ -1,7 +1,6 @@
 import { useState } from "react";
 import CreatinineClearance from "./components/CreatinineClearance";
 import GrowthCalculator from "./components/GrowthCalculator";
-import InstallAppBanner from "./components/InstallAppBanner";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 
@@ -43,8 +42,6 @@ export default function App() {
           </nav>
         </div>
       </header>
-
-      <InstallAppBanner />
 
       <main className="flex-1">
         {tab === "pedDose" && <PediatricDosageCalculator />}
