@@ -303,6 +303,181 @@ const RENAL_DOSE_BANDS: Record<string, RenalDoseBand[]> = {
     { minCrCl: 60, action: "2.5–10 mg PO daily — but avoid in elderly regardless (Beers: prolonged hypoglycemia)." },
     { minCrCl: 0, maxCrCl: 59, action: "Avoid — active metabolites accumulate; switch to gliclazide/short-acting or DPP-4 inhibitor." },
   ],
+  // ---- Antifungals ----
+  voriconazole: [
+    { minCrCl: 50, action: "PO 200 mg q12h (after loading) or IV 4 mg/kg q12h — standard." },
+    { minCrCl: 0, maxCrCl: 49, action: "Switch IV to ORAL (IV vehicle SBECD accumulates); oral dose needs no reduction. Check trough on prolonged use." },
+  ],
+  flucytosine: [
+    { minCrCl: 40, action: "25 mg/kg PO q6h — standard." },
+    { minCrCl: 20, maxCrCl: 39, action: "25 mg/kg q12h (half the daily dose)." },
+    { minCrCl: 10, maxCrCl: 19, action: "25 mg/kg q24h (quarter)." },
+    { minCrCl: 0, maxCrCl: 9, action: "25 mg/kg q48h with levels/CBC — marrow toxicity accumulates." },
+  ],
+  "terbinafine-adult": [
+    { minCrCl: 50, action: "250 mg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 49, action: "Not recommended (label) — choose itraconazole/fluconazole per fungus." },
+  ],
+  "amphotericin-b": [
+    { minCrCl: 60, action: "Dose by indication; prefer liposomal in any renal risk. Saline load 500 ml before dose." },
+    { minCrCl: 0, maxCrCl: 59, action: "Use LIPOSOMAL form; do not dose-reduce for CrCl — instead hydrate, correct K+/Mg2+, daily creatinine; hold only for rapidly rising creatinine per protocol." },
+  ],
+  // ---- Antivirals ----
+  ganciclovir: [
+    { minCrCl: 70, action: "Induction 5 mg/kg IV q12h — standard." },
+    { minCrCl: 50, maxCrCl: 69, action: "2.5 mg/kg q12h (half dose)." },
+    { minCrCl: 25, maxCrCl: 49, action: "2.5 mg/kg q24h (quarter of daily)." },
+    { minCrCl: 10, maxCrCl: 24, action: "1.25 mg/kg q24h." },
+    { minCrCl: 0, maxCrCl: 9, action: "1.25 mg/kg 3×/week after dialysis." },
+  ],
+  valganciclovir: [
+    { minCrCl: 60, action: "Induction 900 mg PO BD; maintenance 900 mg OD." },
+    { minCrCl: 40, maxCrCl: 59, action: "Induction 450 mg BD (half); maintenance 450 mg OD." },
+    { minCrCl: 25, maxCrCl: 39, action: "Induction 450 mg OD (quarter); maintenance 450 mg alternate days." },
+    { minCrCl: 10, maxCrCl: 24, action: "Induction 450 mg alternate days; maintenance 450 mg twice weekly." },
+    { minCrCl: 0, maxCrCl: 9, action: "Not recommended — use IV ganciclovir with dialysis dosing." },
+  ],
+  entecavir: [
+    { minCrCl: 50, action: "0.5 mg PO daily — standard." },
+    { minCrCl: 30, maxCrCl: 49, action: "HALVE: 0.25 mg daily or 0.5 mg q48h." },
+    { minCrCl: 10, maxCrCl: 29, action: "0.15 mg daily or 0.5 mg q72h." },
+    { minCrCl: 0, maxCrCl: 9, action: "0.05 mg daily or 0.5 mg weekly (after dialysis)." },
+  ],
+  "tenofovir-df": [
+    { minCrCl: 50, action: "300 mg PO daily — standard; urine protein + phosphate yearly." },
+    { minCrCl: 30, maxCrCl: 49, action: "300 mg q48h — or better, switch to tenofovir alafenamide." },
+    { minCrCl: 10, maxCrCl: 29, action: "300 mg twice weekly; strongly prefer TAF/alternative." },
+    { minCrCl: 0, maxCrCl: 9, action: "300 mg weekly after dialysis, or avoid." },
+  ],
+  lamivudine: [
+    { minCrCl: 50, action: "300 mg PO daily (HIV) — standard." },
+    { minCrCl: 30, maxCrCl: 49, action: "150 mg daily (half)." },
+    { minCrCl: 15, maxCrCl: 29, action: "150 mg first dose, then 100 mg daily." },
+    { minCrCl: 5, maxCrCl: 14, action: "150 mg first dose, then 50 mg daily." },
+    { minCrCl: 0, maxCrCl: 4, action: "50 mg first dose, then 25 mg daily." },
+  ],
+  remdesivir: [
+    { minCrCl: 30, action: "200 mg IV day 1, then 100 mg daily — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "Label caution (vehicle accumulation); recent data allow short courses — specialist decision, daily creatinine." },
+  ],
+  // ---- Antibiotics ----
+  cefepime: [
+    { minCrCl: 60, action: "1–2 g IV q8–12h — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "2 g q12h (or 1 g q8h for milder infection)." },
+    { minCrCl: 11, maxCrCl: 29, action: "2 g q24h (half of severe-infection dose)." },
+    { minCrCl: 0, maxCrCl: 10, action: "1 g q24h; any confusion/myoclonus = cefepime neurotoxicity until proven otherwise." },
+  ],
+  ceftazidime: [
+    { minCrCl: 50, action: "1–2 g IV q8h — standard." },
+    { minCrCl: 31, maxCrCl: 49, action: "1–2 g q12h." },
+    { minCrCl: 16, maxCrCl: 30, action: "1–2 g q24h." },
+    { minCrCl: 0, maxCrCl: 15, action: "0.5–1 g q24h (half dose, once daily)." },
+  ],
+  ertapenem: [
+    { minCrCl: 30, action: "1 g IV q24h — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "500 mg q24h (half)." },
+  ],
+  colistin: [
+    { minCrCl: 80, action: "Load 9 MU, then 9 MU/day divided q12h." },
+    { minCrCl: 50, maxCrCl: 79, action: "Load 9 MU, then 7.5–9 MU/day divided q12h." },
+    { minCrCl: 30, maxCrCl: 49, action: "Load 9 MU, then 5.5–7.5 MU/day divided q12h." },
+    { minCrCl: 10, maxCrCl: 29, action: "Load 9 MU, then 4.5–5.5 MU/day divided q12h." },
+    { minCrCl: 0, maxCrCl: 9, action: "Load 9 MU, then ~3.5 MU/day; dialysis protocol. Never reduce the loading dose." },
+  ],
+  teicoplanin: [
+    { minCrCl: 60, action: "6 mg/kg q12h ×3 loading, then 6 mg/kg q24h — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "Full loading ×3, then HALVE maintenance (6 mg/kg q48h or half-dose daily)." },
+    { minCrCl: 0, maxCrCl: 29, action: "Full loading ×3, then one-third (6 mg/kg q72h)." },
+  ],
+  daptomycin: [
+    { minCrCl: 30, action: "4–6 mg/kg IV q24h — standard; weekly CK." },
+    { minCrCl: 0, maxCrCl: 29, action: "Same mg/kg dose q48h (half frequency); dose after dialysis on dialysis days." },
+  ],
+  streptomycin: [
+    { minCrCl: 30, action: "15 mg/kg IM daily (max 1 g)." },
+    { minCrCl: 0, maxCrCl: 29, action: "12–15 mg/kg 2–3 times per week, level-guided; audiometry." },
+  ],
+  ethambutol: [
+    { minCrCl: 30, action: "15–20 mg/kg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "15–25 mg/kg THREE times per week (not daily); vision checks each visit." },
+  ],
+  pyrazinamide: [
+    { minCrCl: 30, action: "25 mg/kg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "25–35 mg/kg three times per week; watch urate and LFTs." },
+  ],
+  clarithromycin: [
+    { minCrCl: 30, action: "250–500 mg PO BD — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "HALVE the dose (250 mg BD max); QT and interaction check." },
+  ],
+  "imipenem-cilastatin": [
+    { minCrCl: 60, action: "500 mg IV q6h or 1 g q8h — standard." },
+    { minCrCl: 30, maxCrCl: 59, action: "500 mg q8h (two-thirds)." },
+    { minCrCl: 15, maxCrCl: 29, action: "500 mg q12h (half); seizure risk with accumulation." },
+    { minCrCl: 0, maxCrCl: 14, action: "Avoid unless on dialysis (give post-dialysis); prefer meropenem." },
+  ],
+  // ---- Anticoagulants / CNS / misc ----
+  enoxaparin: [
+    { minCrCl: 30, action: "Treatment 1 mg/kg SC q12h; prophylaxis 40 mg SC daily." },
+    { minCrCl: 0, maxCrCl: 29, action: "Treatment 1 mg/kg ONCE daily (half); prophylaxis 30 mg daily; anti-Xa if course > 1 week." },
+  ],
+  fondaparinux: [
+    { minCrCl: 50, action: "Standard dosing by weight." },
+    { minCrCl: 30, maxCrCl: 49, action: "Caution: prophylaxis 1.5 mg daily; treatment only if no alternative." },
+    { minCrCl: 0, maxCrCl: 29, action: "CONTRAINDICATED — use unfractionated heparin." },
+  ],
+  baclofen: [
+    { minCrCl: 60, action: "Standard titration 5 mg TID upward." },
+    { minCrCl: 30, maxCrCl: 59, action: "HALVE doses and titrate slowly; watch for drowsiness/confusion." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid — baclofen encephalopathy in CKD is classic; if essential, 5 mg daily max with close watch." },
+  ],
+  topiramate: [
+    { minCrCl: 70, action: "25–100 mg PO BD — standard." },
+    { minCrCl: 0, maxCrCl: 69, action: "HALVE the dose; supplement after dialysis." },
+  ],
+  sotalol: [
+    { minCrCl: 60, action: "80–160 mg q12h with QT monitoring." },
+    { minCrCl: 40, maxCrCl: 59, action: "Same dose q24h (half frequency)." },
+    { minCrCl: 0, maxCrCl: 39, action: "Avoid, or individualized q36–48h dosing with ECG — torsades risk." },
+  ],
+  morphine: [
+    { minCrCl: 50, action: "Standard dosing; start low in elderly." },
+    { minCrCl: 10, maxCrCl: 49, action: "Reduce dose ~25–50% and extend interval; watch sedation/myoclonus (M6G accumulation)." },
+    { minCrCl: 0, maxCrCl: 9, action: "Avoid — switch to fentanyl (no active renal metabolites)." },
+  ],
+  acarbose: [
+    { minCrCl: 25, action: "25–100 mg TID with meals — standard." },
+    { minCrCl: 0, maxCrCl: 24, action: "Avoid (label)." },
+  ],
+  zidovudine: [
+    { minCrCl: 15, action: "300 mg PO BD — standard." },
+    { minCrCl: 0, maxCrCl: 14, action: "100 mg q6–8h; CBC for anemia." },
+  ],
+  metoclopramide: [
+    { minCrCl: 40, action: "10 mg PO/IV TID — standard, short courses only." },
+    { minCrCl: 0, maxCrCl: 39, action: "HALVE the dose — EPS/dystonia risk rises with accumulation." },
+  ],
+  hydrochlorothiazide: [
+    { minCrCl: 30, action: "12.5–25 mg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 29, action: "Ineffective as diuretic below CrCl 30 — switch to a loop diuretic (may keep for calcium/BP niche uses)." },
+  ],
+  bisoprolol: [
+    { minCrCl: 20, action: "2.5–10 mg PO daily — standard." },
+    { minCrCl: 0, maxCrCl: 19, action: "Max 10 mg daily; start 1.25 mg." },
+  ],
+  // ---- Explicit "no adjustment" answers ----
+  caspofungin: [{ minCrCl: 0, action: "No renal dose adjustment at any CrCl (hepatic handling). Moderate hepatic impairment: 35 mg daily." }],
+  micafungin: [{ minCrCl: 0, action: "No renal dose adjustment at any CrCl, dialysis included." }],
+  anidulafungin: [{ minCrCl: 0, action: "No renal dose adjustment at any CrCl." }],
+  posaconazole: [{ minCrCl: 0, action: "Tablets: no renal adjustment. IV: vehicle caution below CrCl 50 — prefer tablets. Trough on prolonged therapy." }],
+  "itraconazole-adult": [{ minCrCl: 0, action: "Oral: no renal adjustment (absorption and interactions are the issues). Old IV formulation avoided below CrCl 30." }],
+  "tenofovir-af": [{ minCrCl: 0, action: "No adjustment to CrCl 15 and on dialysis — the preferred tenofovir in CKD." }],
+  dolutegravir: [{ minCrCl: 0, action: "No renal adjustment at any CrCl." }],
+  tigecycline: [{ minCrCl: 0, action: "No renal adjustment at any CrCl (biliary clearance); halve maintenance in severe hepatic impairment." }],
+  "polymyxin-b": [{ minCrCl: 0, action: "NOT dose-adjusted for CrCl (unlike colistin) — but nephrotoxic: daily creatinine while on therapy." }],
+  isoniazid: [{ minCrCl: 0, action: "No renal adjustment; give with pyridoxine 10–25 mg daily." }],
+  rifampicin: [{ minCrCl: 0, action: "No renal adjustment; check drug interactions instead (potent inducer)." }],
+  linagliptin: [{ minCrCl: 0, action: "No renal adjustment at any CrCl including dialysis — the go-to gliptin in CKD." }],
+  teneligliptin: [{ minCrCl: 0, action: "No renal dose adjustment needed in CKD." }],
 };
 
 function urgencyFor(crCl: number, limit?: number): RenalDoseReport["urgency"] {
@@ -342,7 +517,9 @@ function activeBand(bands: RenalDoseBand[], crCl: number): RenalDoseBand | null 
 
 export function searchRenalDrugs(query: string): DrugRecord[] {
   const q = query.trim().toLowerCase();
-  const renalDrugs = drugsDB.filter((d) => d.renalAdjustmentLimit != null);
+  const renalDrugs = drugsDB.filter(
+    (d) => d.renalAdjustmentLimit != null || RENAL_DOSE_BANDS[d.id] || d.renalNote,
+  );
   if (!q) return renalDrugs.slice(0, 40);
   return renalDrugs
     .filter(
@@ -372,6 +549,9 @@ export function buildRenalDoseReport(drug: DrugRecord, crCl: number): RenalDoseR
     recommendations.push(
       `CrCl ≥ ${limit} mL/min — standard dosing generally acceptable: ${drug.standardDose}`,
     );
+  }
+  if (limit == null && !active && drug.renalNote) {
+    recommendations.push(drug.renalNote);
   }
 
   return {
