@@ -8,7 +8,11 @@ const CURSOR_VM_HOSTS = [
 ]
 
 export default defineConfig({
-  base: './',
+  // Absolute base for the web/Netlify build: the SPA catch-all rewrite serves
+  // index.html for unknown paths, and relative asset URLs would then resolve
+  // against that path and 404 into the rewrite (blank page). The Capacitor
+  // build needs relative URLs instead and passes --base=./ (see build:android).
+  base: '/',
   plugins: [react(), tailwindcss()],
   server: {
     host: true,
