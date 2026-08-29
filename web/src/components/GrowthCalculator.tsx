@@ -3,9 +3,11 @@ import {
   centileBandCompact,
   centileBandLabel,
   heightForAge,
+  zBandCompact,
+  zBandLabel,
   toMonths,
   weightForAge,
-  WHO_MAX_MONTHS,
+  GROWTH_MAX_MONTHS,
   type GrowthResult,
   type Sex,
 } from "../lib/growthMath";
@@ -71,9 +73,7 @@ function ResultCard({
           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
             Z-score
           </dt>
-          <dd className="text-lg font-bold">
-            {result.z > 0 ? `+${result.z}` : result.z} SD
-          </dd>
+          <dd className="text-lg font-bold">{zBandCompact(result.z)} SD</dd>
         </div>
         <div className="rounded-md bg-white/70 px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
@@ -92,7 +92,8 @@ function ResultCard({
       </dl>
 
       <p className="mt-3 rounded-md bg-white/70 px-3 py-2 text-sm font-semibold">
-        On the chart: {centileBandLabel(result.percentile)}.
+        On the chart: {centileBandLabel(result.percentile)} ·{" "}
+        {zBandLabel(result.z)}.
       </p>
 
       <p className="mt-3 text-xs opacity-80">
@@ -119,7 +120,7 @@ export default function GrowthCalculator() {
     [years, months],
   );
 
-  const overFive = ageMonths > WHO_MAX_MONTHS;
+  const overMax = ageMonths > GROWTH_MAX_MONTHS;
 
   const wfa = useMemo(
     () =>
@@ -226,19 +227,17 @@ export default function GrowthCalculator() {
           {ageMonths < 24
             ? " · under 2 years, measure length lying down"
             : " · from 2 years, measure height standing"}
+          {ageMonths > 60 &&
+            ageMonths <= GROWTH_MAX_MONTHS &&
+            " · 5–18 y read against CDC 2000 (IAP 2015 not yet loaded)"}
         </p>
       </section>
 
-      {overFive ? (
+      {overMax ? (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">
-            Over 5 years — IAP charts are not loaded yet
-          </p>
+          <p className="font-semibold">Charts here cover 0–18 years</p>
           <p className="mt-1">
-            The WHO standards built in here stop at 5 years (60 months). Indian
-            children above 5 are read against the IAP 2015 charts, and those
-            reference numbers are not in this app yet, so nothing is calculated
-            for this age rather than showing a figure from the wrong chart.
+            Above 18 use adult assessment (BMI), not growth charts.
           </p>
         </div>
       ) : (

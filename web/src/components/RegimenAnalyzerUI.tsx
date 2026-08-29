@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { analyzeRegimen } from "../clinical/AnalysisEngine";
-import { KNOWN_CONDITIONS, searchDrugs } from "../clinical/clinicalData";
+import { CONDITIONS_CATALOG, KNOWN_CONDITIONS, searchDrugs } from "../clinical/clinicalData";
 import type { DrugRecord, PatientProfile } from "../clinical/types";
 
 function severityClass(severity: string): string {
@@ -18,7 +18,8 @@ export default function RegimenAnalyzerUI() {
   const [weightKg, setWeightKg] = useState(68);
   const [creatinineMgDl, setCreatinineMgDl] = useState<number | "">(1.4);
   const [sex, setSex] = useState<"Male" | "Female">("Female");
-  const [conditions, setConditions] = useState<string[]>(["Heart Failure"]);
+  const [conditions, setConditions] = useState<string[]>([]);
+  const [conditionQuery, setConditionQuery] = useState("");
   const [regimen, setRegimen] = useState<DrugRecord[]>([]);
   const [drugQuery, setDrugQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -57,43 +58,20 @@ export default function RegimenAnalyzerUI() {
     );
   };
 
-  const loadDemo = () => {
-    setAgeYears(72);
-    setWeightKg(68);
-    setCreatinineMgDl(1.4);
-    setSex("Female");
-    setConditions(["Heart Failure", "Fall Risk / Frailty"]);
-    const demoIds = [
-      "amitriptyline",
-      "zolpidem",
-      "digoxin",
-      "amiodarone",
-      "clopidogrel",
-      "omeprazole",
-    ];
-    setRegimen(searchDrugs("").filter((d) => demoIds.includes(d.id)).concat(
-      // ensure exact set
-      ...[],
-    ));
-    // resolve properly
-    const fromSearch = ["amitriptyline", "zolpidem", "digoxin", "amiodarone", "clopidogrel", "omeprazole"]
-      .map((id) => searchDrugs(id).find((d) => d.id === id))
-      .filter((d): d is DrugRecord => Boolean(d));
-    setRegimen(fromSearch);
-  };
+  const conditionMatches = useMemo(() => {
+    const q = conditionQuery.trim().toLowerCase();
+    if (!q) return [];
+    return CONDITIONS_CATALOG.filter(
+      (c) => c.toLowerCase().includes(q) && !conditions.includes(c),
+    ).slice(0, 12);
+  }, [conditionQuery, conditions]);
+
 
   return (
     <div className="bg-slate-50 px-3 py-4 md:px-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-4">
           <h1 className="text-2xl font-bold text-rose-800">Polypharmacy Analyzer</h1>
-          <button
-            type="button"
-            onClick={loadDemo}
-            className="mt-2 text-xs font-semibold text-blue-700 underline"
-          >
-            Load demo
-          </button>
         </header>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -165,26 +143,75 @@ export default function RegimenAnalyzerUI() {
               </div>
 
               <p className="mt-4 text-sm font-semibold text-slate-800">
-                Known conditions
+                Conditions ({conditions.length} selected)
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {KNOWN_CONDITIONS.map((c) => {
-                  const on = conditions.includes(c);
-                  return (
+              {conditions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {conditions.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => toggleCondition(c)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                        on
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-slate-200 bg-white text-slate-700"
-                      }`}
+                      title="Tap to remove"
+                      className="rounded-full border border-rose-600 bg-rose-600 px-3 py-1 text-xs font-medium text-white"
                     >
-                      {c}
+                      {c} ✕
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+              <input
+                value={conditionQuery}
+                onChange={(e) => setConditionQuery(e.target.value)}
+                placeholder="Search any condition — e.g. parkinson, glaucoma, falls…"
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-500"
+              />
+              {conditionMatches.length > 0 && (
+                <ul className="mt-1 max-h-52 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+                  {conditionMatches.map((c) => (
+                    <li key={c}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toggleCondition(c);
+                          setConditionQuery("");
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-rose-50"
+                      >
+                        {c}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {conditionQuery.trim() && conditionMatches.length === 0 && (
+                <p className="mt-1 text-xs text-slate-500">
+                  No match — tap Enter to add "{conditionQuery.trim()}" as a custom
+                  condition.{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleCondition(conditionQuery.trim());
+                      setConditionQuery("");
+                    }}
+                    className="font-semibold text-rose-700 underline"
+                  >
+                    Add it
+                  </button>
+                </p>
+              )}
+              <p className="mt-2 text-xs font-semibold text-slate-500">Common:</p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {KNOWN_CONDITIONS.filter((c) => !conditions.includes(c)).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => toggleCondition(c)}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-rose-50"
+                  >
+                    {c}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -449,6 +476,32 @@ export default function RegimenAnalyzerUI() {
                 </ul>
               )}
             </div>
+
+            {report.diseaseDrugAlerts.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="text-base font-bold text-slate-900">
+                  Disease–drug cautions (for this patient's conditions)
+                </h3>
+                <ul className="mt-3 space-y-2">
+                  {report.diseaseDrugAlerts.map((a, i) => (
+                    <li
+                      key={`${a.drugId}-${a.condition}-${i}`}
+                      className={`rounded-lg border p-3 text-sm ${
+                        a.severity === "High"
+                          ? "border-red-200 bg-red-50 text-red-900"
+                          : "border-amber-200 bg-amber-50 text-amber-950"
+                      }`}
+                    >
+                      <p className="font-bold">
+                        {a.drugName} × {a.condition}
+                      </p>
+                      <p className="mt-1">{a.rule}</p>
+                      <p className="mt-1 font-semibold">→ {a.recommendation}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Drug-by-drug point-wise analysis */}
             {report.drugDetails.length > 0 && (

@@ -1,4 +1,12 @@
 import {
+  CDC_FROM_MONTH,
+  CDC_TO_MONTH,
+  CDC_HFA_BOYS,
+  CDC_HFA_GIRLS,
+  CDC_WFA_BOYS,
+  CDC_WFA_GIRLS,
+} from "../data/cdcGrowthReference";
+import {
   STANDING_HEIGHT_FROM_MONTH,
   WHO_HFA_BOYS,
   WHO_HFA_GIRLS,
@@ -8,6 +16,11 @@ import {
 
 export type Sex = "male" | "female";
 export const WHO_MAX_MONTHS = 60;
+/** Charts run to 18 years: WHO to 60 months, CDC 2000 above that. */
+export const GROWTH_MAX_MONTHS = CDC_TO_MONTH;
+
+const CDC_NOTE =
+  "CDC 2000 reference (IAP 2015 tables not yet loaded — Indian children sit slightly lower for height on these lines)";
 
 export type GrowthResult = {
   z: number;
@@ -84,7 +97,36 @@ export function weightForAge(
 ): GrowthResult | null {
   const month = Math.floor(ageMonths);
   if (!Number.isFinite(weightKg) || weightKg <= 0) return null;
-  if (month < 0 || month > WHO_MAX_MONTHS) return null;
+  if (month < 0 || month > GROWTH_MAX_MONTHS) return null;
+
+  if (month >= CDC_FROM_MONTH) {
+    const cdc = sex === "male" ? CDC_WFA_BOYS : CDC_WFA_GIRLS;
+    const [, l, m, sVal] = cdc[month - CDC_FROM_MONTH];
+    const z = lmsZ(weightKg, l, m, sVal);
+    let classification: string;
+    let band: GrowthResult["band"];
+    if (z < -3) {
+      classification = "Severely underweight";
+      band = "alert";
+    } else if (z < -2) {
+      classification = "Underweight";
+      band = "caution";
+    } else if (z <= 2) {
+      classification = "Normal weight for age";
+      band = "normal";
+    } else {
+      classification = "Above +2 SD — assess with BMI-for-age";
+      band = "caution";
+    }
+    return {
+      z: round(z, 2),
+      percentile: round(zToPercentile(z), 1),
+      median: m,
+      reference: `Weight-for-age 5–18 y, ${CDC_NOTE}`,
+      classification,
+      band,
+    };
+  }
 
   const table = sex === "male" ? WHO_WFA_BOYS : WHO_WFA_GIRLS;
   const [, l, m, s, sd3neg, sd2neg, sd2pos, sd3pos] = table[month];
@@ -132,7 +174,37 @@ export function heightForAge(
 ): GrowthResult | null {
   const month = Math.floor(ageMonths);
   if (!Number.isFinite(heightCm) || heightCm <= 0) return null;
-  if (month < 0 || month > WHO_MAX_MONTHS) return null;
+  if (month < 0 || month > GROWTH_MAX_MONTHS) return null;
+
+  if (month >= CDC_FROM_MONTH) {
+    const cdc = sex === "male" ? CDC_HFA_BOYS : CDC_HFA_GIRLS;
+    const [, l, m, sVal] = cdc[month - CDC_FROM_MONTH];
+    const z = lmsZ(heightCm, l, m, sVal);
+    let classification: string;
+    let band: GrowthResult["band"];
+    if (z < -3) {
+      classification = "Severely stunted";
+      band = "alert";
+    } else if (z < -2) {
+      classification = "Stunted / short stature — evaluate";
+      band = "caution";
+    } else if (z <= 3) {
+      classification = "Normal height for age";
+      band = "normal";
+    } else {
+      classification = "Very tall — consider endocrine review if unexpected";
+      band = "caution";
+    }
+    return {
+      z: round(z, 2),
+      percentile: round(zToPercentile(z), 1),
+      median: m,
+      reference: `Height-for-age 5–18 y, ${CDC_NOTE}`,
+      measurement: "Height (standing)",
+      classification,
+      band,
+    };
+  }
 
   const table = sex === "male" ? WHO_HFA_BOYS : WHO_HFA_GIRLS;
   const [, l, m, s] = table[month];
@@ -184,6 +256,41 @@ export function centileBandLabel(percentile: number): string {
     if (percentile > lines[i] && percentile < lines[i + 1]) {
       return `between the ${ord(lines[i])} and ${ord(lines[i + 1])} centile lines`;
     }
+  }
+  return "";
+}
+
+/**
+ * Position against the chart's marked z-lines (−3, −2, −1, 0, +1, +2, +3),
+ * e.g. "between the −2 and −1 SD lines".
+ */
+export function zBandLabel(z: number): string {
+  const lines = [-3, -2, -1, 0, 1, 2, 3];
+  const name = (n: number) => `${n}`.replace("-", "\u2212");
+  for (const line of lines) {
+    if (Math.abs(z - line) < 0.05) return `on the ${name(line)} SD line`;
+  }
+  if (z < -3) return "below the −3 SD line";
+  if (z > 3) return "above the 3 SD line";
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (z > lines[i] && z < lines[i + 1]) {
+      return `between the ${name(lines[i])} and ${name(lines[i + 1])} SD lines`;
+    }
+  }
+  return "";
+}
+
+/** Compact z form for the stat tile: "0", "−2 to −1", "<−3", ">3". */
+export function zBandCompact(z: number): string {
+  const lines = [-3, -2, -1, 0, 1, 2, 3];
+  const name = (n: number) => `${n}`.replace("-", "\u2212");
+  for (const line of lines) {
+    if (Math.abs(z - line) < 0.05) return name(line);
+  }
+  if (z < -3) return "<−3";
+  if (z > 3) return ">3";
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (z > lines[i] && z < lines[i + 1]) return `${name(lines[i])} to ${name(lines[i + 1])}`;
   }
   return "";
 }

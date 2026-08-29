@@ -18,6 +18,61 @@ export const KNOWN_CONDITIONS = [
   "Anemia",
 ] as const;
 
+/**
+ * Searchable condition catalog for the polypharmacy analyzer — common to
+ * uncommon, geriatric-weighted. KNOWN_CONDITIONS above stays as the
+ * quick-pick row; everything here is reachable through the search box.
+ */
+export const CONDITIONS_CATALOG: string[] = [
+  // Cardiovascular
+  "Hypertension", "CAD / ACS", "Post-MI", "Heart Failure (HFrEF)", "Heart Failure (HFpEF)",
+  "Atrial Fibrillation", "Valvular Heart Disease", "Aortic Stenosis", "Rheumatic Heart Disease",
+  "Peripheral Arterial Disease", "Bradyarrhythmia / Heart Block", "Orthostatic Hypotension",
+  "Dyslipidemia", "DVT / Pulmonary Embolism", "Aortic Aneurysm", "Chronic Venous Insufficiency",
+  // Endocrine / metabolic
+  "Type 2 Diabetes", "Type 1 Diabetes", "Prediabetes", "Diabetic Neuropathy",
+  "Diabetic Nephropathy", "Diabetic Retinopathy", "Recurrent Hypoglycemia",
+  "Hypothyroidism", "Hyperthyroidism", "Obesity", "Gout / Hyperuricemia",
+  "Osteoporosis", "Vitamin D Deficiency / Osteomalacia", "Hyponatremia", "Hyperkalemia",
+  "Adrenal Insufficiency",
+  // Renal / genitourinary
+  "CKD", "ESRD on Dialysis", "Recurrent UTI", "BPH / Prostatism", "Urinary Incontinence",
+  "Overactive Bladder", "Urinary Retention", "Nephrolithiasis", "Prostate Cancer",
+  // Neurology / psychiatry
+  "Stroke / TIA", "Alzheimer Dementia", "Vascular Dementia", "Lewy Body Dementia",
+  "Parkinson Disease", "Drug-induced Parkinsonism", "Epilepsy / Seizures",
+  "Peripheral Neuropathy", "Essential Tremor", "Migraine", "Vertigo / BPPV",
+  "Meniere Disease", "Trigeminal Neuralgia", "Normal Pressure Hydrocephalus",
+  "Restless Legs Syndrome", "Depression", "Anxiety Disorder", "Insomnia",
+  "Recent Delirium", "Bipolar Disorder", "Schizophrenia / Psychosis", "Alcohol Use Disorder",
+  // Respiratory
+  "COPD", "Asthma", "Bronchiectasis", "Past Pulmonary TB", "Active TB on Treatment",
+  "ILD / Pulmonary Fibrosis", "Obstructive Sleep Apnea", "Pulmonary Hypertension",
+  // GI / liver
+  "GERD", "Peptic Ulcer Disease", "GI Bleed (history)", "Chronic Liver Disease / Cirrhosis",
+  "Hepatitis B", "Hepatitis C", "Fatty Liver (NAFLD)", "Chronic Constipation",
+  "Irritable Bowel Syndrome", "IBD (UC / Crohn)", "Diverticular Disease",
+  "Chronic Pancreatitis", "Gallstones", "Dysphagia", "Hemorrhoids",
+  // Musculoskeletal
+  "Osteoarthritis (knee/hip)", "Rheumatoid Arthritis", "Chronic Low Back Pain",
+  "Cervical Spondylosis", "Lumbar Canal Stenosis", "Fragility Fracture (history)",
+  "Hip Fracture (past)", "Sarcopenia", "Polymyalgia Rheumatica", "Frozen Shoulder",
+  "Fibromyalgia",
+  // Geriatric syndromes
+  "Fall Risk / Frailty", "Recurrent Falls", "Dizziness", "Syncope", "Chronic Pain",
+  "Pressure Ulcers", "Malnutrition / Weight Loss", "Hearing Impairment",
+  "Cataract / Visual Impairment", "Glaucoma", "Macular Degeneration",
+  "Poor Dentition / Chewing Difficulty", "Immobility / Bedbound",
+  // Hematology / oncology
+  "Anemia", "Iron Deficiency Anemia", "B12 Deficiency", "Thrombocytopenia",
+  "Chronic Lymphocytic Leukemia", "Multiple Myeloma", "MGUS",
+  "Solid Malignancy (on treatment)", "Breast Cancer (past)", "Colon Cancer (past)",
+  // Infection / immune / skin
+  "Infection / Sepsis", "Recent Pneumonia", "Cellulitis", "Recent Herpes Zoster",
+  "Post-herpetic Neuralgia", "Chronic Osteomyelitis", "HIV", "Immunosuppressed State",
+  "Chronic Pruritus", "Psoriasis", "Chronic Leg Ulcer",
+];
+
 export const drugsDB: DrugRecord[] = [
   // —— Analgesics / antipyretics / NSAIDs ——
   {

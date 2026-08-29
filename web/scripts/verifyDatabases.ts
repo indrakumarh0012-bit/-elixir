@@ -256,6 +256,105 @@ section("Growth centile bands");
   console.log(`compact centile cases: ${cpass}/${compact.length} pass`);
 }
 
+// ---------- 5e. Conditions catalog + disease-drug + START rules ----------
+section("Conditions, disease-drug and START rules");
+{
+  const { CONDITIONS_CATALOG } = await import("../src/clinical/clinicalData");
+  const set = new Set(CONDITIONS_CATALOG.map((c) => c.toLowerCase()));
+  if (CONDITIONS_CATALOG.length < 100) fail(`conditions catalog only ${CONDITIONS_CATALOG.length} (< 100)`);
+  if (set.size !== CONDITIONS_CATALOG.length) fail("duplicate conditions in catalog");
+  console.log(`conditions catalog: ${CONDITIONS_CATALOG.length} unique entries`);
+
+  const rx = (ids: string[]) => ids.map((i) => getDrugById(i)!).filter(Boolean);
+  const base = { ageYears: 78, weightKg: 60, creatinineMgDl: 1.0, sex: "Male" as const };
+
+  const hf = analyzeRegimen({ ...base, conditions: ["Heart Failure (HFrEF)"] }, rx(["ibuprofen", "verapamil", "pioglitazone"]));
+  if (hf.diseaseDrugAlerts.filter((a) => a.severity === "High").length !== 3)
+    fail(`HF triple: got ${hf.diseaseDrugAlerts.length} alerts, want 3 High`);
+  if (!hf.drugDetails.every((d) => d.verdict === "stop-or-review"))
+    fail("HF triple: all three should be stop-or-review");
+  if (hf.startAlerts.length < 2) fail("HF with no HF meds should START ACEI + beta-blocker");
+
+  const af = analyzeRegimen({ ...base, conditions: ["Atrial Fibrillation"] }, rx(["paracetamol"]));
+  if (!af.startAlerts.some((a) => /anticoagulation/i.test(a.ruleDescription)))
+    fail("AF without OAC should trigger START anticoagulant");
+  const afTreated = analyzeRegimen({ ...base, conditions: ["Atrial Fibrillation"] }, rx(["apixaban"]));
+  if (afTreated.startAlerts.some((a) => /anticoagulation/i.test(a.ruleDescription)))
+    fail("AF on apixaban should NOT trigger the START rule");
+
+  const pd = analyzeRegimen({ ...base, conditions: ["Parkinson Disease"] }, rx(["flunarizine", "metoclopramide"]));
+  if (pd.diseaseDrugAlerts.length !== 2) fail("Parkinson + flunarizine/metoclopramide should give 2 alerts");
+
+  const falls = analyzeRegimen({ ...base, conditions: ["Recurrent Falls"] }, rx(["zolpidem", "lorazepam"]));
+  if (falls.diseaseDrugAlerts.filter((a) => a.severity === "High").length !== 2)
+    fail("Falls + 2 hypnotics should give 2 High alerts");
+
+  const clean = analyzeRegimen({ ...base, conditions: ["Hypothyroidism"] }, rx(["thyroxine"]));
+  if (clean.diseaseDrugAlerts.length !== 0) fail("thyroxine + hypothyroidism should give no disease-drug alert");
+  console.log("disease-drug rules: HF/Parkinson/falls fire, treated-AF suppressed, benign regimen clean");
+}
+
+// ---------- 5d. Z-band labels + CDC 5-18y reference ----------
+section("Z bands and 5-18 y reference");
+{
+  const gm = await import("../src/lib/growthMath");
+  const zCases: [number, string][] = [
+    [0, "on the 0 SD line"],
+    [-1.14, "between the −2 and −1 SD lines"],
+    [-2.6, "between the −3 and −2 SD lines"],
+    [-3.4, "below the −3 SD line"],
+    [1.02, "on the 1 SD line"],
+    [2.5, "between the 2 and 3 SD lines"],
+    [3.6, "above the 3 SD line"],
+  ];
+  let zp = 0;
+  for (const [z, want] of zCases) {
+    const got = gm.zBandLabel(z);
+    if (got === want) zp++;
+    else fail(`zBand ${z}: want "${want}" got "${got}"`);
+  }
+  const zc: [number, string][] = [[0, "0"], [-1.14, "−2 to −1"], [-3.4, "<−3"], [2.5, "2 to 3"]];
+  for (const [z, want] of zc) {
+    const got = gm.zBandCompact(z);
+    if (got === want) zp++;
+    else fail(`zBandCompact ${z}: want "${want}" got "${got}"`);
+  }
+  console.log(`z-band cases: ${zp}/${zCases.length + zc.length} pass`);
+
+  // CDC self-consistency: feeding each month's median back must give z ≈ 0.
+  const cdc = await import("../src/data/cdcGrowthReference");
+  let cdcOk = 0, cdcN = 0;
+  const sweep: [readonly (readonly number[])[], "male" | "female", "h" | "w"][] = [
+    [cdc.CDC_HFA_BOYS, "male", "h"],
+    [cdc.CDC_HFA_GIRLS, "female", "h"],
+    [cdc.CDC_WFA_BOYS, "male", "w"],
+    [cdc.CDC_WFA_GIRLS, "female", "w"],
+  ];
+  for (const [table, sex, kind] of sweep) {
+    for (const [month, , m] of table) {
+      const r = kind === "h" ? gm.heightForAge(m, month, sex) : gm.weightForAge(m, month, sex);
+      cdcN++;
+      if (r && Math.abs(r.z) < 0.01) cdcOk++;
+      else fail(`CDC median feedback ${kind}/${sex} m${month}: z=${r?.z}`);
+    }
+  }
+  console.log(`CDC median self-consistency: ${cdcOk}/${cdcN}`);
+
+  // Known values: 18-y medians and classification behavior
+  const b18 = gm.heightForAge(176.2, 216, "male");
+  const g18 = gm.heightForAge(163.1, 216, "female");
+  if (!b18 || Math.abs(b18.z) > 0.02) fail(`boy 18y 176.2 cm should be ~z0, got ${b18?.z}`);
+  const short10 = gm.heightForAge(120, 120, "male"); // 10-y boy, 120 cm ≈ -2.5 SD
+  if (!short10 || short10.z > -2 || !/Stunted|short/i.test(short10.classification))
+    fail(`10y boy 120 cm should flag short stature, got ${short10?.z} ${short10?.classification}`);
+  const six = gm.weightForAge(20, 72, "male");
+  if (!six || six.band !== "normal") fail(`6y boy 20 kg should be normal, got ${six?.z}`);
+  if (six && !/CDC 2000/.test(six.reference)) fail("5-18y reference must say CDC 2000");
+  if (b18 && g18) console.log(`18-y medians OK (boy z=${b18.z}, girl z=${g18.z}); 6-y and 10-y spot cases OK`);
+  const over = gm.heightForAge(170, 220, "male");
+  if (over !== null) fail("age > 216 months should return null");
+}
+
 // ---------- 6. Pediatric DB integrity ----------
 section("Pediatric DB integrity");
 {
