@@ -1,11 +1,11 @@
 import {
-  CDC_FROM_MONTH,
-  CDC_TO_MONTH,
-  CDC_HFA_BOYS,
-  CDC_HFA_GIRLS,
-  CDC_WFA_BOYS,
-  CDC_WFA_GIRLS,
-} from "../data/cdcGrowthReference";
+  IAP_CENTILES,
+  IAP_HEIGHT_BOYS,
+  IAP_HEIGHT_GIRLS,
+  IAP_WEIGHT_BOYS,
+  IAP_WEIGHT_GIRLS,
+  type IapRow,
+} from "../data/iapGrowthReference";
 import {
   STANDING_HEIGHT_FROM_MONTH,
   WHO_HFA_BOYS,
@@ -16,11 +16,48 @@ import {
 
 export type Sex = "male" | "female";
 export const WHO_MAX_MONTHS = 60;
-/** Charts run to 18 years: WHO to 60 months, CDC 2000 above that. */
-export const GROWTH_MAX_MONTHS = CDC_TO_MONTH;
+/** Charts run to 18 years: WHO to 60 months, IAP 2015 above that. */
+export const GROWTH_MAX_MONTHS = 216;
 
-const CDC_NOTE =
-  "CDC 2000 reference (IAP 2015 tables not yet loaded — Indian children sit slightly lower for height on these lines)";
+const IAP_REF =
+  "IAP 2015 charts for Indian children (Khadilkar et al., Indian Pediatrics 2015)";
+
+/** Linear interpolation of a half-year-step IAP table at an exact age. */
+function iapRowAt(table: IapRow[], ageYears: number): IapRow {
+  const t = Math.min(Math.max(ageYears, 5), 18);
+  const idx = (t - 5) / 0.5;
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, table.length - 1);
+  const frac = idx - lo;
+  const a = table[lo];
+  const b = table[hi];
+  return a.map((v, i) => v + (b[i] - v) * frac) as IapRow;
+}
+
+/**
+ * Where the measurement sits between the table's own centile columns —
+ * exactly how the printed chart is read. Piecewise-linear between the seven
+ * published lines; beyond the outer lines the SD column extends the scale.
+ */
+function iapPercentile(x: number, row: IapRow): number {
+  const values = row.slice(1, 8);
+  const sd = row[8];
+  if (x < values[0]) {
+    const z = (x - row[4]) / sd;
+    return Math.min(zToPercentile(z), 2.9);
+  }
+  if (x > values[6]) {
+    const z = (x - row[4]) / sd;
+    return Math.max(zToPercentile(z), 97.1);
+  }
+  for (let i = 0; i < 6; i++) {
+    if (x >= values[i] && x <= values[i + 1]) {
+      const frac = (x - values[i]) / (values[i + 1] - values[i]);
+      return IAP_CENTILES[i] + frac * (IAP_CENTILES[i + 1] - IAP_CENTILES[i]);
+    }
+  }
+  return 50;
+}
 
 export type GrowthResult = {
   z: number;
@@ -99,30 +136,30 @@ export function weightForAge(
   if (!Number.isFinite(weightKg) || weightKg <= 0) return null;
   if (month < 0 || month > GROWTH_MAX_MONTHS) return null;
 
-  if (month >= CDC_FROM_MONTH) {
-    const cdc = sex === "male" ? CDC_WFA_BOYS : CDC_WFA_GIRLS;
-    const [, l, m, sVal] = cdc[month - CDC_FROM_MONTH];
-    const z = lmsZ(weightKg, l, m, sVal);
+  if (month > WHO_MAX_MONTHS) {
+    const row = iapRowAt(sex === "male" ? IAP_WEIGHT_BOYS : IAP_WEIGHT_GIRLS, month / 12);
+    const pct = iapPercentile(weightKg, row);
+    const z = (weightKg - row[4]) / row[8];
     let classification: string;
     let band: GrowthResult["band"];
     if (z < -3) {
-      classification = "Severely underweight";
+      classification = "Severely underweight (far below the 3rd IAP centile)";
       band = "alert";
-    } else if (z < -2) {
-      classification = "Underweight";
+    } else if (pct < 3) {
+      classification = "Underweight (below the 3rd IAP centile)";
       band = "caution";
-    } else if (z <= 2) {
+    } else if (pct <= 97) {
       classification = "Normal weight for age";
       band = "normal";
     } else {
-      classification = "Above +2 SD — assess with BMI-for-age";
+      classification = "Above the 97th IAP centile — assess with BMI";
       band = "caution";
     }
     return {
       z: round(z, 2),
-      percentile: round(zToPercentile(z), 1),
-      median: m,
-      reference: `Weight-for-age 5–18 y, ${CDC_NOTE}`,
+      percentile: round(pct, 1),
+      median: row[4],
+      reference: `Weight-for-age 5–18 y, ${IAP_REF}`,
       classification,
       band,
     };
@@ -176,30 +213,30 @@ export function heightForAge(
   if (!Number.isFinite(heightCm) || heightCm <= 0) return null;
   if (month < 0 || month > GROWTH_MAX_MONTHS) return null;
 
-  if (month >= CDC_FROM_MONTH) {
-    const cdc = sex === "male" ? CDC_HFA_BOYS : CDC_HFA_GIRLS;
-    const [, l, m, sVal] = cdc[month - CDC_FROM_MONTH];
-    const z = lmsZ(heightCm, l, m, sVal);
+  if (month > WHO_MAX_MONTHS) {
+    const row = iapRowAt(sex === "male" ? IAP_HEIGHT_BOYS : IAP_HEIGHT_GIRLS, month / 12);
+    const pct = iapPercentile(heightCm, row);
+    const z = (heightCm - row[4]) / row[8];
     let classification: string;
     let band: GrowthResult["band"];
     if (z < -3) {
-      classification = "Severely stunted";
+      classification = "Severely short (far below the 3rd IAP centile)";
       band = "alert";
-    } else if (z < -2) {
-      classification = "Stunted / short stature — evaluate";
+    } else if (pct < 3) {
+      classification = "Short stature (below the 3rd IAP centile) — evaluate";
       band = "caution";
-    } else if (z <= 3) {
+    } else if (pct <= 97) {
       classification = "Normal height for age";
       band = "normal";
     } else {
-      classification = "Very tall — consider endocrine review if unexpected";
+      classification = "Above the 97th IAP centile — tall stature";
       band = "caution";
     }
     return {
       z: round(z, 2),
-      percentile: round(zToPercentile(z), 1),
-      median: m,
-      reference: `Height-for-age 5–18 y, ${CDC_NOTE}`,
+      percentile: round(pct, 1),
+      median: row[4],
+      reference: `Height-for-age 5–18 y, ${IAP_REF}`,
       measurement: "Height (standing)",
       classification,
       band,

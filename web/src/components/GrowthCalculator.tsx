@@ -229,7 +229,7 @@ export default function GrowthCalculator() {
             : " · from 2 years, measure height standing"}
           {ageMonths > 60 &&
             ageMonths <= GROWTH_MAX_MONTHS &&
-            " · 5–18 y read against CDC 2000 (IAP 2015 not yet loaded)"}
+            " · 5–18 y read against the IAP 2015 Indian charts"}
         </p>
       </section>
 
