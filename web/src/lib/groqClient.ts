@@ -52,28 +52,97 @@ export function canAttemptAiCall(): boolean {
   return Boolean(getGroqApiKey()) || usesServerProxy();
 }
 
+/**
+ * Analysing one record fans out into ~30 calls. Fired all at once they blow
+ * straight through Groq's per-minute limits, every one comes back 429, and the
+ * performa silently falls back to generic text. Two at a time with backoff on
+ * 429 keeps the whole batch inside the budget instead.
+ */
+const MAX_CONCURRENT = 2;
+const MAX_RETRIES = 3;
+const BASE_BACKOFF_MS = 1500;
+
+let active = 0;
+const waiting: (() => void)[] = [];
+
+function acquireSlot(): Promise<void> {
+  if (active < MAX_CONCURRENT) {
+    active += 1;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    waiting.push(() => {
+      active += 1;
+      resolve();
+    });
+  });
+}
+
+function releaseSlot(): void {
+  active -= 1;
+  waiting.shift()?.();
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Honour Retry-After when Groq sends it, else exponential backoff. */
+function retryDelayMs(res: Response, attempt: number): number {
+  const header = res.headers.get("retry-after");
+  const seconds = header ? Number(header) : NaN;
+  if (Number.isFinite(seconds) && seconds > 0) {
+    return Math.min(seconds * 1000, 20_000);
+  }
+  return BASE_BACKOFF_MS * 2 ** attempt;
+}
+
+async function sendWithRetry(send: () => Promise<Response>): Promise<Response> {
+  let res = await send();
+  for (let attempt = 0; res.status === 429 && attempt < MAX_RETRIES; attempt++) {
+    const delay = retryDelayMs(res, attempt);
+    // Drain the body so the connection is not left hanging.
+    await res.text().catch(() => "");
+    await sleep(delay);
+    res = await send();
+  }
+  return res;
+}
+
 export async function groqChatCompletion(
   body: GroqChatRequest,
   apiKey?: string,
 ): Promise<Response> {
   const key = apiKey || getGroqApiKey();
   if (key) {
-    return fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    await acquireSlot();
+    try {
+      return await sendWithRetry(() =>
+        fetch(GROQ_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }),
+      );
+    } finally {
+      releaseSlot();
+    }
   }
 
   if (usesServerProxy() && (await isServerProxyConfigured())) {
-    return fetch(proxyUrl(PROXY_PATH), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    await acquireSlot();
+    try {
+      return await sendWithRetry(() =>
+        fetch(proxyUrl(PROXY_PATH), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+      );
+    } finally {
+      releaseSlot();
+    }
   }
 
   throw new Error(

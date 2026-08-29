@@ -22,7 +22,10 @@ const MAX_MESSAGES = 12;
 const MAX_CONTENT_PARTS = 8;
 
 const RATE_WINDOW_MS = 5 * 60_000;
-const RATE_MAX_REQUESTS = 30;
+/** One analysed record costs ~30 upstream calls (extraction + per-condition and
+ *  per-drug textbook passes), so this has to sit well above that or a single
+ *  legitimate upload trips it. Sized for a few records back to back. */
+const RATE_MAX_REQUESTS = 300;
 const hits = new Map<string, number[]>();
 
 export const errorBody = (message: string) => ({ error: { message } });

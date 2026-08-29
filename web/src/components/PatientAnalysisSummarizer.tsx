@@ -47,6 +47,9 @@ export default function PatientAnalysisSummarizer() {
   const [pane, setPane] = useState<SummarizerPane>("history");
   const [specialty, setSpecialty] = useState(specialties[0] ?? "General Medicine");
   const [pastHistory, setPastHistory] = useState("");
+  /** Text read out of uploaded files. Kept out of the paste box (it is raw OCR)
+   *  but retained so a failed analysis can be retried without re-uploading. */
+  const [extractedText, setExtractedText] = useState("");
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
   const [uploads, setUploads] = useState<UploadedRecordFile[]>([]);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -68,6 +71,9 @@ export default function PatientAnalysisSummarizer() {
     () => medicalBooksDB.filter((b) => b.specialty === specialty),
     [specialty],
   );
+
+  /** Typed notes win; otherwise fall back to what we read out of the uploads. */
+  const analysisSource = pastHistory.trim() || extractedText;
 
   const current =
     patients[patientIndex] ?? EMPTY_PATIENT_SUMMARY;
@@ -134,6 +140,7 @@ export default function PatientAnalysisSummarizer() {
 
       if (combined.trim()) {
         setPastHistory(""); // do not show OCR/think in the paste box
+        setExtractedText(combined);
         setUploadBusy(false);
         await runAnalysis(combined);
         return;
@@ -288,9 +295,13 @@ export default function PatientAnalysisSummarizer() {
                         </span>
                         <button
                           type="button"
-                          onClick={() =>
-                            setUploads((prev) => prev.filter((x) => x.id !== u.id))
-                          }
+                          onClick={() => {
+                            setUploads((prev) => {
+                              const next = prev.filter((x) => x.id !== u.id);
+                              if (next.length === 0) setExtractedText("");
+                              return next;
+                            });
+                          }}
                           className="text-xs font-semibold text-red-700"
                         >
                           Remove
@@ -309,12 +320,22 @@ export default function PatientAnalysisSummarizer() {
                 />
                 <button
                   type="button"
-                  disabled={analyzing || !pastHistory.trim()}
-                  onClick={() => void runAnalysis(pastHistory)}
+                  disabled={analyzing || !analysisSource.trim()}
+                  onClick={() => void runAnalysis(analysisSource)}
                   className="mt-3 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {analyzing ? "Analyzing…" : "Analyze"}
+                  {analyzing
+                    ? "Analyzing…"
+                    : analyzeError && extractedText.trim()
+                      ? "Try again"
+                      : "Analyze"}
                 </button>
+                {!pastHistory.trim() && extractedText.trim() && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Using the text read from your uploaded file — no need to
+                    upload it again.
+                  </p>
+                )}
               </div>
             </section>
           </div>

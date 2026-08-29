@@ -513,13 +513,16 @@ export async function enrichPatientFromTextbooks(
   const pathophysiologyByCondition: Record<string, string> = {
     ...(s.pathophysiologyByCondition ?? {}),
   };
-  for (const cond of conditions.slice(0, 6)) {
-    if (
-      pathophysiologyByCondition[cond]?.trim() &&
-      !looksLikeReferEvasion(pathophysiologyByCondition[cond])
-    ) {
-      continue;
-    }
+  // Conditions are independent, so let them overlap; groqChatCompletion caps
+  // real concurrency, and running these in series made a multi-condition
+  // record take minutes.
+  const pending = conditions.slice(0, 6).filter(
+    (cond) =>
+      !pathophysiologyByCondition[cond]?.trim() ||
+      looksLikeReferEvasion(pathophysiologyByCondition[cond]),
+  );
+  await Promise.all(
+    pending.map(async (cond) => {
     try {
       pathophysiologyByCondition[cond] = await fetchPathophysiologyDetail(
         cond,
@@ -542,7 +545,8 @@ End with Ref: line.`,
           `1. ${cond} begins with an initiating insult (infection, ischaemia, immune, metabolic, or structural) that triggers local tissue injury.\n2. Inflammatory mediators (cytokines, complement, prostaglandins as disease-relevant) amplify vascular permeability and immune cell recruitment.\n3. Organ-specific effector pathways produce the cardinal clinical features of ${cond}.\n4. Compensatory physiological responses may temporarily preserve function but can become maladaptive.\n5. Persistent injury leads to dysfunction, complications, or chronic sequelae unless the driver is controlled.\nRef: ${citations.slice(0, 3).join("; ") || "Harrison 21st ed.; Nelson 22nd ed.; Davidson 24th ed."}`;
       }
     }
-  }
+    }),
+  );
 
   let treatmentCritique = s.treatmentCritique?.trim() || "";
   if (!treatmentCritique || looksLikeReferEvasion(treatmentCritique)) {
