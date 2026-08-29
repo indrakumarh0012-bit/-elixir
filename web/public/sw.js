@@ -11,14 +11,33 @@ const SHELL = [
   '/icon-512.png',
 ]
 
+/**
+ * The app's JS/CSS filenames are content-hashed, so they cannot be listed here.
+ * They are also fetched before this worker takes control on a first visit, so
+ * waiting to catch them in fetch() leaves the app broken offline. Read them out
+ * of index.html at install time instead.
+ */
+async function precache() {
+  const cache = await caches.open(CACHE_VERSION)
+  // add() is per-URL rather than addAll() so one 404 cannot void the whole shell.
+  await Promise.all(SHELL.map((url) => cache.add(url).catch(() => {})))
+
+  try {
+    const res = await fetch('/index.html', { cache: 'reload' })
+    if (!res.ok) return
+    const html = await res.text()
+    await cache.put('/index.html', new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    }))
+    const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((m) => m[1])
+    await Promise.all(assets.map((url) => cache.add(url).catch(() => {})))
+  } catch {
+    // Offline at install time: fetch() below fills the cache on a later visit.
+  }
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_VERSION)
-      // addAll is all-or-nothing; a single 404 would leave us with no shell.
-      .then((cache) => Promise.all(SHELL.map((url) => cache.add(url).catch(() => {}))))
-      .then(() => self.skipWaiting()),
-  )
+  event.waitUntil(precache().then(() => self.skipWaiting()))
 })
 
 self.addEventListener('activate', (event) => {
