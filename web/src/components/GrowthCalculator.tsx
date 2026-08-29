@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import {
+  centileBandCompact,
+  centileBandLabel,
   heightForAge,
   toMonths,
   weightForAge,
@@ -75,9 +77,11 @@ function ResultCard({
         </div>
         <div className="rounded-md bg-white/70 px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
-            Percentile
+            Centile
           </dt>
-          <dd className="text-lg font-bold">{result.percentile}</dd>
+          <dd className="text-lg font-bold">
+            {centileBandCompact(result.percentile)}
+          </dd>
         </div>
         <div className="rounded-md bg-white/70 px-2 py-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
@@ -86,6 +90,10 @@ function ResultCard({
           <dd className="text-lg font-bold">{result.median.toFixed(1)}</dd>
         </div>
       </dl>
+
+      <p className="mt-3 rounded-md bg-white/70 px-3 py-2 text-sm font-semibold">
+        On the chart: {centileBandLabel(result.percentile)}.
+      </p>
 
       <p className="mt-3 text-xs opacity-80">
         {result.reference}
@@ -131,7 +139,7 @@ export default function GrowthCalculator() {
 
   return (
     <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
-      <h2 className="text-xl font-bold text-slate-900">
+      <h2 className="text-xl font-bold text-violet-800">
         Growth — height &amp; weight for age
       </h2>
       <p className="mt-1 text-sm text-slate-600">
@@ -148,8 +156,12 @@ export default function GrowthCalculator() {
               onClick={() => setSex(s)}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 sex === s
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  ? s === "male"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-pink-500 text-white shadow-sm"
+                  : s === "male"
+                    ? "bg-blue-50 text-blue-800 hover:bg-blue-100"
+                    : "bg-pink-50 text-pink-700 hover:bg-pink-100"
               }`}
             >
               {s === "male" ? "Boy" : "Girl"}
@@ -166,7 +178,7 @@ export default function GrowthCalculator() {
               min={0}
               value={years}
               onChange={(e) => setYears(numOrEmpty(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-blue-600"
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
             />
           </label>
           <label className="block">
@@ -178,7 +190,7 @@ export default function GrowthCalculator() {
               max={11}
               value={months}
               onChange={(e) => setMonths(numOrEmpty(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-blue-600"
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
             />
           </label>
           <label className="block">
@@ -190,7 +202,7 @@ export default function GrowthCalculator() {
               step="0.1"
               value={weight}
               onChange={(e) => setWeight(numOrEmpty(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-blue-600"
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
             />
           </label>
           <label className="block">
@@ -204,7 +216,7 @@ export default function GrowthCalculator() {
               step="0.1"
               value={height}
               onChange={(e) => setHeight(numOrEmpty(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-blue-600"
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
             />
           </label>
         </div>

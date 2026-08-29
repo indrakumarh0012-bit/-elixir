@@ -86,7 +86,7 @@ export default function RegimenAnalyzerUI() {
     <div className="bg-slate-50 px-3 py-4 md:px-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-4">
-          <h1 className="text-2xl font-bold text-slate-900">Polypharmacy Analyzer</h1>
+          <h1 className="text-2xl font-bold text-rose-800">Polypharmacy Analyzer</h1>
           <button
             type="button"
             onClick={loadDemo}
@@ -449,6 +449,115 @@ export default function RegimenAnalyzerUI() {
                 </ul>
               )}
             </div>
+
+            {/* Drug-by-drug point-wise analysis */}
+            {report.drugDetails.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 className="text-base font-bold text-slate-900">
+                  Drug-by-drug analysis (point-wise)
+                </h3>
+
+                {report.therapeuticDuplications.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                    <p className="font-bold">Therapeutic duplication</p>
+                    <ul className="mt-1 list-decimal space-y-1 pl-5">
+                      {report.therapeuticDuplications.map((dup) => (
+                        <li key={dup.className}>
+                          Two or more drugs of the same class —{" "}
+                          <strong>{dup.className}</strong>: {dup.drugNames.join(", ")}.
+                          Usually one should be stopped.
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {report.anticholinergicBurden.count > 0 && (
+                  <div
+                    className={`mt-3 rounded-lg border p-3 text-sm ${
+                      report.anticholinergicBurden.count >= 2
+                        ? "border-red-200 bg-red-50 text-red-900"
+                        : "border-amber-200 bg-amber-50 text-amber-950"
+                    }`}
+                  >
+                    <p className="font-bold">
+                      Anticholinergic burden: {report.anticholinergicBurden.count} drug
+                      {report.anticholinergicBurden.count > 1 ? "s" : ""} (
+                      {report.anticholinergicBurden.drugNames.join(", ")})
+                    </p>
+                    <p className="mt-1">{report.anticholinergicBurden.note}</p>
+                  </div>
+                )}
+
+                <ul className="mt-3 space-y-3">
+                  {report.drugDetails.map((d) => {
+                    const verdictStyle =
+                      d.verdict === "stop-or-review"
+                        ? "border-red-300 bg-red-50"
+                        : d.verdict === "adjust"
+                          ? "border-orange-300 bg-orange-50"
+                          : d.verdict === "caution"
+                            ? "border-amber-300 bg-amber-50"
+                            : "border-emerald-200 bg-emerald-50";
+                    const verdictLabel =
+                      d.verdict === "stop-or-review"
+                        ? "STOP / REVIEW"
+                        : d.verdict === "adjust"
+                          ? "ADJUST DOSE"
+                          : d.verdict === "caution"
+                            ? "CAUTION"
+                            : "CONTINUE";
+                    const verdictBadge =
+                      d.verdict === "stop-or-review"
+                        ? "bg-red-700"
+                        : d.verdict === "adjust"
+                          ? "bg-orange-600"
+                          : d.verdict === "caution"
+                            ? "bg-amber-600"
+                            : "bg-emerald-700";
+                    const points: { label: string; items: string[] }[] = [
+                      { label: "Beers criteria", items: d.beersPoints },
+                      { label: "STOPP", items: d.stoppPoints },
+                      { label: "START", items: d.startPoints },
+                      { label: "Renal (at this patient's CrCl)", items: d.renalPoints },
+                      { label: "Interactions in this regimen", items: d.interactionPoints },
+                    ].filter((x) => x.items.length > 0);
+                    return (
+                      <li key={d.drugId} className={`rounded-lg border p-3 text-sm ${verdictStyle}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-bold text-slate-900">{d.drugName}</p>
+                          <span className={`rounded px-2 py-0.5 text-[11px] font-bold text-white ${verdictBadge}`}>
+                            {verdictLabel}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-600">
+                          {d.drugClass} · {d.standardDose}
+                          {d.anticholinergic ? " · anticholinergic" : ""}
+                        </p>
+                        {points.length === 0 ? (
+                          <p className="mt-2 text-xs text-slate-600">
+                            No Beers/STOPP/START, renal or interaction flags for this patient.
+                          </p>
+                        ) : (
+                          points.map((sec) => (
+                            <div key={sec.label} className="mt-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                {sec.label}
+                              </p>
+                              <ol className="mt-0.5 list-decimal space-y-1 pl-5 text-slate-800">
+                                {sec.items.map((pt, i) => (
+                                  <li key={i}>{pt}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          ))
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </section>
         </div>
       </div>

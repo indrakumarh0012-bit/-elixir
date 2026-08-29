@@ -168,6 +168,43 @@ export function heightForAge(
   };
 }
 
+/**
+ * Where the child sits on the printed chart's centile lines
+ * (3rd, 10th, 25th, 50th, 75th, 90th, 97th — the IAP/clinic-chart line set).
+ */
+export function centileBandLabel(percentile: number): string {
+  const lines = [3, 10, 25, 50, 75, 90, 97];
+  const ord = (n: number) => (n === 3 ? "3rd" : `${n}th`);
+  for (const line of lines) {
+    if (Math.abs(percentile - line) < 0.5) return `on the ${ord(line)} centile line`;
+  }
+  if (percentile < 3) return "below the 3rd centile line";
+  if (percentile > 97) return "above the 97th centile line";
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (percentile > lines[i] && percentile < lines[i + 1]) {
+      return `between the ${ord(lines[i])} and ${ord(lines[i + 1])} centile lines`;
+    }
+  }
+  return "";
+}
+
+/** Compact form for the stat tile: "50th", "10th–25th", "<3rd", ">97th". */
+export function centileBandCompact(percentile: number): string {
+  const lines = [3, 10, 25, 50, 75, 90, 97];
+  const ord = (n: number) => (n === 3 ? "3rd" : `${n}th`);
+  for (const line of lines) {
+    if (Math.abs(percentile - line) < 0.5) return ord(line);
+  }
+  if (percentile < 3) return "<3rd";
+  if (percentile > 97) return ">97th";
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (percentile > lines[i] && percentile < lines[i + 1]) {
+      return `${ord(lines[i])}–${ord(lines[i + 1])}`;
+    }
+  }
+  return "";
+}
+
 /** Years + months → total completed months. */
 export function toMonths(years: number, months: number): number {
   return (Number(years) || 0) * 12 + (Number(months) || 0);

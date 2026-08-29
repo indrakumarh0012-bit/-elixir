@@ -174,6 +174,88 @@ section("100 random elderly regimens");
   else console.log("sacubitril-valsartan + enalapril → Contraindicated ✓");
 }
 
+// ---------- 5b. Drug-detail point analysis behavior ----------
+section("Drug-by-drug analysis behavior");
+{
+  const rx = (ids: string[]) => ids.map((i) => getDrugById(i)!).filter(Boolean);
+  const ckd80 = { ageYears: 80, weightKg: 55, creatinineMgDl: 2.2, sex: "Female" as const, conditions: [] };
+  const rep = analyzeRegimen(ckd80, rx(["metformin", "famciclovir", "oxybutynin", "ibuprofen", "naproxen", "donepezil"]));
+
+  if (rep.drugDetails.length !== 6) fail(`drugDetails length ${rep.drugDetails.length} != 6`);
+  const byId = Object.fromEntries(rep.drugDetails.map((d) => [d.drugId, d]));
+
+  // CrCl for 80y/55kg/Cr2.2 F = (140-80)*55/(72*2.2)*0.85 ≈ 17.7 → metformin STOP band
+  if (rep.estimatedCrClMlMin == null || Math.abs(rep.estimatedCrClMlMin - 17.7) > 0.5)
+    fail(`CrCl calc off: ${rep.estimatedCrClMlMin}`);
+  if (byId.metformin.verdict !== "stop-or-review" || !byId.metformin.renalPoints.join(" ").includes("STOP"))
+    fail(`metformin at CrCl 17.7 should be stop-or-review with STOP point; got ${byId.metformin.verdict}`);
+  if (!byId.famciclovir.renalPoints.join(" ").includes("250 mg"))
+    fail("famciclovir at CrCl 17.7 should show 250 mg band");
+  if (byId.oxybutynin.verdict !== "stop-or-review" || byId.oxybutynin.beersPoints.length === 0)
+    fail("oxybutynin should be Beers stop-or-review");
+  if (!byId.oxybutynin.anticholinergic) fail("oxybutynin not marked anticholinergic");
+  if (byId.donepezil.interactionPoints.length === 0)
+    fail("donepezil should list its oxybutynin interaction");
+  if (!rep.therapeuticDuplications.some((d) => /NSAID/i.test(d.className)))
+    fail("ibuprofen + naproxen duplication not flagged");
+  if (rep.anticholinergicBurden.count !== 1) fail(`anticholinergic count ${rep.anticholinergicBurden.count} != 1`);
+
+  const two = analyzeRegimen(ckd80, rx(["oxybutynin", "cinnarizine"]));
+  if (two.anticholinergicBurden.count !== 2 || !/deprescribe/.test(two.anticholinergicBurden.note))
+    fail("2-anticholinergic burden note wrong");
+
+  const youngContinue = analyzeRegimen(
+    { ageYears: 40, weightKg: 70, sex: "Male", conditions: [] },
+    rx(["paracetamol", "cetirizine"]),
+  );
+  if (!youngContinue.drugDetails.every((d) => d.verdict === "continue"))
+    fail("benign adult regimen should be all continue");
+  console.log("point-wise analysis: verdicts, renal points, duplication, burden all correct");
+}
+
+// ---------- 5c. Growth centile bands ----------
+section("Growth centile bands");
+{
+  const { centileBandLabel, zToPercentile } = await import("../src/lib/growthMath");
+  const cases: [number, string][] = [
+    [zToPercentile(0), "on the 50th centile line"],
+    [zToPercentile(-1), "between the 10th and 25th centile lines"],
+    [zToPercentile(-1.5), "between the 3rd and 10th centile lines"],
+    [zToPercentile(-2), "below the 3rd centile line"],
+    [zToPercentile(1), "between the 75th and 90th centile lines"],
+    [zToPercentile(1.645), "between the 90th and 97th centile lines"],
+    [zToPercentile(2.5), "above the 97th centile line"],
+    [25, "on the 25th centile line"],
+    [60, "between the 50th and 75th centile lines"],
+    [96.8, "on the 97th centile line"],
+  ];
+  let pass = 0;
+  for (const [pct, want] of cases) {
+    const got = centileBandLabel(pct);
+    if (got === want) pass++;
+    else fail(`centile ${pct.toFixed(2)}: want "${want}" got "${got}"`);
+  }
+  console.log(`centile band cases: ${pass}/${cases.length} pass`);
+
+  const { centileBandCompact } = await import("../src/lib/growthMath");
+  const compact: [number, string][] = [
+    [zToPercentile(0), "50th"],
+    [zToPercentile(-1), "10th–25th"],
+    [zToPercentile(-2), "<3rd"],
+    [zToPercentile(2.5), ">97th"],
+    [25.2, "25th"],
+    [60, "50th–75th"],
+    [5, "3rd–10th"],
+  ];
+  let cpass = 0;
+  for (const [pct, want] of compact) {
+    const got = centileBandCompact(pct);
+    if (got === want) cpass++;
+    else fail(`compact centile ${pct.toFixed(2)}: want "${want}" got "${got}"`);
+  }
+  console.log(`compact centile cases: ${cpass}/${compact.length} pass`);
+}
+
 // ---------- 6. Pediatric DB integrity ----------
 section("Pediatric DB integrity");
 {

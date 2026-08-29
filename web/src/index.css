@@ -26,13 +26,37 @@ body {
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
   background:
-    radial-gradient(1200px 500px at 10% -10%, #d9e8f5 0%, transparent 55%),
-    radial-gradient(900px 400px at 100% 0%, #e7eef5 0%, transparent 50%),
+    radial-gradient(1100px 500px at 8% -10%, #dbeafe 0%, transparent 55%),
+    radial-gradient(900px 420px at 95% -5%, #ede9fe 0%, transparent 52%),
+    radial-gradient(800px 380px at 50% 108%, #ccfbf1 0%, transparent 50%),
     var(--bg);
 }
 
 .app-header {
   padding-top: env(safe-area-inset-top);
+}
+
+/* Four-tool colour ribbon under the header — one hue per tab. */
+.brand-ribbon {
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    #2563eb 0%,
+    #2563eb 25%,
+    #7c3aed 25%,
+    #7c3aed 50%,
+    #0d9488 50%,
+    #0d9488 75%,
+    #e11d48 75%,
+    #e11d48 100%
+  );
+}
+
+.brand-text {
+  background: linear-gradient(90deg, #1d4ed8, #7c3aed 55%, #0d9488);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 #root {
