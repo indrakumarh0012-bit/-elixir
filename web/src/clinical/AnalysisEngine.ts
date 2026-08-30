@@ -1,5 +1,6 @@
 import { drugsDB, getDrugById, interactionsDB } from "./clinicalData";
 import { buildRenalDoseReport } from "../lib/renalDoseAdjust";
+import { PREGNANCY_SAFETY } from "../data/pregnancySafety";
 import type {
   AgeCategory,
   AnticholinergicBurden,
@@ -302,6 +303,24 @@ function findDiseaseDrugAlerts(
   meds: DrugRecord[],
 ): DiseaseDrugAlert[] {
   const out: DiseaseDrugAlert[] = [];
+
+  // Pregnancy: every drug in the regimen is checked against the safety map.
+  const pregCond = patient.conditions.find((c) => /pregnan/i.test(c));
+  if (pregCond) {
+    for (const d of meds) {
+      const entry = PREGNANCY_SAFETY[d.id];
+      if (entry && entry.risk !== "safe") {
+        out.push({
+          severity: entry.risk === "avoid" ? "High" : "Moderate",
+          drugId: d.id,
+          drugName: d.name,
+          condition: pregCond,
+          rule: entry.note,
+          recommendation: entry.alternative ?? "Review indication; use the lowest effective dose with obstetric input.",
+        });
+      }
+    }
+  }
   for (const rule of DISEASE_DRUG_RULES) {
     const cond = patient.conditions.find((c) => rule.condition.test(c));
     if (!cond) continue;

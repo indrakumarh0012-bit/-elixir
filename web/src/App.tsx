@@ -35,8 +35,8 @@ export default function App() {
     },
     {
       id: "bp",
-      label: "BP Centiles",
-      shortLabel: "BP",
+      label: "Ped-BP",
+      shortLabel: "Ped-BP",
       active: "bg-cyan-600 text-white shadow-sm",
       idle: "bg-cyan-50 text-cyan-800 hover:bg-cyan-100",
     },

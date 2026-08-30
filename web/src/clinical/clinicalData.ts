@@ -24,6 +24,8 @@ export const KNOWN_CONDITIONS = [
  * quick-pick row; everything here is reachable through the search box.
  */
 export const CONDITIONS_CATALOG: string[] = [
+  // Obstetric
+  "Pregnancy", "Planning Pregnancy", "Lactation",
   // Cardiovascular
   "Hypertension", "CAD / ACS", "Post-MI", "Heart Failure (HFrEF)", "Heart Failure (HFpEF)",
   "Atrial Fibrillation", "Valvular Heart Disease", "Aortic Stenosis", "Rheumatic Heart Disease",

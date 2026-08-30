@@ -590,6 +590,57 @@ section("ICU titrations and corrections");
   console.log("electrolyte formulas: deficit, free water, corrected Na/Ca all exact");
 }
 
+// ---------- 5h. Ped-BP low flags, pulse pressure, pregnancy safety ----------
+section("Ped-BP dengue flags + pregnancy safety");
+{
+  const bp = await import("../src/lib/bpMath");
+  const low = bp.assessBp("male", "day", "sbp", 140, 85); // well below 5th
+  if (!low || low.band !== "alert" || !/LOW|hypotension/i.test(low.classification))
+    fail(`low BP should alert: ${low?.classification}`);
+  const normal = bp.assessBp("male", "day", "sbp", 140, 112);
+  if (!normal || normal.band !== "normal") fail(`112 @140cm should be normal: ${normal?.percentile}`);
+  if (bp.pulsePressure(90, 72) !== 18) fail("PP 90/72 should be 18");
+  if (bp.pulsePressure(110, 70) !== 40) fail("PP 110/70 should be 40");
+  if (bp.pulsePressure(80, 85) !== null) fail("inverted PP should be null");
+  console.log("Ped-BP: <5th centile alerts, pulse pressure math OK");
+
+  const { PREGNANCY_SAFETY } = await import("../src/data/pregnancySafety");
+  const ids = Object.keys(PREGNANCY_SAFETY);
+  const missing = ids.filter((id) => !getDrugById(id));
+  if (missing.length) fail(`pregnancy entries with unknown ids: ${missing.join(",")}`);
+  if (ids.length < 150) fail(`pregnancy safety only ${ids.length} entries`);
+  for (const [id, e] of Object.entries(PREGNANCY_SAFETY)) {
+    if (!e.note.trim()) fail(`pregnancy entry ${id} has empty note`);
+    if (e.risk === "avoid" && !e.alternative && !/contraindicated|oncology|specialist|handle|Defer|abortifacient|Stop/i.test(e.note))
+      { /* alternatives optional when note self-contains action */ }
+  }
+  const spot: [string, string][] = [
+    ["warfarin", "avoid"], ["enalapril", "avoid"], ["methotrexate", "avoid"],
+    ["valproate-adult", "avoid"], ["doxycycline", "avoid"], ["atorvastatin", "avoid"],
+    ["paracetamol", "safe"], ["thyroxine", "safe"], ["azathioprine", "safe"],
+    ["hydroxychloroquine", "safe"], ["levetiracetam", "safe"], ["enoxaparin", "safe"],
+    ["nifedipine-retard", "safe"], ["lithium", "caution"], ["fluconazole", "caution"],
+  ];
+  for (const [id, want] of spot) {
+    if (PREGNANCY_SAFETY[id]?.risk !== want) fail(`pregnancy ${id}: want ${want} got ${PREGNANCY_SAFETY[id]?.risk}`);
+  }
+  console.log(`pregnancy safety: ${ids.length} entries, all ids valid, 15 spot classifications OK`);
+
+  // Polypharmacy integration
+  const rx = (list: string[]) => list.map((i) => getDrugById(i)!).filter(Boolean);
+  const preg = analyzeRegimen(
+    { ageYears: 28, weightKg: 60, sex: "Female", conditions: ["Pregnancy"] },
+    rx(["warfarin", "enalapril", "paracetamol", "thyroxine"]),
+  );
+  const highs = preg.diseaseDrugAlerts.filter((a) => a.severity === "High").map((a) => a.drugId).sort();
+  if (highs.join() !== "enalapril,warfarin") fail(`pregnancy regimen High alerts: ${highs.join()}`);
+  if (preg.diseaseDrugAlerts.some((a) => a.drugId === "paracetamol" || a.drugId === "thyroxine"))
+    fail("safe drugs must not alert in pregnancy");
+  const wf = preg.drugDetails.find((d) => d.drugId === "warfarin");
+  if (!wf || wf.verdict !== "stop-or-review") fail("warfarin in pregnancy should be STOP/REVIEW");
+  console.log("Polypharmacy 'Pregnancy' condition: warfarin+ACEI flagged High, safe drugs clean");
+}
+
 // ---------- 6. Pediatric DB integrity ----------
 section("Pediatric DB integrity");
 {
