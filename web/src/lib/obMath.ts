@@ -12,7 +12,7 @@
  * - IUI / known ovulation: that date is the anchor itself.
  */
 
-export type ObMethod = "lmp" | "ivf5" | "ivf3" | "ovulation";
+export type ObMethod = "lmp" | "ivf5" | "ivf3" | "ovulation" | "scan";
 
 export type ObResult = {
   gaWeeks: number;
@@ -42,12 +42,24 @@ export function calculateGestation(
   anchorDate: Date,
   today: Date,
   cycleLengthDays = 28,
+  gaAtScanDays?: number,
 ): ObResult | null {
   if (Number.isNaN(anchorDate.getTime())) return null;
 
   let conception: Date;
   let note: string;
   switch (method) {
+    case "scan": {
+      // Anchor = scan date; GA at scan supplies the offset. Ultrasound
+      // dating (CRL < 14 wk) is the most accurate method after IVF (ACOG
+      // Committee Opinion 700).
+      if (gaAtScanDays == null || gaAtScanDays < 35 || gaAtScanDays > 294) return null;
+      conception = addDays(anchorDate, 14 - gaAtScanDays);
+      const w = Math.floor(gaAtScanDays / 7);
+      const d = gaAtScanDays % 7;
+      note = `Dated by ultrasound: ${w}w${d}d on the scan date. First-trimester CRL dating is accurate to ±5–7 days; accuracy falls with gestation (±2 wk in T2, ±3 wk in T3).`;
+      break;
+    }
     case "lmp": {
       const cycle = Math.min(Math.max(cycleLengthDays || 28, 20), 45);
       const ovulationOffset = cycle - 14;
@@ -93,6 +105,26 @@ export function calculateGestation(
     preViable: gaWeeks < 24,
     note,
   };
+}
+
+/**
+ * ACOG Committee Opinion 700 re-dating thresholds: if the ultrasound EDD
+ * differs from the LMP EDD by MORE than this many days at the given scan
+ * gestational age, the ultrasound becomes the official EDD.
+ */
+export function acogRedatingThresholdDays(gaAtScanDays: number): {
+  threshold: number;
+  window: string;
+} {
+  if (gaAtScanDays <= 8 * 7 + 6) return { threshold: 5, window: "≤ 8w6d" };
+  if (gaAtScanDays <= 15 * 7 + 6) return { threshold: 7, window: "9w0d – 15w6d" };
+  if (gaAtScanDays <= 21 * 7 + 6) return { threshold: 10, window: "16w0d – 21w6d" };
+  if (gaAtScanDays <= 27 * 7 + 6) return { threshold: 14, window: "22w0d – 27w6d" };
+  return { threshold: 21, window: "≥ 28w0d" };
+}
+
+export function diffDays(a: Date, b: Date): number {
+  return daysBetween(a, b);
 }
 
 export function formatDate(d: Date): string {
