@@ -9,6 +9,7 @@ import IcuTitration from "./components/IcuTitration";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
+import ReportIssue from "./components/ReportIssue";
 
 type AppTab = MenuTarget;
 
@@ -126,6 +127,7 @@ export default function App() {
         {tab === "regimen" && <RegimenAnalyzerUI />}
         {tab === "icu" && <IcuTitration />}
         {tab === "ob" && <ObCalculator />}
+        {tab === "report" && <ReportIssue />}
       </main>
 
       <footer className="border-t border-[var(--line)] bg-white px-3 py-4 text-center text-xs leading-relaxed text-[var(--muted)] md:px-6">

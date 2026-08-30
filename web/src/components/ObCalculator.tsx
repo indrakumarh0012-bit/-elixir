@@ -41,7 +41,7 @@ export default function ObCalculator() {
 
   return (
     <div className="mx-auto max-w-3xl px-3 py-5 md:px-6">
-      <h2 className="text-xl font-bold text-fuchsia-800">
+      <h2 className="text-xl font-bold text-fuchsia-950">
         Gestational Age &amp; EDD
       </h2>
       <p className="mt-1 text-sm text-slate-600">

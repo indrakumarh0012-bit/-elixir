@@ -12,6 +12,8 @@ export type Profile = {
   id: string;
   name: string;
   phone: string;
+  /** SHA-256(phone:password) hex — device-local protection, not server auth. */
+  passHash?: string;
   createdAt: number;
 };
 
@@ -72,32 +74,61 @@ export function getCurrentProfile(): Profile | null {
   return getProfiles().find((p) => p.id === id) ?? null;
 }
 
-export function createProfile(name: string, phone: string): Profile | null {
+async function hashPassword(phone: string, password: string): Promise<string> {
+  const data = new TextEncoder().encode(`${phone}:${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export type AuthResult =
+  | { ok: true; profile: Profile }
+  | { ok: false; error: string };
+
+export async function signUp(
+  name: string,
+  phone: string,
+  password: string,
+): Promise<AuthResult> {
   const n = name.trim();
   const ph = phone.trim();
-  if (!n || !/^[\d+][\d\s-]{7,14}$/.test(ph)) return null;
+  if (!n) return { ok: false, error: "Enter your name." };
+  if (!/^[\d+][\d\s-]{7,14}$/.test(ph))
+    return { ok: false, error: "Enter a valid phone number (8–15 digits)." };
+  if (password.length < 4)
+    return { ok: false, error: "Password must be at least 4 characters." };
   const profiles = getProfiles();
-  const existing = profiles.find((p) => p.phone === ph);
-  if (existing) {
-    write(CURRENT_KEY, existing.id);
-    emit();
-    return existing;
-  }
+  if (profiles.some((p) => p.phone === ph))
+    return { ok: false, error: "This phone number already has an account — sign in instead." };
   const profile: Profile = {
     id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     name: n,
     phone: ph,
+    passHash: await hashPassword(ph, password),
     createdAt: Date.now(),
   };
   write(PROFILES_KEY, [...profiles, profile]);
   write(CURRENT_KEY, profile.id);
   emit();
-  return profile;
+  return { ok: true, profile };
 }
 
-export function switchProfile(id: string) {
-  write(CURRENT_KEY, id);
+export async function signIn(phone: string, password: string): Promise<AuthResult> {
+  const ph = phone.trim();
+  const profile = getProfiles().find((p) => p.phone === ph);
+  if (!profile) return { ok: false, error: "No account with this phone number — sign up first." };
+  if (profile.passHash) {
+    const h = await hashPassword(ph, password);
+    if (h !== profile.passHash) return { ok: false, error: "Wrong password." };
+  } else if (password) {
+    // Legacy passwordless profile: adopt the first password entered.
+    profile.passHash = await hashPassword(ph, password);
+    write(PROFILES_KEY, getProfiles().map((p) => (p.id === profile.id ? profile : p)));
+  }
+  write(CURRENT_KEY, profile.id);
   emit();
+  return { ok: true, profile };
 }
 
 export function signOut() {

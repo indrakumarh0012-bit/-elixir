@@ -8,13 +8,14 @@ const TOOLS: { id: MenuTarget; icon: string; title: string; desc: string; hue: s
   { id: "regimen", icon: "💊", title: "Polypharmacy", desc: "267 drugs · Beers/STOPP/START · alternatives", hue: "border-rose-200 bg-rose-50" },
   { id: "icu", icon: "🏥", title: "ICU Titration", desc: "Infusion rates · insulin · fluids · electrolytes", hue: "border-orange-200 bg-orange-50" },
   { id: "ob", icon: "🤰", title: "OB / EDD", desc: "Cycle & IVF-corrected dating · pregnancy drug check", hue: "border-fuchsia-200 bg-fuchsia-50" },
+  { id: "report", icon: "🛠️", title: "Report an Issue", desc: "Wrong dose, missing drug, or bug? Tell the maintainer", hue: "border-amber-200 bg-amber-50" },
 ];
 
 export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void }) {
   return (
     <div className="mx-auto max-w-4xl px-3 py-6 md:px-6">
       <h2 className="text-2xl font-bold text-slate-900">Welcome to Pocket-Med</h2>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-slate-700">
         Bedside clinical calculators — offline, reference-backed, no keys.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -27,7 +28,7 @@ export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void
           >
             <p className="text-2xl" aria-hidden>{t.icon}</p>
             <p className="mt-1 font-bold text-slate-900">{t.title}</p>
-            <p className="mt-0.5 text-xs text-slate-600">{t.desc}</p>
+            <p className="mt-0.5 text-xs text-slate-700">{t.desc}</p>
           </button>
         ))}
       </div>

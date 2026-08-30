@@ -65,7 +65,7 @@ export default function BpCentiles() {
 
   return (
     <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
-      <h2 className="text-xl font-bold text-cyan-800">Ped-BP</h2>
+      <h2 className="text-xl font-bold text-cyan-950">Ped-BP</h2>
       <p className="mt-1 text-sm text-slate-600">
         Wühl 2002 ambulatory BP reference by height (120–185 cm boys, 120–175 cm
         girls). Enter height to see every centile line; add measured values to
