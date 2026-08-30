@@ -8,6 +8,7 @@ import {
   type BpSex,
 } from "../lib/bpMath";
 import { centileBandLabel, zBandCompact } from "../lib/growthMath";
+import SaveButton from "./SaveButton";
 
 const BAND_STYLES = {
   normal: "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -187,6 +188,19 @@ export default function BpCentiles() {
           </div>
         );
       })()}
+
+      <SaveButton
+        tool="Ped-BP"
+        build={() => {
+          if (!assessments.length) return null;
+          return {
+            title: `Ped-BP — ${sex === "male" ? "boy" : "girl"} ${height} cm`,
+            detail: assessments
+              .map(({ label, value, a }) => `${label} ${value}: ${a.classification} (${centileBandLabel(a.percentile)})`)
+              .join("\n") + (dip != null ? `\nNocturnal dip ${dip}%` : ""),
+          };
+        }}
+      />
 
       {rows && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

@@ -73,3 +73,27 @@ body {
     break-inside: avoid;
   }
 }
+
+/* Per-tool watermark backgrounds: a faint, fixed subject icon + hue wash. */
+.tool-stage { position: relative; }
+.tool-stage::before {
+  position: fixed;
+  right: -4rem;
+  bottom: -6rem;
+  z-index: 0;
+  font-size: 44vh;
+  line-height: 1;
+  opacity: 0.06;
+  pointer-events: none;
+  content: "";
+}
+.tool-stage > * { position: relative; z-index: 1; }
+.tool-home::before { content: "🩺"; }
+.tool-pedDose::before { content: "🧒"; }
+.tool-growth::before { content: "📈"; }
+.tool-bp::before { content: "🫀"; }
+.tool-crCl::before { content: "🫘"; }
+.tool-regimen::before { content: "💊"; }
+.tool-icu::before { content: "🏥"; }
+.tool-ob::before { content: "🤰"; }
+.tool-saved::before { content: "📁"; }

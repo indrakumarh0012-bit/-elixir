@@ -641,6 +641,58 @@ section("Ped-BP dengue flags + pregnancy safety");
   console.log("Polypharmacy 'Pregnancy' condition: warfarin+ACEI flagged High, safe drugs clean");
 }
 
+// ---------- 5i. 300-sample pediatric dose + renal crosscheck ----------
+section("300-sample ped dose/renal crosscheck");
+{
+  const { calculatePediatricDose } = await import("../src/lib/pediatricDoseMath");
+  const { pedRenalAction, PED_RENAL_BANDS } = await import("../src/lib/pedRenal");
+  let checks = 0, bad = 0;
+  const weights = [6, 22];
+  const gfrs = [70, 25];
+  for (const d of pediatricDrugsDB) {
+    for (const w of weights) {
+      const r = calculatePediatricDose({
+        weightKg: w,
+        doseMgPerKgDay: d.defaultDoseMgPerKg,
+        frequency: d.defaultFrequency,
+        drug: d,
+        formulation: d.formulations[0] ?? null,
+      });
+      // independent recomputation of the arithmetic
+      const rawDaily = d.defaultDoseMgPerKg * w;
+      const expDaily = d.maxDosePerDayMg > 0 ? Math.min(rawDaily, d.maxDosePerDayMg) : rawDaily;
+      const expPer = expDaily / d.defaultDosesPerDay;
+      checks++;
+      if (d.defaultDoseMgPerKg > 0) {
+        if (Math.abs(r.dailyMg - expDaily) > 0.51 || Math.abs(r.perDoseMg - expPer) > 0.51) {
+          bad++; fail(`${d.id} @${w}kg: daily ${r.dailyMg} vs ${expDaily}, per ${r.perDoseMg} vs ${expPer}`);
+        }
+        if (r.perDoseMg < 0 || r.dailyMg < 0) { bad++; fail(`${d.id} negative dose`); }
+      }
+      // volume math against the labeled strength
+      const f0 = d.formulations[0];
+      if (d.defaultDoseMgPerKg > 0 && f0 && f0.strengthMg > 0 && r.volumeMl != null) {
+        const expVol = expPer / (f0.strengthMg / f0.strengthVolumeMl);
+        checks++;
+        if (Math.abs(r.volumeMl - expVol) > 0.05) { bad++; fail(`${d.id} @${w}kg: vol ${r.volumeMl} vs ${expVol.toFixed(2)}`); }
+      }
+      for (const g of gfrs) {
+        const action = pedRenalAction(d.id, g, d.renalAdjustment);
+        checks++;
+        if (!action.trim()) { bad++; fail(`${d.id} empty renal action @GFR ${g}`); }
+        // consistency: at GFR 70 a banded drug must not tell you to avoid (except NSAID hydration caveat)
+        const bands = PED_RENAL_BANDS[d.id];
+        if (bands && g === 70) {
+          const b = bands.find((x) => g >= x.minGfr && g <= (x.maxGfr ?? Infinity));
+          if (b && b.action !== action) { bad++; fail(`${d.id} band mismatch @70`); }
+        }
+      }
+    }
+  }
+  console.log(`ped crosscheck samples: ${checks} (${pediatricDrugsDB.length} drugs × weights × GFR bands), failures: ${bad}`);
+  if (checks < 300) fail(`crosscheck only ${checks} samples (<300)`);
+}
+
 // ---------- 6. Pediatric DB integrity ----------
 section("Pediatric DB integrity");
 {

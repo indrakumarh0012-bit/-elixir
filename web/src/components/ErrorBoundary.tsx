@@ -16,7 +16,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Smart-Elixir render error:", error, info);
+    console.error("Pocket-Med render error:", error, info);
   }
 
   render() {
@@ -25,7 +25,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 px-6 text-center">
           <h1 className="text-xl font-bold text-[var(--ink)]">Something went wrong</h1>
           <p className="text-sm text-[var(--muted)]">
-            Smart-Elixir hit an unexpected error. Reload the page to continue.
+            Pocket-Med hit an unexpected error. Reload the page to continue.
           </p>
           <button
             type="button"

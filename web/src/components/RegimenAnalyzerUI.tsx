@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { analyzeRegimen } from "../clinical/AnalysisEngine";
+import SaveButton from "./SaveButton";
 import { CONDITIONS_CATALOG, KNOWN_CONDITIONS, searchDrugs } from "../clinical/clinicalData";
 import type { DrugRecord, PatientProfile } from "../clinical/types";
 
@@ -619,6 +620,22 @@ export default function RegimenAnalyzerUI() {
                 </ul>
               </div>
             )}
+            <SaveButton
+              tool="Polypharmacy"
+              build={() => {
+                if (!regimen.length) return null;
+                return {
+                  title: `Regimen — ${regimen.length} drugs, ${patient.ageYears} y`,
+                  detail:
+                    regimen.map((d) => d.name.split(" (")[0]).join(", ") +
+                    `\nInteractions ${report.interactions.length} · disease–drug ${report.diseaseDrugAlerts.length} · STOP/REVIEW ${report.drugDetails.filter((x) => x.verdict === "stop-or-review").length}` +
+                    (report.estimatedCrClMlMin != null ? `\nCrCl ${report.estimatedCrClMlMin} ml/min` : ""),
+                };
+              }}
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Ref: AGS Beers 2023 · STOPP/START v3 · drug labels.
+            </p>
           </section>
         </div>
       </div>

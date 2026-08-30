@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { drugsDB } from "../clinical/clinicalData";
 import { estimateCrCl } from "../lib/creatinineClearanceMath";
+import SaveButton from "./SaveButton";
 import {
   buildRenalDoseReport,
   searchRenalDrugs,
@@ -265,6 +266,22 @@ export default function CreatinineClearance() {
           )}
         </div>
       )}
+      <SaveButton
+        tool="CrCl"
+        build={() => {
+          if (!result.valid) return null;
+          return {
+            title: `CrCl ${result.crCl} ml/min — ${age} y`,
+            detail: `Cockcroft–Gault (${sex}, ${weight} kg, Cr ${creatinine} ${unit})` +
+              (selectedReport
+                ? `\n${selectedReport.drug.name}: ${selectedReport.recommendations[0] ?? ""}`
+                : ""),
+          };
+        }}
+      />
+      <p className="mt-3 text-xs text-slate-500">
+        Ref: Cockcroft–Gault 1976 · drug bands per label/renal handbooks.
+      </p>
     </div>
   );
 }

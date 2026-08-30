@@ -10,6 +10,7 @@ import {
   restrictedFluidPlans,
   sodiumDeficit,
 } from "../lib/icuMath";
+import SaveButton from "./SaveButton";
 
 function num(v: string): number | "" {
   if (v.trim() === "") return "";
@@ -225,6 +226,17 @@ export default function IcuTitration() {
           </div>
         </div>
       </section>
+
+      <SaveButton
+        tool="ICU"
+        build={() => {
+          if (rate == null) return null;
+          return {
+            title: `${drug.name} — ${dose} ${drug.doseUnit}`,
+            detail: `${w ?? "?"} kg → ${rate} ml/h (${drug.dilution})`,
+          };
+        }}
+      />
 
       <p className="mt-4 text-xs leading-relaxed text-slate-500">
         Protocol-level summaries for bedside cross-checking (ISCCM/SSC, ISPAD

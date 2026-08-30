@@ -161,11 +161,96 @@ export const PED_RENAL_BANDS: Record<string, PedRenalBand[]> = {
     { minGfr: 50, action: "Normal dosing." },
     { minGfr: 0, maxGfr: 49, action: "HALF dose or alternate-day dosing." },
   ],
+  // ---- Additional oral agents ----
+  cefdinir_po: [
+    { minGfr: 30, action: "Normal dosing (14 mg/kg/day)." },
+    { minGfr: 0, maxGfr: 29, action: "7 mg/kg once daily (HALF the daily dose, single dose)." },
+  ],
+  ciprofloxacin_po: [
+    { minGfr: 50, action: "Normal dosing." },
+    { minGfr: 30, maxGfr: 49, action: "Usual dose q12h (no change) — monitor." },
+    { minGfr: 0, maxGfr: 29, action: "Usual single dose q18–24h (about HALF the daily dose)." },
+  ],
+  ofloxacin_po: [
+    { minGfr: 50, action: "Normal dosing." },
+    { minGfr: 20, maxGfr: 49, action: "Usual single dose ONCE daily (half the daily dose)." },
+    { minGfr: 0, maxGfr: 19, action: "HALF the single dose, once daily." },
+  ],
+  doxycycline_po: [{ minGfr: 0, action: "No renal adjustment at any GFR — the tetracycline of choice in kidney disease." }],
+  clindamycin_po: [{ minGfr: 0, action: "No renal adjustment (hepatic clearance)." }],
+  cetirizine_po: [
+    { minGfr: 30, action: "Normal dosing." },
+    { minGfr: 0, maxGfr: 29, action: "HALF the dose or give on alternate days (renally cleared)." },
+  ],
+  levocetirizine_po: [
+    { minGfr: 30, action: "Normal dosing." },
+    { minGfr: 0, maxGfr: 29, action: "HALF the dose or alternate days." },
+  ],
+  fexofenadine_po: [
+    { minGfr: 30, action: "Normal dosing." },
+    { minGfr: 0, maxGfr: 29, action: "Give once daily (lower end of dose range)." },
+  ],
+  ibuprofen_po: [
+    { minGfr: 60, action: "Use only if well hydrated; shortest course." },
+    { minGfr: 0, maxGfr: 59, action: "AVOID — NSAIDs worsen renal impairment (use paracetamol)." },
+  ],
+  mefenamic_po: [
+    { minGfr: 60, action: "Short courses only, well hydrated." },
+    { minGfr: 0, maxGfr: 59, action: "AVOID — NSAID; use paracetamol." },
+  ],
+  paracetamol_po: [
+    { minGfr: 30, action: "No dose change." },
+    { minGfr: 0, maxGfr: 29, action: "Same dose, minimum 6-hourly interval (q6h or wider)." },
+  ],
+  phenobarbital: [
+    { minGfr: 30, action: "Normal dosing with levels." },
+    { minGfr: 0, maxGfr: 29, action: "Extend the interval (q12–24h) and follow levels — accumulates." },
+  ],
+  phenytoin: [{ minGfr: 0, action: "No dose reduction, but in renal failure protein binding falls — total levels read falsely low; use free levels or corrected values." }],
+  valproate: [{ minGfr: 0, action: "No renal adjustment (hepatic); free fraction rises in uremia — interpret levels carefully." }],
+  carbamazepine: [{ minGfr: 0, action: "No renal adjustment (hepatic clearance)." }],
+  clobazam: [{ minGfr: 0, action: "No routine renal adjustment; watch for sedation in severe CKD." }],
+  midazolam: [
+    { minGfr: 50, action: "Normal dosing for seizure rescue." },
+    { minGfr: 0, maxGfr: 49, action: "Rescue dose unchanged; for infusions, active metabolite accumulates — reduce and reassess." },
+  ],
+  diazepam: [{ minGfr: 0, action: "Rescue dosing unchanged; avoid repeated doses in renal failure (accumulation)." }],
+  griseofulvin_po: [{ minGfr: 0, action: "No renal adjustment (hepatic clearance)." }],
+  terbinafine_po: [
+    { minGfr: 50, action: "Normal dosing." },
+    { minGfr: 0, maxGfr: 49, action: "Not recommended below GFR 50 — choose fluconazole/itraconazole per fungus." },
+  ],
+  itraconazole_po: [{ minGfr: 0, action: "No oral renal adjustment; absorption and interactions are the issues." }],
+  nystatin_oral: [{ minGfr: 0, action: "Not absorbed — no renal consideration." }],
+  clotrimazole_topical: [{ minGfr: 0, action: "Topical — no renal consideration." }],
+  albendazole_po: [{ minGfr: 0, action: "No renal adjustment (hepatic clearance)." }],
+  montelukast_po: [{ minGfr: 0, action: "No renal adjustment." }],
+  salbutamol_inh: [{ minGfr: 0, action: "Inhaled — no renal adjustment." }],
+  prednisolone_po: [{ minGfr: 0, action: "No renal adjustment." }],
+  omeprazole_po: [{ minGfr: 0, action: "No renal adjustment." }],
+  pantoprazole_po: [{ minGfr: 0, action: "No renal adjustment." }],
+  ondansetron_po: [{ minGfr: 0, action: "No renal adjustment." }],
+  domperidone_po: [{ minGfr: 0, action: "No routine renal adjustment; in severe CKD reduce frequency (QT caution)." }],
+  lactulose_po: [{ minGfr: 0, action: "Not absorbed — no renal adjustment." }],
+  zinc_po: [{ minGfr: 0, action: "Standard diarrhea course unchanged." }],
+  ors: [{ minGfr: 0, action: "In oligo-anuric renal failure, replace measured losses only — do not push fluids blindly." }],
+  iron_po: [{ minGfr: 0, action: "No adjustment; CKD anemia needs nephrology work-up, not just iron." }],
+  dextromethorphan_po: [{ minGfr: 0, action: "No renal adjustment." }],
+  ambroxol_po: [{ minGfr: 0, action: "No routine adjustment; halve in severe renal failure." }],
+  permethrin_5: [{ minGfr: 0, action: "Topical — no renal consideration." }],
 };
 
-export function pedRenalAction(drugId: string, gfr: number): string | null {
+export function pedRenalAction(
+  drugId: string,
+  gfr: number,
+  renallyCleared?: boolean,
+): string {
   const bands = PED_RENAL_BANDS[drugId];
-  if (!bands) return null;
+  if (!bands) {
+    return renallyCleared
+      ? "Renally cleared — no validated pediatric band in this app: refer pediatric nephrology and dose by eGFR."
+      : "No renal dose adjustment required for this drug.";
+  }
   for (const b of bands) {
     if (gfr >= b.minGfr && gfr <= (b.maxGfr ?? Infinity)) return b.action;
   }
