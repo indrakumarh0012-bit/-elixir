@@ -241,8 +241,8 @@ export default function BpCentiles() {
       {rows && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="text-base font-bold text-slate-900">
-            Centile lines at this height ({sex === "male" ? "boy" : "girl"},{" "}
-            {height} cm) — mmHg
+            Centile lines ({sex === "male" ? "boy" : "girl"},{" "}
+            {basis === "height" ? `${height} cm` : `${age} y`}) — mmHg
           </h3>
           <table className="mt-2 w-full min-w-[560px] text-sm">
             <thead>
