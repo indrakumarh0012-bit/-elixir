@@ -121,13 +121,20 @@ export default function SideMenu({
           ))}
           {/* Direct APK download — only meaningful when browsing the website */}
           {window.location.hostname.endsWith("github.io") && (
-            <a
-              href={`${import.meta.env.BASE_URL}Pocket-Med.apk`}
-              download="Pocket-Med.apk"
-              className="mt-1 flex w-full items-center gap-3 rounded-lg bg-emerald-50 px-3 py-2.5 text-left text-sm font-bold text-emerald-900 hover:bg-emerald-100"
-            >
-              ⬇ Download Android app (APK)
-            </a>
+            <div className="mt-1">
+              <a
+                href={`${import.meta.env.BASE_URL}Pocket-Med.apk`}
+                download="Pocket-Med.apk"
+                className="flex w-full items-center gap-3 rounded-lg bg-emerald-50 px-3 py-2.5 text-left text-sm font-bold text-emerald-900 hover:bg-emerald-100"
+              >
+                ⬇ Download Android app (APK)
+              </a>
+              <p className="px-3 pt-1 text-[10px] leading-snug text-slate-500">
+                Chrome asks "File might be harmful" for EVERY app installed
+                outside the Play Store — tap "Download anyway", then open the
+                file from the notification shade to install.
+              </p>
+            </div>
           )}
         </nav>
         <div className="border-t border-slate-200 p-4">
