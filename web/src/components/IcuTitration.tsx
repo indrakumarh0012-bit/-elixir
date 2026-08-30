@@ -63,10 +63,6 @@ export default function IcuTitration() {
       <h2 className="text-xl font-bold text-orange-950">
         ICU / Ward — titrations &amp; corrections
       </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Infusion rates, insulin, fluids and electrolyte corrections. Weight
-        drives everything; creatinine adds renal cautions.
-      </p>
 
       <section className={`mt-4 ${card}`}>
         <div className="flex flex-wrap gap-2">

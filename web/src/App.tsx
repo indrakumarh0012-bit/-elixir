@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import HomeScreen from "./components/HomeScreen";
 import SavedScreen from "./components/SavedScreen";
 import SideMenu, { type MenuTarget } from "./components/SideMenu";
@@ -16,6 +16,26 @@ type AppTab = MenuTarget;
 export default function App() {
   const [tab, setTab] = useState<AppTab>("home");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Inputs marked data-adv="N" jump focus to the next field once N digits
+  // are typed, so a full entry never needs a manual tap on the next box.
+  useEffect(() => {
+    const onInput = (e: Event) => {
+      const el = e.target;
+      if (!(el instanceof HTMLInputElement)) return;
+      const adv = Number(el.dataset.adv);
+      if (!adv) return;
+      if (el.value.replace(/\D/g, "").length < adv) return;
+      const scope = el.closest("main") ?? document.body;
+      const fields = Array.from(
+        scope.querySelectorAll<HTMLElement>("input, select, textarea"),
+      ).filter((f) => !f.hasAttribute("disabled"));
+      const i = fields.indexOf(el);
+      if (i >= 0 && i + 1 < fields.length) fields[i + 1].focus();
+    };
+    document.addEventListener("input", onInput);
+    return () => document.removeEventListener("input", onInput);
+  }, []);
 
   const tabs: {
     id: AppTab;
@@ -54,7 +74,7 @@ export default function App() {
     },
     {
       id: "regimen",
-      label: "Polypharmacy",
+      label: "Polypharm",
       shortLabel: "Polypharm",
       active: "bg-rose-600 text-white shadow-sm",
       idle: "bg-rose-50 text-rose-800 hover:bg-rose-100",
@@ -91,8 +111,13 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTab("home")}
-              className="brand-text text-lg font-extrabold tracking-tight"
+              className="flex items-center gap-1.5 whitespace-nowrap text-base font-bold tracking-tight text-slate-900"
             >
+              <img
+                src={`${import.meta.env.BASE_URL}icon.svg`}
+                alt=""
+                className="h-6 w-6 rounded-md"
+              />
               Pocket-Med
             </button>
           </div>

@@ -144,10 +144,6 @@ export default function GrowthCalculator() {
       <h2 className="text-xl font-bold text-violet-950">
         Growth — height &amp; weight for age
       </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Type the numbers; the z-score, percentile and interpretation update as
-        you go.
-      </p>
 
       <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
@@ -178,6 +174,7 @@ export default function GrowthCalculator() {
               type="number"
               inputMode="numeric"
               min={0}
+              data-adv="2"
               value={years}
               onChange={(e) => setYears(numOrEmpty(e.target.value))}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
@@ -190,6 +187,7 @@ export default function GrowthCalculator() {
               inputMode="numeric"
               min={0}
               max={11}
+              data-adv="2"
               value={months}
               onChange={(e) => setMonths(numOrEmpty(e.target.value))}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"

@@ -17,7 +17,7 @@ const LINKS: { id: MenuTarget; label: string; icon: string }[] = [
   { id: "growth", label: "Growth Charts", icon: "📈" },
   { id: "bp", label: "Ped-BP", icon: "🫀" },
   { id: "crCl", label: "Creatinine Clearance", icon: "🫘" },
-  { id: "regimen", label: "Polypharmacy", icon: "💊" },
+  { id: "regimen", label: "Polypharm", icon: "💊" },
   { id: "icu", label: "ICU Titration", icon: "🏥" },
   { id: "ob", label: "OB / EDD", icon: "🤰" },
   { id: "saved", label: "Saved Calculations", icon: "📁" },
@@ -39,7 +39,6 @@ export default function SideMenu({
   useSyncExternalStore(subscribe, getVersion);
   const profile = getCurrentProfile();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -52,14 +51,13 @@ export default function SideMenu({
     setErr(null);
     const result =
       mode === "signup"
-        ? await signUp(name, phone, password)
+        ? await signUp("", phone, password)
         : await signIn(phone, password);
     setBusy(false);
     if (!result.ok) {
       setErr(result.error);
       return;
     }
-    setName("");
     setPhone("");
     setPassword("");
     setMode("signin");
@@ -75,8 +73,7 @@ export default function SideMenu({
       />
       <div className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-white shadow-2xl">
         <div className="border-b border-slate-200 p-4">
-          <p className="brand-text text-lg font-extrabold">Pocket-Med</p>
-          <p className="text-xs text-slate-600">Clinical calculators &amp; checks</p>
+          <p className="brand-text text-base font-bold">Pocket-Med</p>
         </div>
         <nav className="flex-1 p-2">
           {LINKS.map((l) => (
@@ -96,8 +93,10 @@ export default function SideMenu({
         <div className="border-t border-slate-200 p-4">
           {profile ? (
             <>
-              <p className="text-sm font-bold text-slate-900">{profile.name}</p>
-              <p className="text-xs text-slate-600">{profile.phone}</p>
+              <p className="text-sm font-bold text-slate-900">{profile.phone}</p>
+              {profile.name !== profile.phone && (
+                <p className="text-xs text-slate-600">{profile.name}</p>
+              )}
               <button
                 type="button"
                 onClick={signOut}
@@ -124,14 +123,6 @@ export default function SideMenu({
                   Sign up
                 </button>
               </div>
-              {mode === "signup" && (
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className={inputCls}
-                />
-              )}
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -142,8 +133,9 @@ export default function SideMenu({
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder={mode === "signup" ? "Password (min 6 digits)" : "Password"}
                 type="password"
+                inputMode="numeric"
                 className={inputCls}
               />
               {err && <p className="mt-1 text-xs text-red-700">{err}</p>}
@@ -156,9 +148,7 @@ export default function SideMenu({
                 {mode === "signup" ? "Create account" : "Sign in"}
               </button>
               <p className="mt-2 text-[11px] leading-snug text-slate-600">
-                Accounts and saved calculations stay on this device only — the
-                password protects them locally. Google / Apple sign-in and OTP
-                need a server backend and are not offered yet.
+                Accounts and saved calculations stay on this device.
               </p>
             </>
           )}

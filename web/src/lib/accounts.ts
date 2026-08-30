@@ -91,13 +91,13 @@ export async function signUp(
   phone: string,
   password: string,
 ): Promise<AuthResult> {
-  const n = name.trim();
   const ph = phone.trim();
-  if (!n) return { ok: false, error: "Enter your name." };
+  // Phone number doubles as the username; a display name is optional.
+  const n = name.trim() || ph;
   if (!/^[\d+][\d\s-]{7,14}$/.test(ph))
     return { ok: false, error: "Enter a valid phone number (8–15 digits)." };
-  if (password.length < 4)
-    return { ok: false, error: "Password must be at least 4 characters." };
+  if (password.length < 6)
+    return { ok: false, error: "Password must be at least 6 digits or characters." };
   const profiles = getProfiles();
   if (profiles.some((p) => p.phone === ph))
     return { ok: false, error: "This phone number already has an account — sign in instead." };
