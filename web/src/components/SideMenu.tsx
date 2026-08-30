@@ -10,13 +10,14 @@ import {
 import ToolIcon from "./ToolIcon";
 
 export type MenuTarget =
-  | "home" | "pedDose" | "growth" | "bp" | "crCl" | "regimen" | "icu" | "ob" | "saved" | "report";
+  | "home" | "pedDose" | "growth" | "bp" | "bmi" | "crCl" | "regimen" | "icu" | "ob" | "saved" | "report";
 
 const LINKS: { id: MenuTarget; label: string }[] = [
   { id: "home", label: "Home" },
   { id: "pedDose", label: "Ped Dose Calculator" },
   { id: "growth", label: "Growth Charts" },
   { id: "bp", label: "Ped-BP" },
+  { id: "bmi", label: "BMI" },
   { id: "crCl", label: "Creatinine Clearance" },
   { id: "regimen", label: "Polypharm" },
   { id: "icu", label: "ICU Titration" },

@@ -8,10 +8,37 @@ import {
   WUEHL_SBP_NIGHT_BOYS, WUEHL_SBP_NIGHT_GIRLS,
   type BpRow,
 } from "../data/wuehlBpReference";
+import {
+  BP_AGE_MAX, BP_AGE_MIN,
+  WUEHL_AGE_DBP_24H_BOYS, WUEHL_AGE_DBP_24H_GIRLS,
+  WUEHL_AGE_DBP_DAY_BOYS, WUEHL_AGE_DBP_DAY_GIRLS,
+  WUEHL_AGE_DBP_NIGHT_BOYS, WUEHL_AGE_DBP_NIGHT_GIRLS,
+  WUEHL_AGE_SBP_24H_BOYS, WUEHL_AGE_SBP_24H_GIRLS,
+  WUEHL_AGE_SBP_DAY_BOYS, WUEHL_AGE_SBP_DAY_GIRLS,
+  WUEHL_AGE_SBP_NIGHT_BOYS, WUEHL_AGE_SBP_NIGHT_GIRLS,
+} from "../data/wuehlBpAgeReference";
 import { zToPercentile } from "./growthMath";
+
+export type BpBasis = "height" | "age";
+export { BP_AGE_MIN, BP_AGE_MAX };
 
 export type BpPeriod = "day" | "night" | "24h";
 export type BpSex = "male" | "female";
+
+const AGE_TABLES: Record<BpPeriod, Record<BpSex, { sbp: BpRow[]; dbp: BpRow[] }>> = {
+  day: {
+    male: { sbp: WUEHL_AGE_SBP_DAY_BOYS, dbp: WUEHL_AGE_DBP_DAY_BOYS },
+    female: { sbp: WUEHL_AGE_SBP_DAY_GIRLS, dbp: WUEHL_AGE_DBP_DAY_GIRLS },
+  },
+  night: {
+    male: { sbp: WUEHL_AGE_SBP_NIGHT_BOYS, dbp: WUEHL_AGE_DBP_NIGHT_BOYS },
+    female: { sbp: WUEHL_AGE_SBP_NIGHT_GIRLS, dbp: WUEHL_AGE_DBP_NIGHT_GIRLS },
+  },
+  "24h": {
+    male: { sbp: WUEHL_AGE_SBP_24H_BOYS, dbp: WUEHL_AGE_DBP_24H_BOYS },
+    female: { sbp: WUEHL_AGE_SBP_24H_GIRLS, dbp: WUEHL_AGE_DBP_24H_GIRLS },
+  },
+};
 
 const TABLES: Record<BpPeriod, Record<BpSex, { sbp: BpRow[]; dbp: BpRow[] }>> = {
   day: {
@@ -28,15 +55,16 @@ const TABLES: Record<BpPeriod, Record<BpSex, { sbp: BpRow[]; dbp: BpRow[] }>> = 
   },
 };
 
-/** Interpolated [L, M, S] at a height; clamped to the table's range. */
-function lmsAt(table: BpRow[], heightCm: number): [number, number, number] {
+/** Interpolated [L, M, S] at an x value (height or age); clamped to range. */
+function lmsAt(table: BpRow[], x: number): [number, number, number] {
   const min = table[0][0];
   const max = table[table.length - 1][0];
-  const h = Math.min(Math.max(heightCm, min), max);
-  const idx = (h - min) / 5;
-  const lo = Math.floor(idx);
+  const v = Math.min(Math.max(x, min), max);
+  let lo = 0;
+  while (lo < table.length - 2 && table[lo + 1][0] <= v) lo++;
   const hi = Math.min(lo + 1, table.length - 1);
-  const f = idx - lo;
+  const span = table[hi][0] - table[lo][0] || 1;
+  const f = (v - table[lo][0]) / span;
   const lerp = (i: number) => table[lo][i] + (table[hi][i] - table[lo][i]) * f;
   return [lerp(1), lerp(2), lerp(3)];
 }
@@ -67,14 +95,16 @@ export type BpAssessment = {
   band: "normal" | "caution" | "alert";
 };
 
-/** Reference centile values (5th…99th) for one component at this height. */
+/** Reference centiles (5th…99th) for one component at this height or age. */
 export function bpCentiles(
   sex: BpSex,
   period: BpPeriod,
   component: "sbp" | "dbp",
-  heightCm: number,
+  x: number,
+  basis: BpBasis = "height",
 ): BpCentileRow {
-  const [l, m, s] = lmsAt(TABLES[period][sex][component], heightCm);
+  const set = basis === "age" ? AGE_TABLES : TABLES;
+  const [l, m, s] = lmsAt(set[period][sex][component], x);
   const out = {} as BpCentileRow;
   for (const [key, z] of Object.entries(Z_FOR)) {
     out[key as keyof BpCentileRow] = Math.round(lmsValue(z, l, m, s) * 10) / 10;
@@ -87,12 +117,15 @@ export function assessBp(
   sex: BpSex,
   period: BpPeriod,
   component: "sbp" | "dbp",
-  heightCm: number,
+  x: number,
   value: number,
+  basis: BpBasis = "height",
 ): BpAssessment | null {
   if (!Number.isFinite(value) || value <= 0) return null;
-  if (!Number.isFinite(heightCm) || heightCm < BP_HEIGHT_MIN - 15) return null;
-  const [l, m, s] = lmsAt(TABLES[period][sex][component], heightCm);
+  if (basis === "height" && (!Number.isFinite(x) || x < BP_HEIGHT_MIN - 15)) return null;
+  if (basis === "age" && (!Number.isFinite(x) || x < BP_AGE_MIN - 1 || x > BP_AGE_MAX + 3)) return null;
+  const set = basis === "age" ? AGE_TABLES : TABLES;
+  const [l, m, s] = lmsAt(set[period][sex][component], x);
   const z = lmsZ(value, l, m, s);
   const pct = zToPercentile(z);
   let classification: string;

@@ -126,9 +126,9 @@ export default function ObCalculator() {
       </section>
 
       {result ? (
-        <div className="mt-4 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-4">
-          <p className="text-sm font-semibold text-fuchsia-900">Today</p>
-          <p className="mt-1 text-3xl font-bold text-fuchsia-900">
+        <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">Today</p>
+          <p className="mt-1 text-3xl font-bold text-slate-900">
             {result.gaLabel}
           </p>
           <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -158,7 +158,7 @@ export default function ObCalculator() {
               </dd>
             </div>
           </dl>
-          <p className="mt-3 text-xs text-fuchsia-900/80">{result.note}</p>
+          <p className="mt-3 text-xs text-slate-700">{result.note}</p>
           <p className="mt-1 text-xs text-slate-500">
             A first-trimester ultrasound CRL that differs from menstrual dating
             by more than the accepted window should re-date the pregnancy —
@@ -403,7 +403,7 @@ export default function ObCalculator() {
                       setSelectedConds((prev) => [...prev, e.condition]);
                       setCondQuery("");
                     }}
-                    className="rounded-full bg-fuchsia-100 px-3 py-1.5 text-xs font-semibold text-fuchsia-900 hover:bg-fuchsia-200"
+                    className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-slate-300"
                   >
                     + {e.condition}
                   </button>
@@ -422,10 +422,10 @@ export default function ObCalculator() {
                 {cards.map((e) => (
                   <li
                     key={e.condition}
-                    className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/60 p-3"
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-bold text-fuchsia-950">{e.condition}</p>
+                      <p className="font-bold text-slate-900">{e.condition}</p>
                       <button
                         type="button"
                         onClick={() =>
@@ -461,7 +461,7 @@ export default function ObCalculator() {
                               key={i}
                               className={`rounded-md px-2 py-1.5 text-xs font-semibold ${
                                 applies
-                                  ? "bg-fuchsia-900 text-white"
+                                  ? "bg-slate-900 text-white"
                                   : "bg-slate-100 text-slate-700"
                               }`}
                             >

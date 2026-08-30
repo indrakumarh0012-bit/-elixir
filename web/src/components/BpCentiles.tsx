@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import {
+  BP_AGE_MAX, BP_AGE_MIN,
   assessBp,
   bpCentiles,
   dippingPercent,
   pulsePressure,
+  type BpBasis,
   type BpPeriod,
   type BpSex,
 } from "../lib/bpMath";
@@ -24,6 +26,8 @@ function num(v: string): number | "" {
 
 export default function BpCentiles() {
   const [sex, setSex] = useState<BpSex>("male");
+  const [basis, setBasis] = useState<BpBasis>("height");
+  const [age, setAge] = useState<number | "">("");
   const [height, setHeight] = useState<number | "">("");
   const [daySbp, setDaySbp] = useState<number | "">("");
   const [dayDbp, setDayDbp] = useState<number | "">("");
@@ -32,31 +36,35 @@ export default function BpCentiles() {
 
   const h = height === "" ? null : Number(height);
   const heightOk = h != null && h >= 105 && h <= 200;
+  const a = age === "" ? null : Number(age);
+  const ageOk = a != null && a >= BP_AGE_MIN - 1 && a <= BP_AGE_MAX + 3;
+  const x = basis === "height" ? h : a;
+  const xOk = basis === "height" ? heightOk : ageOk;
 
   const rows = useMemo(() => {
-    if (!heightOk || h == null) return null;
+    if (!xOk || x == null) return null;
     const make = (period: BpPeriod) => ({
       period,
-      sbp: bpCentiles(sex, period, "sbp", h),
-      dbp: bpCentiles(sex, period, "dbp", h),
+      sbp: bpCentiles(sex, period, "sbp", x, basis),
+      dbp: bpCentiles(sex, period, "dbp", x, basis),
     });
     return [make("day"), make("night"), make("24h")];
-  }, [sex, h, heightOk]);
+  }, [sex, x, xOk, basis]);
 
   const assessments = useMemo(() => {
-    if (!heightOk || h == null) return [];
+    if (!xOk || x == null) return [];
     const list: { label: string; value: number; a: NonNullable<ReturnType<typeof assessBp>> }[] = [];
     const push = (label: string, period: BpPeriod, comp: "sbp" | "dbp", v: number | "") => {
       if (v === "") return;
-      const a = assessBp(sex, period, comp, h, Number(v));
-      if (a) list.push({ label, value: Number(v), a });
+      const r = assessBp(sex, period, comp, x, Number(v), basis);
+      if (r) list.push({ label, value: Number(v), a: r });
     };
     push("Daytime systolic", "day", "sbp", daySbp);
     push("Daytime diastolic", "day", "dbp", dayDbp);
     push("Night systolic", "night", "sbp", nightSbp);
     push("Night diastolic", "night", "dbp", nightDbp);
     return list;
-  }, [sex, h, heightOk, daySbp, dayDbp, nightSbp, nightDbp]);
+  }, [sex, x, xOk, basis, daySbp, dayDbp, nightSbp, nightDbp]);
 
   const dip =
     daySbp !== "" && nightSbp !== ""
@@ -87,8 +95,29 @@ export default function BpCentiles() {
               {s === "male" ? "Boy" : "Girl"}
             </button>
           ))}
+          <span className="mx-1 hidden self-center text-slate-300 sm:inline">|</span>
+          {(["height", "age"] as const).map((b) => (
+            <button
+              key={b}
+              type="button"
+              onClick={() => setBasis(b)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                basis === b
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+              }`}
+            >
+              {b === "height" ? "By height" : "By age"}
+            </button>
+          ))}
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-600">Age (years)</span>
+            <input type="number" inputMode="numeric" min={5} max={19} data-adv="2" value={age}
+              onChange={(e) => setAge(num(e.target.value))}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
+          </label>
           <label className="block col-span-2 sm:col-span-1">
             <span className="text-xs font-semibold text-slate-600">Height (cm)</span>
             <input type="number" inputMode="decimal" data-adv="3" value={height}
@@ -120,10 +149,22 @@ export default function BpCentiles() {
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
           </label>
         </div>
-        {height !== "" && !heightOk && (
+        {basis === "height" && height !== "" && !heightOk && (
           <p className="mt-2 text-xs text-amber-700">
-            Reference covers roughly 120–185 cm; values outside are clamped to
-            the nearest edge.
+            Height reference covers roughly 120–185 cm; values outside are
+            clamped to the nearest edge.
+          </p>
+        )}
+        {basis === "height" && height === "" && (
+          <p className="mt-2 text-xs text-slate-600">
+            Enter height for height-based centiles (preferred by ESH/AAP), or
+            switch to "By age" and enter age (5–16 y reference).
+          </p>
+        )}
+        {basis === "age" && a != null && (a < BP_AGE_MIN || a > BP_AGE_MAX) && (
+          <p className="mt-2 text-xs text-amber-700">
+            Age reference covers {BP_AGE_MIN}–{BP_AGE_MAX} years; values outside
+            are clamped to the nearest edge.
           </p>
         )}
       </section>
@@ -199,7 +240,7 @@ export default function BpCentiles() {
 
       {rows && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900">
+          <h3 className="text-base font-bold text-slate-900">
             Centile lines at this height ({sex === "male" ? "boy" : "girl"},{" "}
             {height} cm) — mmHg
           </h3>

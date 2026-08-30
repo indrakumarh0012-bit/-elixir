@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { drugsDB } from "../clinical/clinicalData";
-import { estimateCrCl } from "../lib/creatinineClearanceMath";
+import { egfrCkdEpi2021, estimateCrCl, gfrCategory } from "../lib/creatinineClearanceMath";
 import SaveButton from "./SaveButton";
 import {
   buildRenalDoseReport,
@@ -137,14 +137,50 @@ export default function CreatinineClearance() {
       </div>
 
       <div className="mt-6 rounded-xl border border-[var(--line)] bg-white p-5 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Estimated CrCl
-        </p>
         {result.valid ? (
           <>
-            <p className="mt-1 text-3xl font-bold text-[var(--accent)]">
-              {result.crCl} <span className="text-lg font-semibold">mL/min</span>
-            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  CrCl — Cockcroft-Gault
+                </p>
+                <p className="mt-1 text-3xl font-bold text-slate-900">
+                  {result.crCl} <span className="text-lg font-semibold">mL/min</span>
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Used for the drug dose adjustments below.
+                </p>
+              </div>
+              {(() => {
+                const scrMgDl =
+                  creatinine === ""
+                    ? null
+                    : unit === "mg/dL"
+                      ? Number(creatinine)
+                      : Number(creatinine) / 88.4;
+                const egfr =
+                  scrMgDl == null || age === ""
+                    ? null
+                    : egfrCkdEpi2021(sex, Number(age), scrMgDl);
+                if (egfr == null) return null;
+                const cat = gfrCategory(egfr);
+                return (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      eGFR — CKD-EPI 2021
+                    </p>
+                    <p className="mt-1 text-3xl font-bold text-slate-900">
+                      {egfr}{" "}
+                      <span className="text-lg font-semibold">mL/min/1.73 m²</span>
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      KDIGO {cat.stage} — {cat.label}. Use for CKD staging
+                      (adults; race-free 2021 equation).
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
             <p className="mt-3 text-sm text-[var(--muted)]">
               Weight used: <strong>{result.weightUsed} kg</strong> ({result.basis})
               {result.ibw != null ? ` · IBW ${result.ibw} kg` : ""}

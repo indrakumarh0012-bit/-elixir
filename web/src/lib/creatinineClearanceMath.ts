@@ -106,3 +106,36 @@ export function estimateCrCl(input: CrClInput): CrClResult {
     errors,
   };
 }
+
+/**
+ * CKD-EPI 2021 (race-free) eGFR in mL/min/1.73 m².
+ * kappa 0.7 F / 0.9 M; alpha −0.241 F / −0.302 M; ×1.012 if female.
+ */
+export function egfrCkdEpi2021(
+  sex: "Male" | "Female",
+  ageYears: number,
+  creatinineMgDl: number,
+): number | null {
+  if (!(ageYears >= 18) || !(creatinineMgDl > 0)) return null;
+  const female = sex === "Female";
+  const kappa = female ? 0.7 : 0.9;
+  const alpha = female ? -0.241 : -0.302;
+  const r = creatinineMgDl / kappa;
+  const egfr =
+    142 *
+    Math.pow(Math.min(r, 1), alpha) *
+    Math.pow(Math.max(r, 1), -1.2) *
+    Math.pow(0.9938, ageYears) *
+    (female ? 1.012 : 1);
+  return round1(egfr);
+}
+
+/** KDIGO GFR category for an eGFR (mL/min/1.73 m²). */
+export function gfrCategory(egfr: number): { stage: string; label: string } {
+  if (egfr >= 90) return { stage: "G1", label: "normal or high" };
+  if (egfr >= 60) return { stage: "G2", label: "mildly decreased" };
+  if (egfr >= 45) return { stage: "G3a", label: "mild–moderately decreased" };
+  if (egfr >= 30) return { stage: "G3b", label: "moderate–severely decreased" };
+  if (egfr >= 15) return { stage: "G4", label: "severely decreased" };
+  return { stage: "G5", label: "kidney failure" };
+}
