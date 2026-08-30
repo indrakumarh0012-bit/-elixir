@@ -7,7 +7,7 @@ import {
   signUp,
   subscribe,
 } from "../lib/accounts";
-import ToolIcon from "./ToolIcon";
+import ToolIcon, { TOOL_TEXT } from "./ToolIcon";
 
 export type MenuTarget =
   | "home" | "pedDose" | "growth" | "bp" | "bmi" | "crCl" | "regimen" | "icu" | "insulin" | "ob" | "saved" | "report";
@@ -89,7 +89,7 @@ export default function SideMenu({
               }}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-900 hover:bg-slate-100"
             >
-              <ToolIcon id={l.id} className="h-4.5 w-4.5 text-slate-700" /> {l.label}
+              <ToolIcon id={l.id} className={`h-4.5 w-4.5 ${TOOL_TEXT[l.id]}`} /> {l.label}
             </button>
           ))}
         </nav>

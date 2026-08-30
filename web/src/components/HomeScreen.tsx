@@ -1,5 +1,5 @@
 import type { MenuTarget } from "./SideMenu";
-import ToolIcon from "./ToolIcon";
+import ToolIcon, { TOOL_BG } from "./ToolIcon";
 
 const TOOLS: { id: MenuTarget; title: string }[] = [
   { id: "pedDose", title: "Ped Dose Calculator" },
@@ -11,7 +11,6 @@ const TOOLS: { id: MenuTarget; title: string }[] = [
   { id: "icu", title: "ICU Titration" },
   { id: "insulin", title: "Insulin" },
   { id: "ob", title: "OB / EDD" },
-  { id: "report", title: "Report an Issue" },
 ];
 
 export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void }) {
@@ -25,7 +24,7 @@ export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void
             onClick={() => onOpen(t.id)}
             className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-400 hover:shadow"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+            <span className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${TOOL_BG[t.id]}`}>
               <ToolIcon id={t.id} className="h-5 w-5" />
             </span>
             <span className="font-bold text-slate-900">{t.title}</span>
