@@ -47,7 +47,7 @@ export default function CreatinineClearance() {
 
   return (
     <div className="mx-auto max-w-4xl px-3 py-6 md:px-6">
-      <h1 className="text-2xl font-bold text-teal-800">Creatinine Clearance</h1>
+      <h1 className="text-2xl font-bold text-teal-950">Creatinine Clearance</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
         Calculate CrCl, then search antibiotics and common drugs for dose or interval
         adjustments.

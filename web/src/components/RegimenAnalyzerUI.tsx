@@ -72,7 +72,7 @@ export default function RegimenAnalyzerUI() {
     <div className="bg-slate-50 px-3 py-4 md:px-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-4">
-          <h1 className="text-2xl font-bold text-rose-800">Polypharmacy Analyzer</h1>
+          <h1 className="text-2xl font-bold text-rose-950">Polypharmacy Analyzer</h1>
         </header>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

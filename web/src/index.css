@@ -4,7 +4,7 @@
   --bg: #f1f5f9;
   --card: #ffffff;
   --ink: #0f172a;
-  --muted: #475569;
+  --muted: #334155;
   --accent: #0f4c81;
   --accent-soft: #e8f1f8;
   --warn: #b45309;
@@ -74,26 +74,54 @@ body {
   }
 }
 
-/* Per-tool watermark backgrounds: a faint, fixed subject icon + hue wash. */
+/* Per-tool backgrounds: a large fixed subject icon (bottom-right), a small
+   echo icon (top-left), and a hue wash matched to the tool's colour. */
 .tool-stage { position: relative; }
 .tool-stage::before {
   position: fixed;
   right: -4rem;
   bottom: -6rem;
   z-index: 0;
-  font-size: 44vh;
+  font-size: 48vh;
   line-height: 1;
-  opacity: 0.06;
+  opacity: 0.16;
+  filter: saturate(1.15);
+  pointer-events: none;
+  content: "";
+}
+.tool-stage::after {
+  position: fixed;
+  left: -2.5rem;
+  top: 22%;
+  z-index: 0;
+  font-size: 18vh;
+  line-height: 1;
+  opacity: 0.1;
+  transform: rotate(-12deg);
   pointer-events: none;
   content: "";
 }
 .tool-stage > * { position: relative; z-index: 1; }
-.tool-home::before { content: "🩺"; }
-.tool-pedDose::before { content: "🧒"; }
-.tool-growth::before { content: "📈"; }
-.tool-bp::before { content: "🫀"; }
-.tool-crCl::before { content: "🫘"; }
-.tool-regimen::before { content: "💊"; }
-.tool-icu::before { content: "🏥"; }
-.tool-ob::before { content: "🤰"; }
-.tool-saved::before { content: "📁"; }
+
+.tool-home::before, .tool-home::after { content: "🩺"; }
+.tool-pedDose::before, .tool-pedDose::after { content: "🧒"; }
+.tool-growth::before, .tool-growth::after { content: "📈"; }
+.tool-bp::before, .tool-bp::after { content: "🫀"; }
+.tool-crCl::before, .tool-crCl::after { content: "🫘"; }
+.tool-regimen::before, .tool-regimen::after { content: "💊"; }
+.tool-icu::before, .tool-icu::after { content: "🏥"; }
+.tool-ob::before, .tool-ob::after { content: "🤰"; }
+.tool-saved::before, .tool-saved::after { content: "📁"; }
+.tool-report::before, .tool-report::after { content: "🛠️"; }
+
+/* Hue washes so each tool's page carries its own tint. */
+.tool-home    { background: linear-gradient(160deg, rgba(37, 99, 235, 0.07), rgba(13, 148, 136, 0.06)); }
+.tool-pedDose { background: linear-gradient(160deg, rgba(37, 99, 235, 0.1), rgba(147, 197, 253, 0.14)); }
+.tool-growth  { background: linear-gradient(160deg, rgba(124, 58, 237, 0.1), rgba(196, 181, 253, 0.14)); }
+.tool-bp      { background: linear-gradient(160deg, rgba(8, 145, 178, 0.1), rgba(165, 243, 252, 0.16)); }
+.tool-crCl    { background: linear-gradient(160deg, rgba(13, 148, 136, 0.1), rgba(153, 246, 228, 0.16)); }
+.tool-regimen { background: linear-gradient(160deg, rgba(225, 29, 72, 0.08), rgba(254, 205, 211, 0.16)); }
+.tool-icu     { background: linear-gradient(160deg, rgba(234, 88, 12, 0.09), rgba(254, 215, 170, 0.16)); }
+.tool-ob      { background: linear-gradient(160deg, rgba(192, 38, 211, 0.08), rgba(245, 208, 254, 0.16)); }
+.tool-saved   { background: linear-gradient(160deg, rgba(71, 85, 105, 0.08), rgba(203, 213, 225, 0.16)); }
+.tool-report  { background: linear-gradient(160deg, rgba(217, 119, 6, 0.09), rgba(253, 230, 138, 0.16)); }
