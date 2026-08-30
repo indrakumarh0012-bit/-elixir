@@ -467,6 +467,63 @@ function analyzePolypharmacy(
  * Pure clinical regimen analyzer: DDIs, Beers/STOPP/START, pediatric dosing, renal + polypharmacy.
  */
 
+
+/** What to reach for instead, shown when a drug earns a STOP/REVIEW verdict. */
+const ALTERNATIVES: Record<string, string> = {
+  ibuprofen: "Paracetamol first; topical NSAID for joints; short tramadol only if unavoidable.",
+  diclofenac: "Paracetamol / topical diclofenac gel; PPI cover if any oral NSAID is truly needed.",
+  naproxen: "Paracetamol / topical NSAID; if inflammation demands, shortest course + PPI.",
+  etoricoxib: "Paracetamol / topical NSAID; avoid all NSAIDs in cardiac/renal disease.",
+  indomethacin: "Any other analgesic — indomethacin has the worst CNS profile in elderly.",
+  aspirin: "If for primary prevention in elderly — usually stop; secondary prevention stays.",
+  glibenclamide: "Gliclazide (shorter-acting), linagliptin/teneligliptin (no renal adjustment), or basal insulin.",
+  glimepiride: "Low-dose gliclazide or a DPP-4 inhibitor; insulin if HbA1c far off target.",
+  metformin: "In CKD: linagliptin/teneligliptin, low-dose gliclazide, or insulin.",
+  oxybutynin: "Bladder training + timed voiding; if a drug is needed, low-dose solifenacin (max 5 mg in CKD).",
+  solifenacin: "Bladder training; review if benefit is real — stop and reassess after 4 weeks.",
+  trihexyphenidyl: "Stop — for drug-induced EPS, reduce the offending antipsychotic instead.",
+  amitriptyline: "For neuropathic pain: duloxetine (if eGFR > 30) or gabapentin (renally dosed).",
+  chlorpheniramine: "Loratadine / fexofenadine (non-sedating).",
+  pheniramine: "Loratadine / fexofenadine.",
+  cinnarizine: "Vestibular rehabilitation; betahistine for Meniere-type vertigo.",
+  flunarizine: "For migraine prophylaxis: propranolol (if no asthma/HF) or topiramate (renally dosed).",
+  diazepam: "Taper gradually; sleep hygiene; melatonin at bedtime if needed.",
+  "diazepam-adult": "Taper gradually (switch to equivalent lorazepam first if needed); sleep hygiene, melatonin.",
+  alprazolam: "Gradual taper; SSRI for underlying anxiety; relaxation techniques.",
+  clonazepam: "Slow taper; treat the underlying disorder (SSRI for anxiety).",
+  zolpidem: "Sleep hygiene + stimulus control; melatonin; treat pain/nocturia driving insomnia.",
+  lorazepam: "Taper; non-drug sleep measures; melatonin.",
+  risperidone: "Non-drug measures for BPSD (routine, pain control, environment); if essential, lowest-dose quetiapine with review date.",
+  olanzapine: "Non-drug BPSD measures; if an antipsychotic is unavoidable, set a stop date.",
+  quetiapine: "Non-drug measures first; re-review need every 4–12 weeks.",
+  haloperidol: "For delirium: treat the cause; if sedation essential, lowest dose shortest time.",
+  paroxetine: "Sertraline or escitalopram (cleaner in elderly).",
+  fluoxetine: "Sertraline / escitalopram (shorter half-life, no CYP2D6 problem with tamoxifen).",
+  verapamil: "For rate control in HF: beta-blocker (bisoprolol/carvedilol); for BP: amlodipine.",
+  diltiazem: "Beta-blocker for rate control in HFrEF; amlodipine for BP.",
+  clonidine: "Amlodipine / telmisartan / chlorthalidone per guidelines.",
+  prazosin: "For BP: standard first-line agents; keep alpha-blockers for BPH symptoms only.",
+  pioglitazone: "DPP-4 inhibitor, SGLT2 inhibitor (if eGFR allows), or insulin.",
+  nitrofurantoin: "Per urine culture: cephalexin, fosfomycin single dose, or amoxicillin-clavulanate.",
+  dabigatran: "Apixaban (best renal tolerance of the DOACs) or warfarin with INR monitoring.",
+  rivaroxaban: "Apixaban or warfarin when CrCl < 15.",
+  tramadol: "Paracetamol round-the-clock; topical agents; low-dose morphine (renally adjusted) for severe pain.",
+  morphine: "In renal failure: fentanyl (patch/injection) — no active renal metabolites.",
+  "tenofovir-df": "Tenofovir alafenamide (TAF) — same efficacy, kinder to kidneys and bone.",
+  cotrimoxazole: "Per culture: nitrofurantoin (if eGFR ≥ 60), cephalexin, or fosfomycin.",
+  duloxetine: "Sertraline (no renal adjustment) for mood; gabapentin (renally dosed) for neuropathic pain.",
+  trimetazidine: "Optimize standard anti-anginals: beta-blocker, amlodipine, nitrates, ranolazine per cardiology.",
+  digoxin: "Rate control with beta-blocker; if digoxin essential, 0.125 mg with levels.",
+  cisplatin: "Carboplatin dosed by Calvert formula (uses the patient's GFR).",
+  capecitabine: "Infusional 5-FU with dose reduction per oncology, or non-fluoropyrimidine regimen.",
+  lithium: "With psychiatry: valproate or an atypical agent; never stop lithium abruptly.",
+  spironolactone: "For resistant HTN in CKD: check with nephrology; amiloride is NOT safer — loop diuretic + BP agents.",
+  famciclovir: "Acyclovir or valacyclovir with renal-banded dosing (cheaper, same coverage).",
+  baclofen: "Tizanidine (hepatic clearance) at low dose, or local measures/physio for spasticity.",
+  fondaparinux: "Unfractionated heparin (monitorable, reversible) in CrCl < 30.",
+  enoxaparin: "In CrCl < 30 with high bleeding risk: unfractionated heparin.",
+};
+
 /** Systemic anticholinergics in the DB (inhaled LAMA/SAMA deliberately excluded). */
 const ANTICHOLINERGIC_IDS = new Set([
   "oxybutynin",
@@ -588,6 +645,7 @@ function buildDrugDetails(
       interactionPoints,
       anticholinergic: isAnticholinergic(d),
       verdict,
+      alternatives: verdict === "stop-or-review" ? ALTERNATIVES[d.id] : undefined,
     };
   });
 }

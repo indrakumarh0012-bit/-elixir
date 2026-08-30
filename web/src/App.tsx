@@ -1,10 +1,12 @@
 import { useState } from "react";
+import BpCentiles from "./components/BpCentiles";
 import CreatinineClearance from "./components/CreatinineClearance";
 import GrowthCalculator from "./components/GrowthCalculator";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
+import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 
-type AppTab = "pedDose" | "growth" | "crCl" | "regimen";
+type AppTab = "pedDose" | "growth" | "bp" | "crCl" | "regimen" | "ob";
 
 export default function App() {
   const [tab, setTab] = useState<AppTab>("pedDose");
@@ -31,6 +33,13 @@ export default function App() {
       idle: "bg-violet-50 text-violet-800 hover:bg-violet-100",
     },
     {
+      id: "bp",
+      label: "BP Centiles",
+      shortLabel: "BP",
+      active: "bg-cyan-600 text-white shadow-sm",
+      idle: "bg-cyan-50 text-cyan-800 hover:bg-cyan-100",
+    },
+    {
       id: "crCl",
       label: "Creatinine Clearance",
       shortLabel: "CrCl",
@@ -43,6 +52,13 @@ export default function App() {
       shortLabel: "Polypharm",
       active: "bg-rose-600 text-white shadow-sm",
       idle: "bg-rose-50 text-rose-800 hover:bg-rose-100",
+    },
+    {
+      id: "ob",
+      label: "OB / EDD",
+      shortLabel: "OB",
+      active: "bg-fuchsia-600 text-white shadow-sm",
+      idle: "bg-fuchsia-50 text-fuchsia-800 hover:bg-fuchsia-100",
     },
   ];
 
@@ -75,8 +91,10 @@ export default function App() {
       <main className="flex-1">
         {tab === "pedDose" && <PediatricDosageCalculator />}
         {tab === "growth" && <GrowthCalculator />}
+        {tab === "bp" && <BpCentiles />}
         {tab === "crCl" && <CreatinineClearance />}
         {tab === "regimen" && <RegimenAnalyzerUI />}
+        {tab === "ob" && <ObCalculator />}
       </main>
 
       <footer className="border-t border-[var(--line)] bg-white px-3 py-4 text-center text-xs leading-relaxed text-[var(--muted)] md:px-6">

@@ -8,6 +8,12 @@ import {
   type PediatricDrug,
 } from "../data/pediatricDrugs";
 import { calculatePediatricDose } from "../lib/pediatricDoseMath";
+import {
+  creatinineUpperLimitForAge,
+  gfrStage,
+  pedRenalAction,
+  schwartzEgfr,
+} from "../lib/pedRenal";
 
 type AgeUnit = "years" | "months" | "days";
 
@@ -16,6 +22,7 @@ export default function PediatricDosageCalculator() {
   const [ageUnit, setAgeUnit] = useState<AgeUnit>("years");
   const [weight, setWeight] = useState<number | "">(14);
   const [creatinine, setCreatinine] = useState<number | "">("");
+  const [heightCm, setHeightCm] = useState<number | "">("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDrug, setSelectedDrug] = useState<PediatricDrug | null>(null);
   const [selectedFormulation, setSelectedFormulation] = useState<DrugFormulation | null>(null);
@@ -79,10 +86,20 @@ export default function PediatricDosageCalculator() {
   const cappedDaily = doseCalc.dailyMg;
   const perDose = doseCalc.perDoseMg;
   const exceedsMax = doseCalc.capped;
+  const scr = creatinine === "" ? null : Number(creatinine);
+  const crCutoff =
+    ageDays != null && scr != null ? creatinineUpperLimitForAge(ageDays) : null;
+  const crElevated =
+    crCutoff != null && scr != null && scr > crCutoff.limit;
+  const egfr =
+    scr != null && heightCm !== "" && Number(heightCm) > 0
+      ? schwartzEgfr(Number(heightCm), scr)
+      : null;
+  const egfrInfo = egfr != null ? gfrStage(egfr) : null;
+  const renalAction =
+    egfr != null && selectedDrug ? pedRenalAction(selectedDrug.id, egfr) : null;
   const renalWarn =
-    Boolean(selectedDrug?.renalAdjustment) &&
-    creatinine !== "" &&
-    Number(creatinine) > 1.0;
+    Boolean(selectedDrug?.renalAdjustment) && crElevated && egfr == null;
   const weightInvalid =
     (weight !== "" && (!(Number.isFinite(weightNum) && weightNum > 0))) ||
     doseCalc.errors.includes("Weight must be > 0");
@@ -172,6 +189,22 @@ export default function PediatricDosageCalculator() {
               value={creatinine}
               onChange={(e) =>
                 setCreatinine(e.target.value === "" ? "" : Number(e.target.value))
+              }
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--accent)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Height (cm) — for eGFR
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="Optional, with creatinine"
+              value={heightCm}
+              onChange={(e) =>
+                setHeightCm(e.target.value === "" ? "" : Number(e.target.value))
               }
               className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--accent)]"
             />
@@ -324,6 +357,61 @@ export default function PediatricDosageCalculator() {
             )}
           </div>
 
+
+          {scr != null && crCutoff && (
+            <div
+              className={`mb-4 rounded-lg border p-3 text-sm ${
+                crElevated
+                  ? "border-red-200 bg-red-50 text-red-950"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-950"
+              }`}
+            >
+              <p className="font-bold">
+                Renal check — creatinine {scr} mg/dL (
+                {crCutoff.ageGroup}: upper limit ≈ {crCutoff.limit})
+              </p>
+              {crElevated ? (
+                <p className="mt-1">
+                  Above the normal limit FOR THIS AGE (Harriet Lane normals) —
+                  what looks mild in an adult is significant in a child.
+                </p>
+              ) : (
+                <p className="mt-1">Within the normal range for this age group.</p>
+              )}
+              {crCutoff.note && <p className="mt-1 text-xs">{crCutoff.note}</p>}
+              {egfr != null && egfrInfo ? (
+                <div className="mt-2 border-t border-current/10 pt-2">
+                  <p>
+                    <strong>eGFR (bedside Schwartz):</strong> {egfr} mL/min/1.73 m²
+                    — {egfrInfo.label}
+                  </p>
+                  {renalAction ? (
+                    <p className="mt-1">
+                      <strong>{selectedDrug.name} at this eGFR:</strong>{" "}
+                      {renalAction}
+                    </p>
+                  ) : selectedDrug.renalAdjustment ? (
+                    <p className="mt-1">
+                      <strong>{selectedDrug.name}:</strong> renally cleared —
+                      adjust per Harriet Lane / nephrology if eGFR &lt; 50.
+                    </p>
+                  ) : (
+                    <p className="mt-1">
+                      <strong>{selectedDrug.name}:</strong> no routine renal dose
+                      adjustment.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                crElevated && (
+                  <p className="mt-2 text-xs">
+                    Enter height to compute eGFR (Schwartz) and get the exact
+                    dose-adjustment band for this drug.
+                  </p>
+                )
+              )}
+            </div>
+          )}
           {selectedDrug.ivAdministration?.giveSlowly && (
             <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-950">
               <p className="font-bold">IV — give slowly</p>

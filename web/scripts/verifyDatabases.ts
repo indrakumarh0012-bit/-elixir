@@ -51,7 +51,7 @@ section("Renal band coverage sweep");
   const renalDrugs = searchRenalDrugs("");
   // searchRenalDrugs caps at 40 — go direct:
   const all = drugsDB.filter((d) => d.renalAdjustmentLimit != null || d.renalNote);
-  if (drugsDB.length < 230) fail(`drugsDB only ${drugsDB.length} (< 230)`);
+  if (drugsDB.length < 265) fail(`drugsDB only ${drugsDB.length} (< 265)`);
   let checked = 0;
   for (const drug of all) {
     for (let crCl = 0; crCl <= 130; crCl += 5) {
@@ -421,6 +421,117 @@ section("Z bands and 5-18 y reference");
 
   const over = gm.heightForAge(170, 220, "male");
   if (over !== null) fail("age > 216 months should return null");
+}
+
+// ---------- 5f. New features: OB, BP, ped renal, alternatives ----------
+section("OB dating");
+{
+  const { calculateGestation } = await import("../src/lib/obMath");
+  const d = (x: string) => new Date(x + "T00:00:00");
+  const iso = (x: Date) => x.toISOString().slice(0, 10);
+  const cases: [string, string, string, number, string, string][] = [
+    ["lmp", "2026-01-01", "2026-08-30", 28, "2026-10-08", "34 weeks 3 days"],
+    ["lmp", "2026-01-01", "2026-08-30", 35, "2026-10-15", "33 weeks 3 days"],
+    ["lmp", "2026-01-01", "2026-08-30", 24, "2026-10-04", "35 weeks 0 days"],
+    ["ivf5", "2026-03-01", "2026-08-30", 28, "2026-11-17", "28 weeks 5 days"],
+    ["ivf3", "2026-03-01", "2026-08-30", 28, "2026-11-19", "28 weeks 3 days"],
+    ["ovulation", "2026-03-01", "2026-08-30", 28, "2026-11-22", "28 weeks 0 days"],
+  ];
+  let ok = 0;
+  for (const [m, anchor, today, cyc, edd, ga] of cases) {
+    const r = calculateGestation(m as never, d(anchor), d(today), cyc);
+    if (r && iso(r.edd) === edd && r.gaLabel === ga) ok++;
+    else fail(`OB ${m}/${anchor}/cyc${cyc}: got ${r ? iso(r.edd) + " " + r.gaLabel : "null"} want ${edd} ${ga}`);
+  }
+  const bad = calculateGestation("lmp", d("2026-09-15"), d("2026-08-30"), 28);
+  if (bad !== null) fail("future LMP should be rejected");
+  console.log(`OB cases: ${ok}/${cases.length} + future-date rejection`);
+}
+
+section("Wuehl BP centiles");
+{
+  const { assessBp, bpCentiles, dippingPercent } = await import("../src/lib/bpMath");
+  const wref = await import("../src/data/wuehlBpReference");
+  // every table median fed back must be the 50th centile (z≈0)
+  let ok = 0, n = 0;
+  const sweep: [readonly (readonly number[])[], "male" | "female", "day" | "night" | "24h", "sbp" | "dbp"][] = [
+    [wref.WUEHL_SBP_DAY_BOYS, "male", "day", "sbp"],
+    [wref.WUEHL_SBP_NIGHT_GIRLS, "female", "night", "sbp"],
+    [wref.WUEHL_DBP_DAY_GIRLS, "female", "day", "dbp"],
+    [wref.WUEHL_DBP_NIGHT_BOYS, "male", "night", "dbp"],
+    [wref.WUEHL_SBP_24H_BOYS, "male", "24h", "sbp"],
+    [wref.WUEHL_DBP_24H_GIRLS, "female", "24h", "dbp"],
+  ];
+  for (const [table, sex, period, comp] of sweep) {
+    for (const [h, , m] of table) {
+      const a = assessBp(sex, period, comp, h, m);
+      n++;
+      if (a && Math.abs(a.z) < 0.01 && Math.abs(a.percentile - 50) < 0.5) ok++;
+      else fail(`BP median ${sex}/${period}/${comp} h${h}: z=${a?.z}`);
+    }
+  }
+  console.log(`BP median self-consistency: ${ok}/${n}`);
+  // published check: boy 120 cm day SBP 50th = 110.8; girl 175 night SBP 95th sane
+  const c = bpCentiles("male", "day", "sbp", 120);
+  if (Math.abs(c.p50 - 110.8) > 0.2) fail(`boy 120cm day SBP p50 ${c.p50} != 110.8`);
+  if (!(c.p95 > c.p90 && c.p90 > c.p50 && c.p50 > c.p5)) fail("centile ordering broken");
+  const hi = assessBp("male", "day", "sbp", 140, 135);
+  if (!hi || !/Hypertensive/.test(hi.classification)) fail(`boy 140cm day SBP 135 should be hypertensive: ${hi?.classification}`);
+  const dip = dippingPercent(120, 100);
+  if (dip !== 16.7) fail(`dip calc: ${dip} != 16.7`);
+  console.log("BP anchors, HTN classification and dipping OK");
+}
+
+section("Pediatric renal (Harriet Lane)");
+{
+  const pr = await import("../src/lib/pedRenal");
+  const cut = (days: number) => pr.creatinineUpperLimitForAge(days).limit;
+  if (cut(10) !== 1.0 || cut(200) !== 0.4 || cut(365 * 5) !== 0.7 || cut(365 * 15) !== 1.0)
+    fail(`age cutoffs wrong: ${cut(10)}/${cut(200)}/${cut(365 * 5)}/${cut(365 * 15)}`);
+  const e = pr.schwartzEgfr(110, 0.9); // 0.413*110/0.9 = 50.5
+  if (e == null || Math.abs(e - 50.5) > 0.2) fail(`Schwartz eGFR ${e} != 50.5`);
+  const acy = pr.pedRenalAction("acyclovir_po", 15);
+  if (!acy || !/q8h/.test(acy)) fail(`acyclovir GFR15 action: ${acy}`);
+  const nit = pr.pedRenalAction("nitrofurantoin", 40);
+  if (!nit || !/AVOID/.test(nit)) fail(`nitrofurantoin GFR40 should say avoid`);
+  const ctx = pr.pedRenalAction("ceftriaxone_iv", 20);
+  if (!ctx || !/No renal adjustment/.test(ctx)) fail("ceftriaxone should be no-adjust");
+  // band sweep
+  let gaps = 0;
+  for (const [id, bands] of Object.entries(pr.PED_RENAL_BANDS)) {
+    for (let g = 0; g <= 120; g += 5) {
+      const hits = bands.filter((b) => g >= b.minGfr && g <= (b.maxGfr ?? Infinity));
+      if (hits.length !== 1) { gaps++; fail(`ped band gap/overlap ${id} @ GFR ${g}`); }
+    }
+  }
+  console.log(`ped renal: cutoffs, Schwartz, actions OK; band sweep gaps=${gaps}; ${Object.keys(pr.PED_RENAL_BANDS).length} drugs covered`);
+}
+
+section("Specialty drugs + alternatives");
+{
+  const rx = (ids: string[]) => ids.map((i) => getDrugById(i)!).filter(Boolean);
+  for (const id of ["lithium", "clozapine", "tacrolimus", "azathioprine", "cisplatin", "tamoxifen", "fentanyl-patch", "efavirenz", "vincristine", "capecitabine"])
+    if (!getDrugById(id)) fail(`specialty drug missing: ${id}`);
+
+  const aza = analyzeRegimen({ ageYears: 60, weightKg: 70, sex: "Male", conditions: [] }, rx(["azathioprine", "allopurinol"]));
+  if (!aza.interactions.some((x) => x.interaction.severity === "Contraindicated"))
+    fail("azathioprine + allopurinol not Contraindicated");
+  const tam = analyzeRegimen({ ageYears: 55, weightKg: 60, sex: "Female", conditions: [] }, rx(["tamoxifen", "paroxetine"]));
+  if (!tam.interactions.some((x) => /endoxifen/.test(x.interaction.clinicalEffect)))
+    fail("tamoxifen + paroxetine not flagged");
+  const li = analyzeRegimen({ ageYears: 72, weightKg: 60, creatinineMgDl: 1.8, sex: "Male", conditions: [] }, rx(["lithium", "ibuprofen"]));
+  const liDetail = li.drugDetails.find((x) => x.drugId === "lithium");
+  if (!liDetail || liDetail.verdict === "continue") fail("lithium in CKD + NSAID should be flagged");
+
+  // alternatives appear on stop verdicts
+  const ckd = analyzeRegimen({ ageYears: 80, weightKg: 55, creatinineMgDl: 2.2, sex: "Female", conditions: [] }, rx(["metformin", "oxybutynin"]));
+  const met = ckd.drugDetails.find((x) => x.drugId === "metformin");
+  const oxy = ckd.drugDetails.find((x) => x.drugId === "oxybutynin");
+  if (!met?.alternatives || !/linagliptin|insulin/.test(met.alternatives)) fail("metformin stop should suggest alternatives");
+  if (!oxy?.alternatives || !/solifenacin|Bladder/.test(oxy.alternatives)) fail("oxybutynin stop should suggest alternatives");
+  const fine = analyzeRegimen({ ageYears: 40, weightKg: 70, sex: "Male", conditions: [] }, rx(["paracetamol"]));
+  if (fine.drugDetails[0].alternatives) fail("continue verdict must not carry alternatives");
+  console.log("specialty interactions, lithium flag, alternatives-on-stop all OK");
 }
 
 // ---------- 6. Pediatric DB integrity ----------
