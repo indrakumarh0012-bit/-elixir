@@ -46,6 +46,22 @@ export const TOOL_BG: Record<MenuTarget, string> = {
   report: "bg-amber-900",
 };
 
+/** Faded tint of each tool's colour — home card backgrounds. */
+export const TOOL_SOFT: Record<MenuTarget, string> = {
+  home: "border-slate-200 bg-slate-50",
+  pedDose: "border-blue-200 bg-blue-50",
+  growth: "border-violet-200 bg-violet-50",
+  bp: "border-cyan-200 bg-cyan-50",
+  bmi: "border-emerald-200 bg-emerald-50",
+  crCl: "border-teal-200 bg-teal-50",
+  regimen: "border-rose-200 bg-rose-50",
+  icu: "border-orange-200 bg-orange-50",
+  insulin: "border-indigo-200 bg-indigo-50",
+  ob: "border-fuchsia-200 bg-fuchsia-50",
+  saved: "border-slate-200 bg-slate-50",
+  report: "border-amber-200 bg-amber-50",
+};
+
 export const TOOL_TEXT: Record<MenuTarget, string> = {
   home: "text-slate-800",
   pedDose: "text-blue-900",
