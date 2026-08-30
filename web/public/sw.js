@@ -1,7 +1,7 @@
 // Pocket-Med service worker.
 // Bump CACHE_VERSION whenever the shell list below changes; activate() drops
 // every older cache, so a deploy never serves a half-stale shell.
-const CACHE_VERSION = 'pocket-med-v14'
+const CACHE_VERSION = 'pocket-med-v15'
 
 // The app is served from a sub-path on GitHub Pages, so every URL is derived
 // from where this worker actually lives rather than hard-coded to '/'.
