@@ -12,7 +12,7 @@ import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 import ReportIssue from "./components/ReportIssue";
-import ToolIcon from "./components/ToolIcon";
+import ToolIcon, { TOOL_HEX } from "./components/ToolIcon";
 import AuthScreen from "./components/AuthScreen";
 import { getCurrentProfile, getVersion, subscribe } from "./lib/accounts";
 
@@ -184,7 +184,7 @@ export default function App() {
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(t) => setTab(t)} />
 
       <main className={`tool-stage tool-${tab} flex-1`}>
-        <ToolIcon id={tab} className="tool-watermark" strokeWidth={1} />
+        <ToolIcon id={tab} className="tool-watermark" strokeWidth={1} style={{ color: TOOL_HEX[tab] }} />
         {tab === "home" && <HomeScreen onOpen={(t) => setTab(t)} />}
         {tab === "saved" && <SavedScreen />}
         {tab === "pedDose" && <PediatricDosageCalculator />}
