@@ -1171,6 +1171,8 @@ section("Pediatric DB integrity");
   const pedIds = new Set(pediatricDrugsDB.map((d) => d.id));
   for (const id of ["levetiracetam", "valproate", "phenytoin", "phenobarbital", "carbamazepine", "clobazam", "midazolam", "diazepam", "oxcarbazepine", "lamotrigine", "ethosuximide"])
     if (!pedIds.has(id)) fail(`pediatric DB missing antiseizure drug: ${id}`);
+  for (const id of ["ors", "ivf"])
+    if (!pedIds.has(id)) fail(`pediatric DB missing searchable helper entry: ${id}`);
   const lamo = pediatricDrugsDB.find((d) => d.id === "lamotrigine");
   if (lamo && !lamo.cautionsAndContraindications.join(" ").includes("valproate"))
     fail("ped lamotrigine must warn to halve dose with valproate");

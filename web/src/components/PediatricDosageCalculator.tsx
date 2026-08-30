@@ -372,7 +372,61 @@ export default function PediatricDosageCalculator() {
         </section>
       )}
 
-      {selectedDrug && selectedDrug.id !== "ors" && (
+      {selectedDrug?.id === "ivf" && (
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900">
+            3. IV maintenance fluids — Holliday–Segar
+          </h3>
+          {weightNum > 0 ? (
+            (() => {
+              const mf = pedMaintenanceFluids(weightNum);
+              if (!mf) {
+                return (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Not applicable for this weight.
+                  </p>
+                );
+              }
+              return (
+                <div className="mt-2">
+                  <p className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm font-bold text-sky-950">
+                    {weightNum} kg → {mf.daily} ml/day = {mf.hourly} ml/h
+                    <span className="mt-1 block text-xs font-semibold">
+                      (100 ml/kg first 10 kg + 50 ml/kg next 10 kg + 20 ml/kg
+                      beyond)
+                    </span>
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-800">
+                    {restrictedFluidPlans(mf.daily).map((pl) => (
+                      <li key={pl.label}>
+                        <strong>{pl.label}:</strong> {pl.dailyMl} ml/day — {pl.note}
+                      </li>
+                    ))}
+                  </ul>
+                  {isNeonate && (
+                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                      Neonate: Holliday–Segar does NOT apply — use day-of-life
+                      fluid protocols (start ~60 ml/kg/day, step up daily per
+                      NICU policy).
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs text-slate-600">
+                    Use isotonic maintenance fluids with dextrose in acutely ill
+                    children (hypotonic fluids risk hyponatremia). Ref:
+                    Holliday–Segar · Nelson · NICE IV fluids in children.
+                  </p>
+                </div>
+              );
+            })()
+          ) : (
+            <p className="mt-2 text-sm text-slate-600">
+              Enter the weight in section 1 to get the rate.
+            </p>
+          )}
+        </section>
+      )}
+
+      {selectedDrug && selectedDrug.id !== "ors" && selectedDrug.id !== "ivf" && (
         <section className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-base font-bold text-slate-900">
             3. Dosage calculation — {selectedDrug.name}
@@ -448,25 +502,6 @@ export default function PediatricDosageCalculator() {
 
 
 
-          {weightNum != null && Number.isFinite(weightNum) && weightNum > 0 && (() => {
-            const mf = pedMaintenanceFluids(weightNum);
-            if (!mf) return null;
-            return (
-              <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
-                <p className="font-bold">
-                  IV fluids for {weightNum} kg — Holliday–Segar: {mf.daily} ml/day
-                  ({mf.hourly} ml/h)
-                </p>
-                <ul className="mt-1.5 space-y-1">
-                  {restrictedFluidPlans(mf.daily).map((pl) => (
-                    <li key={pl.label}>
-                      <strong>{pl.label}:</strong> {pl.dailyMl} ml/day — {pl.note}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })()}
           <SaveButton
             tool="Ped Dose"
             build={() => {
