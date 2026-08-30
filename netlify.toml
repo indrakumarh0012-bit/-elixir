@@ -6,6 +6,11 @@
   command = "npm run build"
   publish = "dist"
 
+# Vite 8 needs modern Node; without this an older site-default Node makes
+# every deploy fail and the site silently stays on the last good build.
+[build.environment]
+  NODE_VERSION = "22"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
