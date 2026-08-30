@@ -587,6 +587,14 @@ export default function RegimenAnalyzerUI() {
                           {d.drugClass} · {d.standardDose}
                           {d.anticholinergic ? " · anticholinergic" : ""}
                         </p>
+                        {d.alternatives && (
+                          <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">
+                              If stopping — alternatives
+                            </p>
+                            <p className="mt-0.5 text-blue-900">{d.alternatives}</p>
+                          </div>
+                        )}
                         {points.length === 0 ? (
                           <p className="mt-2 text-xs text-slate-600">
                             No Beers/STOPP/START, renal or interaction flags for this patient.

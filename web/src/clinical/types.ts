@@ -80,6 +80,8 @@ export interface DrugPointAnalysis {
   interactionPoints: string[];
   anticholinergic: boolean;
   verdict: "stop-or-review" | "adjust" | "caution" | "continue";
+  /** Shown when the verdict is stop-or-review: what to use instead. */
+  alternatives?: string;
 }
 
 export interface TherapeuticDuplication {

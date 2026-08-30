@@ -478,6 +478,53 @@ const RENAL_DOSE_BANDS: Record<string, RenalDoseBand[]> = {
   rifampicin: [{ minCrCl: 0, action: "No renal adjustment; check drug interactions instead (potent inducer)." }],
   linagliptin: [{ minCrCl: 0, action: "No renal adjustment at any CrCl including dialysis — the go-to gliptin in CKD." }],
   teneligliptin: [{ minCrCl: 0, action: "No renal dose adjustment needed in CKD." }],
+  lithium: [
+    { minCrCl: 60, action: "Standard dosing to trough 0.6–1.0 mEq/L (elderly 0.4–0.8); levels 5–7 days after any change." },
+    { minCrCl: 30, maxCrCl: 59, action: "Reduce dose 25–50%, level-guided; review every interacting drug (NSAID/ACEI/thiazide)." },
+    { minCrCl: 0, maxCrCl: 29, action: "Avoid — switch mood stabilizer (e.g., valproate) with psychiatry." },
+  ],
+  venlafaxine: [
+    { minCrCl: 30, action: "Standard dosing; check BP after titration." },
+    { minCrCl: 10, maxCrCl: 29, action: "HALVE the dose." },
+    { minCrCl: 0, maxCrCl: 9, action: "Avoid or specialist dosing." },
+  ],
+  azathioprine: [
+    { minCrCl: 50, action: "1–2.5 mg/kg daily with CBC monitoring." },
+    { minCrCl: 10, maxCrCl: 49, action: "~75% of dose." },
+    { minCrCl: 0, maxCrCl: 9, action: "HALF dose; CBC weekly." },
+  ],
+  capecitabine: [
+    { minCrCl: 50, action: "Full protocol dose." },
+    { minCrCl: 30, maxCrCl: 49, action: "75% of dose." },
+    { minCrCl: 0, maxCrCl: 29, action: "CONTRAINDICATED." },
+  ],
+  cisplatin: [
+    { minCrCl: 60, action: "Full dose with pre/post hydration and mandatory diuresis." },
+    { minCrCl: 45, maxCrCl: 59, action: "Reduce dose (e.g., 75%) or switch to carboplatin; oncology decision." },
+    { minCrCl: 0, maxCrCl: 44, action: "Avoid — use carboplatin (Calvert) instead." },
+  ],
+  cyclophosphamide: [
+    { minCrCl: 30, action: "Full protocol dose with hydration ± mesna." },
+    { minCrCl: 0, maxCrCl: 29, action: "Reduce ~25%; hematology/oncology guidance." },
+  ],
+  oxaliplatin: [
+    { minCrCl: 30, action: "Full protocol dose." },
+    { minCrCl: 0, maxCrCl: 29, action: "Reduce (e.g., 65 mg/m²) per oncology." },
+  ],
+  imatinib: [
+    { minCrCl: 40, action: "400 mg daily — standard." },
+    { minCrCl: 20, maxCrCl: 39, action: "Start at 50% (200 mg), titrate by response/tolerance." },
+    { minCrCl: 0, maxCrCl: 19, action: "Use with caution, specialist only." },
+  ],
+  "fentanyl-patch": [
+    { minCrCl: 0, action: "PREFERRED opioid in renal failure — no active renal metabolites. Titrate carefully; never in opioid-naive patients." },
+  ],
+  cyclosporine: [
+    { minCrCl: 0, action: "Dose by trough LEVELS, not CrCl bands — the drug is itself nephrotoxic; creatinine rise > 30% needs dose review." },
+  ],
+  tacrolimus: [
+    { minCrCl: 0, action: "Dose by trough LEVELS, not CrCl bands; nephrotoxic — watch creatinine, K+, glucose, tremor." },
+  ],
 };
 
 function urgencyFor(crCl: number, limit?: number): RenalDoseReport["urgency"] {
