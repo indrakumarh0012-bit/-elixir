@@ -132,7 +132,7 @@ export default function RegimenAnalyzerUI() {
                         onClick={() => setSex(s)}
                         className={`flex-1 rounded-lg px-2 py-2 text-sm font-semibold ${
                           sex === s
-                            ? "bg-blue-600 text-white"
+                            ? "bg-slate-900 text-white"
                             : "bg-slate-100 text-slate-700"
                         }`}
                       >
@@ -154,7 +154,7 @@ export default function RegimenAnalyzerUI() {
                       type="button"
                       onClick={() => toggleCondition(c)}
                       title="Tap to remove"
-                      className="rounded-full border border-rose-600 bg-rose-600 px-3 py-1 text-xs font-medium text-white"
+                      className="rounded-full border border-rose-600 bg-rose-900 px-3 py-1 text-xs font-medium text-white"
                     >
                       {c} ✕
                     </button>
@@ -565,9 +565,9 @@ export default function RegimenAnalyzerUI() {
                       d.verdict === "stop-or-review"
                         ? "bg-red-700"
                         : d.verdict === "adjust"
-                          ? "bg-orange-600"
+                          ? "bg-orange-900"
                           : d.verdict === "caution"
-                            ? "bg-amber-600"
+                            ? "bg-amber-800"
                             : "bg-emerald-700";
                     const points: { label: string; items: string[] }[] = [
                       { label: "Beers criteria", items: d.beersPoints },

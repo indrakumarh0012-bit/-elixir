@@ -77,11 +77,11 @@ export default function BpCentiles() {
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 sex === s
                   ? s === "male"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-pink-500 text-white shadow-sm"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-rose-900 text-white shadow-sm"
                   : s === "male"
-                    ? "bg-blue-50 text-blue-800 hover:bg-blue-100"
-                    : "bg-pink-50 text-pink-700 hover:bg-pink-100"
+                    ? "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                    : "bg-slate-100 text-slate-800 hover:bg-slate-200"
               }`}
             >
               {s === "male" ? "Boy" : "Girl"}

@@ -190,3 +190,103 @@ export function correctedNa(measuredNa: number, glucoseMgDl: number): number {
 export function correctedCa(measuredCa: number, albuminGdl: number): number {
   return Math.round((measuredCa + 0.8 * (4 - albuminGdl)) * 10) / 10;
 }
+
+/** Potassium assessment with pediatric and renal-impairment variants.
+ *  Bands per standard ICU references (normal 3.5–5.0 mEq/L). */
+export type PotassiumAssessment = {
+  band: "normal" | "caution" | "alert";
+  classification: string;
+  actions: string[];
+};
+
+export function assessPotassium(
+  k: number,
+  pediatric = false,
+  renalImpairment = false,
+): PotassiumAssessment | null {
+  if (!(k > 0.5) || k > 12) return null;
+  const ivRate = pediatric
+    ? "IV KCl 0.5–1 mEq/kg over 1–2 h (max 40 mEq/dose), on a monitor"
+    : "IV KCl 10 mEq/h peripheral (max concentration 40 mEq/L); up to 20 mEq/h only via central line with continuous ECG";
+  const renalLine = renalImpairment
+    ? "Renal impairment: halve replacement rates and recheck early — K⁺ clears slowly."
+    : null;
+  const mgLine = "Check and correct Mg²⁺ — hypokalemia will not hold until magnesium is replaced.";
+  const push = (arr: string[]) => (renalLine ? [...arr, renalLine] : arr);
+
+  if (k < 2.5)
+    return {
+      band: "alert",
+      classification: `SEVERE hypokalemia (K⁺ ${k})`,
+      actions: push([
+        ivRate + ". Never IV push.",
+        "ECG monitoring throughout; recheck K⁺ after every 40–60 mEq (each 10 mEq typically raises serum K⁺ ~0.1 mEq/L).",
+        mgLine,
+        "Hold digoxin-toxic and QT-prolonging drugs until corrected.",
+      ]),
+    };
+  if (k < 3.0)
+    return {
+      band: "alert",
+      classification: `Moderate hypokalemia (K⁺ ${k})`,
+      actions: push([
+        "Oral KCl 40–80 mEq/day in divided doses when able to take orally.",
+        "Add IV replacement (" + ivRate + ") if symptomatic, arrhythmia, ECG changes, or on digoxin.",
+        mgLine,
+      ]),
+    };
+  if (k < 3.5)
+    return {
+      band: "caution",
+      classification: `Mild hypokalemia (K⁺ ${k})`,
+      actions: push([
+        pediatric
+          ? "Oral KCl 1–2 mEq/kg/day in divided doses; recheck in 24 h."
+          : "Oral KCl 20–40 mEq once or twice daily; recheck in 24 h.",
+        mgLine,
+      ]),
+    };
+  if (k <= 5.0)
+    return {
+      band: "normal",
+      classification: `Normal (K⁺ ${k}, reference 3.5–5.0)`,
+      actions: ["No replacement needed."],
+    };
+  if (k < 6.0)
+    return {
+      band: "caution",
+      classification: `Mild hyperkalemia (K⁺ ${k})`,
+      actions: push([
+        "Repeat the sample first (hemolysis is the commonest cause) and get an ECG.",
+        "Stop every K⁺ source and K-raising drug (ACEI/ARB, spironolactone, NSAIDs, cotrimoxazole).",
+        "Consider furosemide if urine flows, or an oral K-binder; recheck in 2–4 h.",
+      ]),
+    };
+  if (k < 6.5)
+    return {
+      band: "alert",
+      classification: `Moderate hyperkalemia (K⁺ ${k})`,
+      actions: push([
+        "ECG now — any change is treated as severe.",
+        pediatric
+          ? "Insulin 0.1 U/kg + dextrose 0.5 g/kg over 15–30 min; salbutamol nebulized 2.5–5 mg."
+          : "Insulin 10 U regular + 25 g dextrose over 15–30 min; salbutamol nebulized 10 mg.",
+        "Stop K⁺ sources and K-raising drugs; remove K⁺ (furosemide if urine flows, K-binder).",
+        "Hourly glucose ×4 after insulin.",
+      ]),
+    };
+  return {
+    band: "alert",
+    classification: `SEVERE hyperkalemia (K⁺ ${k}) — emergency`,
+    actions: push([
+      pediatric
+        ? "Calcium gluconate 10% 0.5–1 ml/kg (max 20 ml) IV over 5–10 min — protects the heart, does not lower K⁺."
+        : "Calcium gluconate 10% 10 ml IV over 5–10 min — protects the heart, does not lower K⁺; repeat if ECG unchanged in 5 min.",
+      pediatric
+        ? "Insulin 0.1 U/kg + dextrose 0.5 g/kg over 15–30 min; salbutamol nebulized 2.5–5 mg."
+        : "Insulin 10 U regular + 25 g dextrose over 15–30 min; salbutamol nebulized 10–20 mg.",
+      "Remove K⁺: furosemide if urine flows, K-binder, dialysis if refractory or anuric.",
+      "Stop every K⁺ source and K-raising drug; hourly glucose ×4 after insulin.",
+    ]),
+  };
+}

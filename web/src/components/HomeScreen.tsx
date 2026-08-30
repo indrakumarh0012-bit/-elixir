@@ -1,14 +1,15 @@
 import type { MenuTarget } from "./SideMenu";
+import ToolIcon from "./ToolIcon";
 
-const TOOLS: { id: MenuTarget; icon: string; title: string; hue: string }[] = [
-  { id: "pedDose", icon: "🧒", title: "Ped Dose Calculator", hue: "border-blue-200 bg-blue-50" },
-  { id: "growth", icon: "📈", title: "Growth Charts", hue: "border-violet-200 bg-violet-50" },
-  { id: "bp", icon: "🫀", title: "Ped-BP", hue: "border-cyan-200 bg-cyan-50" },
-  { id: "crCl", icon: "🫘", title: "Creatinine Clearance", hue: "border-teal-200 bg-teal-50" },
-  { id: "regimen", icon: "💊", title: "Polypharm", hue: "border-rose-200 bg-rose-50" },
-  { id: "icu", icon: "🏥", title: "ICU Titration", hue: "border-orange-200 bg-orange-50" },
-  { id: "ob", icon: "🤰", title: "OB / EDD", hue: "border-fuchsia-200 bg-fuchsia-50" },
-  { id: "report", icon: "🛠️", title: "Report an Issue", hue: "border-amber-200 bg-amber-50" },
+const TOOLS: { id: MenuTarget; title: string }[] = [
+  { id: "pedDose", title: "Ped Dose Calculator" },
+  { id: "growth", title: "Growth Charts" },
+  { id: "bp", title: "Ped-BP" },
+  { id: "crCl", title: "Creatinine Clearance" },
+  { id: "regimen", title: "Polypharm" },
+  { id: "icu", title: "ICU Titration" },
+  { id: "ob", title: "OB / EDD" },
+  { id: "report", title: "Report an Issue" },
 ];
 
 export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void }) {
@@ -21,9 +22,11 @@ export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void
             key={t.id}
             type="button"
             onClick={() => onOpen(t.id)}
-            className={`flex items-center gap-3 rounded-xl border p-4 text-left shadow-sm transition hover:shadow ${t.hue}`}
+            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-400 hover:shadow"
           >
-            <span className="text-2xl" aria-hidden>{t.icon}</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+              <ToolIcon id={t.id} className="h-5 w-5" />
+            </span>
             <span className="font-bold text-slate-900">{t.title}</span>
           </button>
         ))}

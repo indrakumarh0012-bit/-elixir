@@ -63,8 +63,8 @@ export default function ObCalculator() {
               onClick={() => setMethod(m.id)}
               className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                 method === m.id
-                  ? "bg-fuchsia-600 text-white shadow-sm"
-                  : "bg-fuchsia-50 text-fuchsia-800 hover:bg-fuchsia-100"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-800 hover:bg-slate-200"
               }`}
             >
               {m.label}
@@ -183,10 +183,6 @@ export default function ObCalculator() {
         <h3 className="text-base font-bold text-fuchsia-800">
           Pregnancy drug check
         </h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Search any drug — safe (green), weigh/adjust (amber), avoid with the
-          alternative to use instead (red).
-        </p>
         <input
           value={drugQuery}
           onChange={(e) => setDrugQuery(e.target.value)}
@@ -218,7 +214,7 @@ export default function ObCalculator() {
                 risk === "avoid"
                   ? "bg-red-700"
                   : risk === "caution"
-                    ? "bg-amber-600"
+                    ? "bg-amber-800"
                     : risk === "safe"
                       ? "bg-emerald-700"
                       : "bg-slate-500";
@@ -250,22 +246,6 @@ export default function ObCalculator() {
             })}
           </ul>
         )}
-        <div className="mt-4 rounded-lg border border-fuchsia-100 bg-fuchsia-50 p-3 text-sm text-fuchsia-950">
-          <p className="font-bold">Dosing changes in pregnancy — the ones that bite</p>
-          <ol className="mt-1 list-decimal space-y-1 pl-5">
-            <li><strong>Kidneys speed up:</strong> GFR rises ~50%, so a "normal" creatinine of 1.0 mg/dL is ABNORMAL in pregnancy (upper normal ≈ 0.8) — and renally cleared drugs may need MORE, not less.</li>
-            <li><strong>Thyroxine:</strong> increase ~25–30% at conception; TSH every 4–6 weeks.</li>
-            <li><strong>Levetiracetam / lamotrigine:</strong> levels fall — check each trimester and up-titrate.</li>
-            <li><strong>Insulin:</strong> requirements climb steadily, especially T2–T3.</li>
-            <li><strong>LMWH:</strong> weight changes — re-dose; anti-Xa on treatment doses.</li>
-            <li><strong>Lithium:</strong> clearance rises — monthly levels; hold at delivery, then dose drops back.</li>
-          </ol>
-          <p className="mt-2 text-xs">
-            Tip: in the Polypharm tab, add "Pregnancy" as a condition —
-            every drug in the regimen is then screened against this same
-            safety data automatically.
-          </p>
-        </div>
       </section>
 
       {/* Comorbidity dosing in pregnancy */}
@@ -416,7 +396,7 @@ export default function ObCalculator() {
                               key={i}
                               className={`rounded-md px-2 py-1.5 text-xs font-semibold ${
                                 applies
-                                  ? "bg-fuchsia-600 text-white"
+                                  ? "bg-fuchsia-900 text-white"
                                   : "bg-slate-100 text-slate-700"
                               }`}
                             >

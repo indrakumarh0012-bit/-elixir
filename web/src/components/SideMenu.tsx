@@ -7,21 +7,22 @@ import {
   signUp,
   subscribe,
 } from "../lib/accounts";
+import ToolIcon from "./ToolIcon";
 
 export type MenuTarget =
   | "home" | "pedDose" | "growth" | "bp" | "crCl" | "regimen" | "icu" | "ob" | "saved" | "report";
 
-const LINKS: { id: MenuTarget; label: string; icon: string }[] = [
-  { id: "home", label: "Home", icon: "🏠" },
-  { id: "pedDose", label: "Ped Dose Calculator", icon: "🧒" },
-  { id: "growth", label: "Growth Charts", icon: "📈" },
-  { id: "bp", label: "Ped-BP", icon: "🫀" },
-  { id: "crCl", label: "Creatinine Clearance", icon: "🫘" },
-  { id: "regimen", label: "Polypharm", icon: "💊" },
-  { id: "icu", label: "ICU Titration", icon: "🏥" },
-  { id: "ob", label: "OB / EDD", icon: "🤰" },
-  { id: "saved", label: "Saved Calculations", icon: "📁" },
-  { id: "report", label: "Report an Issue", icon: "🛠️" },
+const LINKS: { id: MenuTarget; label: string }[] = [
+  { id: "home", label: "Home" },
+  { id: "pedDose", label: "Ped Dose Calculator" },
+  { id: "growth", label: "Growth Charts" },
+  { id: "bp", label: "Ped-BP" },
+  { id: "crCl", label: "Creatinine Clearance" },
+  { id: "regimen", label: "Polypharm" },
+  { id: "icu", label: "ICU Titration" },
+  { id: "ob", label: "OB / EDD" },
+  { id: "saved", label: "Saved Calculations" },
+  { id: "report", label: "Report an Issue" },
 ];
 
 const inputCls =
@@ -86,7 +87,7 @@ export default function SideMenu({
               }}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-900 hover:bg-slate-100"
             >
-              <span aria-hidden>{l.icon}</span> {l.label}
+              <ToolIcon id={l.id} className="h-4.5 w-4.5 text-slate-700" /> {l.label}
             </button>
           ))}
         </nav>
@@ -143,7 +144,7 @@ export default function SideMenu({
                 type="button"
                 onClick={submit}
                 disabled={busy}
-                className="mt-2 w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               >
                 {mode === "signup" ? "Create account" : "Sign in"}
               </button>
