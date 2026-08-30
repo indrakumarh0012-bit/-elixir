@@ -12,7 +12,7 @@
  * - IUI / known ovulation: that date is the anchor itself.
  */
 
-export type ObMethod = "lmp" | "ivf5" | "ivf3" | "ovulation" | "scan";
+export type ObMethod = "lmp" | "ivf5" | "ivf3" | "ovulation" | "scan" | "edd";
 
 export type ObResult = {
   gaWeeks: number;
@@ -51,6 +51,14 @@ export function calculateGestation(
   let conception: Date;
   let note: string;
   switch (method) {
+    case "edd": {
+      // Anchor = the EDD itself (e.g. printed on a scan report).
+      // LMP = EDD − 280 days; conception = EDD − 266 days.
+      conception = addDays(anchorDate, -266);
+      note =
+        "Dated from a known EDD: LMP back-calculated as EDD − 280 days (Naegele reversed). Use the earliest scan's EDD — it should not be changed by later scans (ACOG CO 700).";
+      break;
+    }
     case "scan": {
       // Anchor = scan date; GA at scan supplies the offset. Ultrasound
       // dating (CRL < 14 wk) is the most accurate method after IVF (ACOG

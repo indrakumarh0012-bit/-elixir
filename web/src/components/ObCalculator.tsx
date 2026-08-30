@@ -20,6 +20,7 @@ import SaveButton from "./SaveButton";
 const METHODS: { id: ObMethod; label: string; dateLabel: string }[] = [
   { id: "lmp", label: "LMP", dateLabel: "First day of last period" },
   { id: "scan", label: "Scan (USG)", dateLabel: "Scan date" },
+  { id: "edd", label: "EDD known", dateLabel: "EDD (from the scan report)" },
   { id: "ivf5", label: "IVF — day-5 transfer", dateLabel: "Embryo transfer date" },
   { id: "ivf3", label: "IVF — day-3 transfer", dateLabel: "Embryo transfer date" },
   { id: "ovulation", label: "Ovulation / IUI", dateLabel: "Ovulation / IUI date" },
@@ -223,7 +224,9 @@ export default function ObCalculator() {
             {method !== "lmp" && (
               <div className="rounded-md border border-slate-300 bg-white px-3 py-2">
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  {method === "scan" ? "LMP by scan (calculated)" : "Working LMP (calculated)"}
+                  {method === "scan" || method === "edd"
+                    ? "LMP (calculated backwards)"
+                    : "Working LMP (calculated)"}
                 </dt>
                 <dd className="text-lg font-bold text-slate-900">
                   {formatDate(result.derivedLmp)}
@@ -231,13 +234,14 @@ export default function ObCalculator() {
               </div>
             )}
           </dl>
-          {method === "scan" && (
+          {(method === "scan" || method === "edd") && (
             <p className="mt-2 text-xs text-slate-600">
-              LMP unknown? Use this calculated LMP ({formatDate(result.derivedLmp)}) as
-              the working LMP for records and gestational charting — it is the
-              scan date minus the scan GA, the standard back-calculation when
-              the period date is not known (ACOG CO 700: ultrasound then serves
-              as the official dating).
+              LMP unknown? Use this calculated LMP ({formatDate(result.derivedLmp)})
+              as the working LMP for records and gestational charting —{" "}
+              {method === "edd"
+                ? "it is the EDD minus 280 days (Naegele reversed)."
+                : "it is the scan date minus the scan GA."}{" "}
+              (ACOG CO 700: the ultrasound dating then serves as official.)
             </p>
           )}
           <p className="mt-3 text-xs text-slate-700">{result.note}</p>
