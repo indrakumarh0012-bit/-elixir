@@ -57,8 +57,8 @@ export default function ReportIssue() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-3 py-6 md:px-6">
-      <h2 className="text-2xl font-extrabold text-amber-900">Report an Issue</h2>
+    <div className="mx-auto max-w-2xl px-3 py-5 md:px-6">
+      <h2 className="text-xl font-bold tracking-tight text-slate-900">Report an Issue</h2>
       <p className="mt-1 text-sm font-medium text-slate-800">
         Spotted a wrong dose, a missing drug, or an app bug? Your report goes
         straight to the Pocket-Med maintainer and helps keep the calculators safe.

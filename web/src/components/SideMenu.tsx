@@ -73,8 +73,8 @@ export default function SideMenu({
         className="absolute inset-0 h-full w-full bg-slate-900/40"
       />
       <div className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto bg-white shadow-2xl">
-        <div className="border-b border-slate-200 p-4">
-          <p className="brand-text text-base font-bold">Pocket-Med</p>
+        <div className="border-b border-slate-200 p-3">
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Pocket-Med" className="h-10 w-auto" />
         </div>
         <nav className="flex-1 p-2">
           {LINKS.map((l) => (

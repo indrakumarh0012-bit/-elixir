@@ -13,8 +13,8 @@ export default function SavedScreen() {
   const entries = getEntries();
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-6 md:px-6">
-      <h2 className="text-xl font-bold text-slate-900">Saved calculations</h2>
+    <div className="mx-auto max-w-3xl px-3 py-5 md:px-6">
+      <h2 className="text-xl font-bold tracking-tight text-slate-900">Saved Calculations</h2>
       {!profile ? (
         <p className="mt-2 text-sm text-slate-600">
           Sign in from the ☰ menu to save and view your calculations.

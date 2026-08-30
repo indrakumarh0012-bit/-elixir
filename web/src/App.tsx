@@ -112,14 +112,13 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTab("home")}
-              className="flex items-center gap-1.5 whitespace-nowrap text-sm font-bold tracking-tight text-slate-900"
+              className="flex items-center"
             >
               <img
-                src={`${import.meta.env.BASE_URL}icon.svg`}
-                alt=""
-                className="h-5 w-5 rounded"
+                src={`${import.meta.env.BASE_URL}logo.png`}
+                alt="Pocket-Med"
+                className="h-10 w-auto"
               />
-              Pocket-Med
             </button>
           </div>
           <nav className="flex w-full flex-wrap gap-1.5 lg:ml-auto lg:w-auto lg:justify-end" aria-label="Main navigation">
