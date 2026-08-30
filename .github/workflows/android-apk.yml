@@ -8,6 +8,9 @@ on:
       - "web/**"
       - ".github/workflows/android-apk.yml"
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -49,9 +52,20 @@ jobs:
       - name: Build debug APK
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
 
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/Pocket-Med.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Smart-Elixir-debug-apk
-          path: web/android/app/build/outputs/apk/debug/app-debug.apk
+          name: Pocket-Med-apk
+          path: web/android/app/build/outputs/apk/debug/Pocket-Med.apk
           if-no-files-found: error
+
+      - name: Publish APK to the rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Pocket-Med Android app
+          body: "Latest Pocket-Med Android APK. Download Pocket-Med.apk below, open it on the phone, and allow install from this source."
+          files: web/android/app/build/outputs/apk/debug/Pocket-Med.apk

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.smartelixir.clinical",
-  appName: "Smart-Elixir",
+  appId: "com.pocketmed.app",
+  appName: "Pocket-Med",
   webDir: "dist",
   android: {
     allowMixedContent: false,

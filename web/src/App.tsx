@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import HomeScreen from "./components/HomeScreen";
 import SavedScreen from "./components/SavedScreen";
 import SideMenu, { type MenuTarget } from "./components/SideMenu";
@@ -12,12 +12,21 @@ import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 import ReportIssue from "./components/ReportIssue";
 import ToolIcon from "./components/ToolIcon";
+import AuthScreen from "./components/AuthScreen";
+import { getCurrentProfile, getVersion, subscribe } from "./lib/accounts";
 
 type AppTab = MenuTarget;
 
 export default function App() {
   const [tab, setTab] = useState<AppTab>("home");
   const [menuOpen, setMenuOpen] = useState(false);
+  useSyncExternalStore(subscribe, getVersion);
+  const profile = getCurrentProfile();
+  // "Continue without account" lasts for this session only, so the
+  // sign-in page greets every fresh open until an account is signed in.
+  const [guest, setGuest] = useState(
+    () => sessionStorage.getItem("POCKETMED_GUEST") === "1",
+  );
 
   // Inputs marked data-adv="N" jump focus to the next field once N digits
   // are typed, so a full entry never needs a manual tap on the next box.
@@ -103,6 +112,22 @@ export default function App() {
       idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
   ];
+
+  const showAuth = !profile && !guest;
+  useEffect(() => {
+    if (showAuth) setMenuOpen(false);
+  }, [showAuth]);
+
+  if (showAuth) {
+    return (
+      <AuthScreen
+        onGuest={() => {
+          sessionStorage.setItem("POCKETMED_GUEST", "1");
+          setGuest(true);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
