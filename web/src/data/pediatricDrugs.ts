@@ -1291,19 +1291,25 @@ export const pediatricDrugsDB: PediatricDrug[] = [
     ],
   },
   {
+    // Selecting this entry opens the WHO dehydration-plan calculator in the
+    // UI instead of the mg/kg dose flow.
     id: "ors",
-    name: "ORS (WHO low-osmolarity)",
-    category: "GI - Supportive",
-    recommendedDose: "ml/kg based — not mg/kg. Small frequent sips.",
+    name: "ORS (Oral Rehydration Salts)",
+    category: "Rehydration / Diarrhoea",
+    recommendedDose: "By WHO dehydration plan: A (per stool), B (75 ml/kg over 4 h), C (IV RL 100 ml/kg) — pick the plan after selecting.",
     defaultDoseMgPerKg: 0,
     maxDosePerDayMg: 0,
-    frequencyOptions: ["OD"],
-    defaultFrequency: "OD",
+    frequencyOptions: ["per plan"],
+    defaultFrequency: "per plan",
     defaultDosesPerDay: 1,
-    route: ["PO"],
-    cautionsAndContraindications: ["Shock / severe vomit — IV assessment"],
-    instructions: "Mix 1 sachet in 1 L clean water (or as pack). Electral / ORS-L common.",
-    referenceSource: "WHO / IAP",
+    route: ["PO", "NG"],
+    cautionsAndContraindications: [
+      "Mix 1 sachet in EXACTLY 1 litre of clean water; discard after 24 h",
+      "Severe dehydration needs IV Ringer's lactate first, not ORS alone",
+      "Cautious rehydration in severe acute malnutrition (ReSoMal per protocol)",
+    ],
+    instructions: "WHO low-osmolarity ORS for diarrhoea and dehydration; give zinc for 14 days alongside.",
+    referenceSource: "WHO Pocket Book 2013 / IMNCI / IAP acute gastroenteritis",
     renalAdjustment: false,
     formulations: [
       f("Other", "WHO ORS powder sachet → 1 L", 0, 1000, ["Electral", "ORS-L", "Peditral"], {
