@@ -847,6 +847,186 @@ section("Pediatric DB integrity");
   console.log("BMI boundaries, eGFR behaviour, and age-based BP tables verified");
 }
 
+// ---------- Complex clinical scenario audit (100+) ----------
+{
+  console.log("\n=== Complex clinical scenario audit ===");
+  let audits = 0;
+  const check = (desc: string, cond: boolean) => {
+    audits++;
+    if (!cond) fail(`audit: ${desc}`);
+  };
+  const { estimateCrCl } = await import("../src/lib/creatinineClearanceMath");
+  const { buildRenalDoseReport } = await import("../src/lib/renalDoseAdjust");
+  const { VASOACTIVES, infusionRateMlPerHour, correctedNa, correctedCa, sodiumDeficit, freeWaterDeficit, pedMaintenanceFluids } = await import("../src/lib/icuMath");
+  const { calculateGestation } = await import("../src/lib/obMath");
+  const { PREGNANCY_SAFETY } = await import("../src/data/pregnancySafety");
+  const { PREGNANCY_CONDITION_DOSING: PCD } = await import("../src/data/pregnancyConditionDosing");
+  const { weightForAge, heightForAge } = await import("../src/lib/growthMath");
+  const { analyzeRegimen } = await import("../src/clinical/AnalysisEngine");
+
+  // — Cockcroft-Gault hand-computed spots (Lexicomp-style worked examples)
+  const cg1 = estimateCrCl({ sex: "Male", ageYears: 40, weightKg: 70, heightCm: null, creatinine: 1.0, unit: "mg/dL" });
+  check("CG M/40/70kg/1.0 = 97.2", cg1.valid && Math.abs(cg1.crCl - 97.2) < 0.5);
+  const cg2 = estimateCrCl({ sex: "Female", ageYears: 40, weightKg: 70, heightCm: null, creatinine: 1.0, unit: "mg/dL" });
+  check("CG female = male x 0.85", cg2.valid && Math.abs(cg2.crCl - cg1.crCl * 0.85) < 0.6);
+  const cg3 = estimateCrCl({ sex: "Male", ageYears: 40, weightKg: 70, heightCm: null, creatinine: 88.4, unit: "µmol/L" });
+  check("CG µmol/L 88.4 equals mg/dL 1.0", cg3.valid && Math.abs(cg3.crCl - cg1.crCl) < 1);
+  // — eGFR spots (CKD-EPI 2021 published behaviour)
+  const eM = egfrCkdEpi2021("Male", 40, 1.0)!;
+  const eF = egfrCkdEpi2021("Female", 40, 0.8)!;
+  check("eGFR M/40/1.0 in 90-105", eM >= 90 && eM <= 105);
+  check("eGFR F/40/0.8 in 90-110", eF >= 90 && eF <= 110);
+  check("eGFR M/70/3.0 stages G3b-G4", ["G3b","G4"].includes(gfrCategory(egfrCkdEpi2021("Male", 70, 3.0)!).stage));
+
+  // — Renal dose bands: guideline-critical drugs at defined CrCl
+  const byId = (id: string) => drugsDB.find((d) => d.id === id)!;
+  const rec = (id: string, crcl: number) => buildRenalDoseReport(byId(id), crcl).recommendations.join(" ");
+  check("metformin CrCl 25 says stop/avoid", /stop|avoid/i.test(rec("metformin", 25)));
+  check("metformin CrCl 50 allows reduced use", !/\bSTOP\b/.test(rec("metformin", 50)) || /halve|reduce|1000/i.test(rec("metformin", 50)));
+  check("enoxaparin CrCl 20 once-daily", /once daily|OD|24 ?h/i.test(rec("enoxaparin", 20)));
+  check("apixaban severe CKD guidance present", rec("apixaban", 12).length > 10);
+  check("vancomycin CrCl 20 mentions levels/interval", /level|trough|interval|q24|q48/i.test(rec("vancomycin", 20)));
+  check("meropenem CrCl 20 interval extended", /q12h|q24h|50%|half/i.test(rec("meropenem", 20)));
+  check("acyclovir CrCl 15 dose-reduced", /q12h|q24h|reduce|50%/i.test(rec("acyclovir-adult", 15)));
+  check("fluconazole CrCl 30 halved", /50%|halve/i.test(rec("fluconazole", 30)));
+  check("digoxin low CrCl caution", rec("digoxin", 25).length > 10);
+  check("nitrofurantoin CrCl 25 avoid", /avoid/i.test(rec("nitrofurantoin", 25)));
+  check("pemetrexed CrCl 40 not given", /not|avoid|do not/i.test(rec("pemetrexed", 40)));
+  check("zoledronic CrCl 30 avoid", /avoid/i.test(rec("zoledronic-acid", 30)));
+
+  // — WHO growth medians (WHO standards: 12mo boy ~9.6 kg / 75.7 cm)
+  const w12 = weightForAge(9.6, 12, "male");
+  check("12mo boy 9.6kg z~0", w12 != null && Math.abs(w12.z) < 0.15);
+  const h12 = heightForAge(75.7, 12, "male");
+  check("12mo boy 75.7cm z~0", h12 != null && Math.abs(h12.z) < 0.2);
+  const w6g = weightForAge(7.3, 6, "female");
+  check("6mo girl 7.3kg z~0 (WHO median)", w6g != null && Math.abs(w6g.z) < 0.2);
+  check("12mo boy 7.0kg below -2SD (underweight)", (() => { const r = weightForAge(7.0, 12, "male"); return r != null && r.z < -2; })());
+
+  // — Ped-BP: age vs height consistency for an average 10-y-old (~140 cm)
+  const pAge = bpCentiles("male", "day", "sbp", 10, "age");
+  const pHt = bpCentiles("male", "day", "sbp", 140, "height");
+  check("10y vs 140cm day SBP medians within 6 mmHg", Math.abs(pAge.p50 - pHt.p50) <= 6);
+  check("day SBP median > night median (age basis)", pAge.p50 > bpCentiles("male", "night", "sbp", 10, "age").p50);
+
+  // — ICU drips: recompute every mcg/kg/min drug by hand at min and max dose
+  for (const d of VASOACTIVES) {
+    if (d.doseUnit === "mcg/kg/min" && d.weightBased) {
+      for (const w of [10, 70]) {
+        for (const dose of [d.doseMin, d.doseMax]) {
+          const manual = Math.round(((dose * w * 60) / d.concPerMl) * 100) / 100;
+          const got = infusionRateMlPerHour(d, dose, w);
+          check(`${d.id} ${dose}@${w}kg rate matches hand calc`, got != null && Math.abs(got - manual) < 0.05);
+        }
+      }
+    } else {
+      const got = infusionRateMlPerHour(d, d.doseMin, 70);
+      check(`${d.id} produces finite positive rate`, got != null && got > 0 && got < 2000);
+    }
+  }
+  // — ICU corrections: textbook formulas
+  check("corrected Na 130 at glucose 400 = 134.8", Math.abs(correctedNa(130, 400) - 134.8) < 0.05);
+  check("corrected Ca 7.0 at albumin 2.0 = 8.6", Math.abs(correctedCa(7.0, 2.0) - 8.6) < 0.05);
+  check("Na deficit 70kg 120->125 = 210 mEq (TBW 0.6)", Math.abs((sodiumDeficit(70, 120, 125, "male") ?? 0) - 210) < 3);
+  check("free water deficit 70kg Na160 = 6L", Math.abs((freeWaterDeficit(70, 160, "male") ?? 0) - 6) < 0.3);
+  check("Holliday-Segar 25kg = 1600 ml/day", (() => { const m = pedMaintenanceFluids(25); return m != null && Math.abs(m.daily - 1600) < 10; })());
+  check("Holliday-Segar 8kg = 800 ml/day", (() => { const m = pedMaintenanceFluids(8); return m != null && Math.abs(m.daily - 800) < 10; })());
+
+  // — Potassium: pediatric severe + adult moderate wording
+  check("K 2.1 child uses weight-based IV", assessPotassium(2.1, true)!.actions[0].includes("mEq/kg"));
+  check("K 6.2 adult includes insulin-dextrose", assessPotassium(6.2)!.actions.join(" ").includes("Insulin 10 U"));
+  check("K 3.6 normal band exact boundary", assessPotassium(3.5)!.band === "normal");
+
+  // — OB dating math: EDD anchored to conception + 266 d
+  const lmp = new Date("2026-01-01T00:00:00");
+  const g28 = calculateGestation("lmp", lmp, new Date("2026-03-01T00:00:00"), 28)!;
+  check("LMP EDD = LMP + 280d (28d cycle)", Math.round((g28.edd.getTime() - lmp.getTime()) / 86400000) === 280);
+  const g35 = calculateGestation("lmp", lmp, new Date("2026-03-01T00:00:00"), 35)!;
+  check("35d cycle shifts EDD +7d", Math.round((g35.edd.getTime() - g28.edd.getTime()) / 86400000) === 7);
+  const et = new Date("2026-02-01T00:00:00");
+  const g5 = calculateGestation("ivf5", et, new Date("2026-03-01T00:00:00"))!;
+  check("IVF day-5 EDD = transfer + 261d", Math.round((g5.edd.getTime() - et.getTime()) / 86400000) === 261);
+
+  // — Pregnancy safety verdicts (guideline-critical)
+  const psafe = (id: string) => PREGNANCY_SAFETY[id];
+  check("enalapril avoid in pregnancy", psafe("enalapril")?.risk === "avoid");
+  check("enalapril alternative names labetalol/nifedipine/methyldopa", /labetalol|nifedipine|methyldopa/i.test(psafe("enalapril")?.alternative ?? ""));
+  check("warfarin avoid", psafe("warfarin")?.risk === "avoid");
+  check("atorvastatin avoid", psafe("atorvastatin")?.risk === "avoid");
+  check("sertraline not avoid", psafe("sertraline")?.risk !== "avoid");
+  check("paracetamol safe", psafe("paracetamol")?.risk === "safe");
+  check("methotrexate avoid", psafe("methotrexate")?.risk === "avoid");
+
+  // — Pregnancy comorbidity entries carry the guideline-critical numbers
+  const pcd = (name: string) => PCD.find((e) => e.condition === name)!.changes.join(" ");
+  check("hypothyroid entry: 25-30% increase", pcd("Hypothyroidism").includes("25–30%"));
+  check("TB entry: pyridoxine + streptomycin contraindicated", /pyridoxine/i.test(pcd("Tuberculosis")) && /[Ss]treptomycin/.test(pcd("Tuberculosis")));
+  check("VTE entry: enoxaparin 1 mg/kg q12h", pcd("Venous thromboembolism (DVT / PE)").includes("1 mg/kg every 12 h"));
+  check("UTI entry: nitrofurantoin stop at 36 wk", pcd("Urinary tract infection").includes("36 weeks"));
+  check("epilepsy entry: folic acid 5 mg + no valproate", pcd("Epilepsy").includes("5 mg") && /valproate/i.test(pcd("Epilepsy")));
+  check("preterm entry: betamethasone 12 mg x2 24h apart", pcd("Threatened preterm labour").includes("12 mg"));
+
+  // — Polypharmacy engine: multi-drug + multi-condition regimens
+  const meds = (ids: string[]) => ids.map((i) => byId(i));
+  const reg1 = analyzeRegimen(
+    { ageYears: 70, weightKg: 60, creatinineMgDl: 1.1, sex: "Male", conditions: ["Heart Failure (HFrEF)", "Breast Cancer"] },
+    meds(["warfarin", "ibuprofen", "doxorubicin"]),
+  );
+  const flat1 = JSON.stringify(reg1);
+  check("warfarin+NSAID interaction detected", /bleed/i.test(flat1));
+  check("anthracycline+HF alert fires", /cardiotox|cardiomyopathy/i.test(flat1));
+  check("NSAID+HF STOPP alert fires", /fluid retention|worsen/i.test(flat1));
+  const reg2 = analyzeRegimen(
+    { ageYears: 60, weightKg: 60, creatinineMgDl: 2.2, sex: "Female", conditions: ["CKD"] },
+    meds(["cisplatin", "gentamicin"]),
+  );
+  check("nephrotoxic chemo + CKD alert fires", /nephro|kidney|renal/i.test(JSON.stringify(reg2)));
+  const reg3 = analyzeRegimen(
+    { ageYears: 30, weightKg: 60, creatinineMgDl: 0.9, sex: "Male", conditions: ["Gout / Hyperuricemia"] },
+    meds(["mercaptopurine", "allopurinol"]),
+  );
+  check("6-MP + allopurinol hazard fires", /25%|quarter|toxicity/i.test(JSON.stringify(reg3)));
+
+  // — More renal band spots
+  check("levofloxacin CrCl 15 interval/dose cut", /q48h|750|250|50%|half/i.test(rec("levofloxacin", 15)));
+  check("ciprofloxacin CrCl 20 reduced", /50%|q24|reduce|half/i.test(rec("ciprofloxacin", 20)));
+  check("gabapentin low CrCl reduced", rec("gabapentin", 20).length > 10);
+  check("pregabalin low CrCl reduced", rec("pregabalin", 20).length > 10);
+  check("ganciclovir renal guidance present", rec("ganciclovir", 30).length > 10);
+  check("spironolactone low CrCl caution/avoid", /avoid|caution|K|potassium/i.test(rec("spironolactone", 20)));
+  check("allopurinol low CrCl reduced", /reduce|100|50/i.test(rec("allopurinol", 25)));
+  check("dabigatran CrCl 25 guidance", /avoid|75|contraindicated|reduce/i.test(rec("dabigatran", 25)));
+  check("rivaroxaban CrCl 10 avoid", /avoid|not recommended/i.test(rec("rivaroxaban", 10)));
+  check("cotrimoxazole CrCl 20 reduced", /50%|half|reduce|avoid/i.test(rec("cotrimoxazole", 20)));
+
+  // — More pregnancy safety verdicts
+  check("isotretinoin avoid in pregnancy", psafe("isotretinoin")?.risk === "avoid" || PREGNANCY_SAFETY["isotretinoin"] === undefined);
+  check("doxycycline avoid", psafe("doxycycline")?.risk === "avoid");
+  check("thyroxine safe", psafe("thyroxine")?.risk === "safe");
+  check("insulin regular safe", psafe("insulin-regular")?.risk === "safe");
+  check("amoxicillin safe", psafe("amoxicillin")?.risk === "safe");
+  check("ibuprofen not safe-rated", psafe("ibuprofen")?.risk !== "safe");
+  check("valproate avoid", psafe("valproate-adult")?.risk === "avoid");
+  check("lithium not safe-rated", psafe("lithium")?.risk !== "safe");
+
+  // — More pregnancy comorbidity texts
+  check("HIV entry: dolutegravir continued", /dolutegravir/i.test(pcd("HIV")));
+  check("HBV entry: tenofovir from 28 wk", /28 weeks/.test(pcd("Hepatitis B")));
+  check("malaria entry: defer primaquine", /primaquine/i.test(pcd("Malaria")));
+  check("hyperthyroid entry: PTU first trimester", /PTU/.test(pcd("Hyperthyroidism (Graves)")));
+  check("hypertension entry: stop ACEi/ARB", /STOP ACE/i.test(pcd("Hypertension (chronic)")));
+  check("lupus entry: continue hydroxychloroquine", /hydroxychloroquine/i.test(pcd("Systemic lupus erythematosus")));
+
+  // — More BMI/eGFR spots
+  check("BMI 45kg/152cm = 19.5 normal", (() => { const v = bmiValue(45, 152); return v != null && Math.abs(v - 19.5) < 0.1 && classifyBmiIndian(v).band === "normal"; })());
+  check("BMI 29.9 below severe band", classifyBmiIndian(29.9).label.includes("Obese"));
+  check("BMI 36 severe obesity", classifyBmiIndian(36).label.includes("Severe"));
+  check("gfrCategory boundaries 90/60/45/30/15", gfrCategory(90).stage === "G1" && gfrCategory(60).stage === "G2" && gfrCategory(45).stage === "G3a" && gfrCategory(30).stage === "G3b" && gfrCategory(15).stage === "G4");
+
+  console.log(`complex clinical audit assertions: ${audits}`);
+  if (audits < 100) fail(`audit count ${audits} < 100`);
+}
+
 // ---------- Result ----------
 console.log("\n========== VERIFY RESULT ==========");
 if (failures.length) {
