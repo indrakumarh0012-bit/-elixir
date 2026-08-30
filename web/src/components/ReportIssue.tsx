@@ -122,7 +122,7 @@ export default function ReportIssue() {
           type="button"
           onClick={submit}
           disabled={status === "sending"}
-          className="mt-4 w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow hover:bg-amber-700 disabled:opacity-60"
+          className="mt-4 w-full rounded-xl bg-amber-800 px-4 py-3 text-sm font-bold text-white shadow hover:bg-amber-900 disabled:opacity-60"
         >
           {status === "sending" ? "Sending…" : "Send report"}
         </button>

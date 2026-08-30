@@ -13,6 +13,7 @@ import {
   pregnancyRenalNote,
   searchPregnancyConditions,
 } from "../src/data/pregnancyConditionDosing";
+import { assessPotassium } from "../src/lib/icuMath";
 
 let failures: string[] = [];
 const fail = (msg: string) => failures.push(msg);
@@ -757,6 +758,38 @@ section("Pediatric DB integrity");
   if (pregnancyRenalNote(0.9).band !== "caution") fail("preg renal: 0.9 should be caution");
   if (pregnancyRenalNote(1.4).band !== "alert") fail("preg renal: 1.4 should be alert");
   console.log(`pregnancy condition entries: ${PREGNANCY_CONDITION_DOSING.length}, search + renal banding OK`);
+}
+
+// ---------- Potassium banding ----------
+{
+  console.log("\n=== Potassium assessment banding ===");
+  const cases: [number, string, string][] = [
+    [2.1, "alert", "SEVERE hypokalemia"],
+    [2.7, "alert", "Moderate hypokalemia"],
+    [3.2, "caution", "Mild hypokalemia"],
+    [3.5, "normal", "Normal"],
+    [4.2, "normal", "Normal"],
+    [5.0, "normal", "Normal"],
+    [5.4, "caution", "Mild hyperkalemia"],
+    [6.2, "alert", "Moderate hyperkalemia"],
+    [6.8, "alert", "SEVERE hyperkalemia"],
+  ];
+  for (const [kv, band, prefix] of cases) {
+    const a = assessPotassium(kv);
+    if (!a) { fail(`K ${kv}: no assessment returned`); continue; }
+    if (a.band !== band) fail(`K ${kv}: band ${a.band}, expected ${band}`);
+    if (!a.classification.startsWith(prefix)) fail(`K ${kv}: classification "${a.classification}" lacks "${prefix}"`);
+    if (a.band !== "normal" && a.actions.length < 2) fail(`K ${kv}: abnormal but < 2 actions`);
+  }
+  if (assessPotassium(0.2) !== null || assessPotassium(15) !== null)
+    fail("K implausible values should return null");
+  const ped = assessPotassium(2.1, true);
+  if (!ped || !ped.actions[0].includes("0.5\u20131 mEq/kg"))
+    fail("K pediatric severe hypokalemia should use weight-based IV rate");
+  const renal = assessPotassium(3.2, false, true);
+  if (!renal || !renal.actions.some((x) => x.includes("Renal impairment")))
+    fail("K renal-impairment note missing");
+  console.log("potassium bands verified across 9 levels + pediatric + renal variants");
 }
 
 // ---------- Result ----------

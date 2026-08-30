@@ -10,6 +10,7 @@ import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 import ReportIssue from "./components/ReportIssue";
+import ToolIcon from "./components/ToolIcon";
 
 type AppTab = MenuTarget;
 
@@ -48,58 +49,58 @@ export default function App() {
       id: "pedDose",
       label: "Ped Dose Calculator",
       shortLabel: "Ped Dose",
-      active: "bg-blue-600 text-white shadow-sm",
-      idle: "bg-blue-50 text-blue-800 hover:bg-blue-100",
+      active: "bg-blue-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
       id: "growth",
       label: "Growth Charts",
       shortLabel: "Growth",
-      active: "bg-violet-600 text-white shadow-sm",
-      idle: "bg-violet-50 text-violet-800 hover:bg-violet-100",
+      active: "bg-violet-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
       id: "bp",
       label: "Ped-BP",
       shortLabel: "Ped-BP",
-      active: "bg-cyan-600 text-white shadow-sm",
-      idle: "bg-cyan-50 text-cyan-800 hover:bg-cyan-100",
+      active: "bg-cyan-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
       id: "crCl",
       label: "Creatinine Clearance",
       shortLabel: "CrCl",
-      active: "bg-teal-600 text-white shadow-sm",
-      idle: "bg-teal-50 text-teal-800 hover:bg-teal-100",
+      active: "bg-teal-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
       id: "regimen",
       label: "Polypharm",
       shortLabel: "Polypharm",
-      active: "bg-rose-600 text-white shadow-sm",
-      idle: "bg-rose-50 text-rose-800 hover:bg-rose-100",
+      active: "bg-rose-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
       id: "icu",
       label: "ICU Titration",
       shortLabel: "ICU",
-      active: "bg-orange-600 text-white shadow-sm",
-      idle: "bg-orange-50 text-orange-800 hover:bg-orange-100",
+      active: "bg-orange-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
       id: "ob",
       label: "OB / EDD",
       shortLabel: "OB",
-      active: "bg-fuchsia-600 text-white shadow-sm",
-      idle: "bg-fuchsia-50 text-fuchsia-800 hover:bg-fuchsia-100",
+      active: "bg-fuchsia-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
   ];
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="app-header border-b border-[var(--line)] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-3 py-3 md:px-6">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               aria-label="Open menu"
@@ -143,6 +144,7 @@ export default function App() {
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(t) => setTab(t)} />
 
       <main className={`tool-stage tool-${tab} flex-1`}>
+        <ToolIcon id={tab} className="tool-watermark" strokeWidth={1} />
         {tab === "home" && <HomeScreen onOpen={(t) => setTab(t)} />}
         {tab === "saved" && <SavedScreen />}
         {tab === "pedDose" && <PediatricDosageCalculator />}
