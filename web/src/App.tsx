@@ -99,7 +99,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="app-header border-b border-[var(--line)] bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-3 py-3 md:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 md:px-6">
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -112,23 +112,23 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTab("home")}
-              className="flex items-center gap-1.5 whitespace-nowrap text-base font-bold tracking-tight text-slate-900"
+              className="flex items-center gap-1.5 whitespace-nowrap text-sm font-bold tracking-tight text-slate-900"
             >
               <img
                 src={`${import.meta.env.BASE_URL}icon.svg`}
                 alt=""
-                className="h-6 w-6 rounded-md"
+                className="h-5 w-5 rounded"
               />
               Pocket-Med
             </button>
           </div>
-          <nav className="flex flex-wrap gap-2" aria-label="Main navigation">
+          <nav className="flex w-full flex-wrap gap-1.5 lg:ml-auto lg:w-auto lg:justify-end" aria-label="Main navigation">
             {tabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition sm:text-sm ${
                   tab === t.id ? t.active : t.idle
                 }`}
               >
