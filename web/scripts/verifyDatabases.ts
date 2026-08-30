@@ -180,7 +180,7 @@ section("Renal spot cases");
 // ---------- 5. 100 polypharmacy regimens ----------
 section("100 random elderly regimens");
 {
-  let rngState = 42;
+  let rngState = Number(process.env.VERIFY_SEED ?? 42);
   const rng = () => (rngState = (rngState * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
   let ok = 0;
   for (let i = 0; i < 100; i++) {
@@ -660,8 +660,9 @@ section("300-sample ped dose/renal crosscheck");
   const { calculatePediatricDose } = await import("../src/lib/pediatricDoseMath");
   const { pedRenalAction, PED_RENAL_BANDS } = await import("../src/lib/pedRenal");
   let checks = 0, bad = 0;
-  const weights = [6, 22];
-  const gfrs = [70, 25];
+  const seed = Number(process.env.VERIFY_SEED ?? 42);
+  const weights = [6, 22, 3 + (seed % 38), 10 + ((seed * 7) % 50)];
+  const gfrs = [70, 25, 8 + (seed % 80)];
   for (const d of pediatricDrugsDB) {
     for (const w of weights) {
       const r = calculatePediatricDose({
