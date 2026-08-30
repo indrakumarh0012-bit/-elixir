@@ -2134,6 +2134,31 @@ export const pediatricDrugsDB: PediatricDrug[] = [
       f("Capsule", "250 mg", 250, 1, ["Zarontin"], {}),
     ],
   },
+  {
+    // Selecting this entry opens the Holliday-Segar maintenance-fluid
+    // calculator in the UI instead of the mg/kg dose flow.
+    id: "ivf",
+    name: "IV Maintenance Fluids (IVF)",
+    category: "Fluids / Rehydration",
+    recommendedDose: "Holliday–Segar 100/50/20 rule by weight, with restriction plans — shown after selecting.",
+    defaultDoseMgPerKg: 0,
+    maxDosePerDayMg: 0,
+    frequencyOptions: ["continuous"],
+    defaultFrequency: "continuous",
+    defaultDosesPerDay: 1,
+    route: ["IV"],
+    cautionsAndContraindications: [
+      "Use isotonic maintenance fluids with dextrose in acutely ill children — hypotonic fluids risk hyponatremia",
+      "Restrict in meningitis, pneumonia and post-operative SIADH-prone states",
+      "Neonates follow day-of-life fluid protocols, not Holliday–Segar",
+    ],
+    instructions: "Maintenance IV fluid rate and restriction plans by weight.",
+    referenceSource: "Holliday–Segar · Nelson · NICE IV fluids in children",
+    renalAdjustment: false,
+    formulations: [
+      f("Other", "Isotonic maintenance fluid with dextrose", 1, 1, ["DNS", "RL + dextrose", "Isolyte P (review Na)"], {}),
+    ],
+  },
 ];
 
 export function searchPediatricDrugs(query: string): PediatricDrug[] {
