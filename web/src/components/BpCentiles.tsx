@@ -66,11 +66,6 @@ export default function BpCentiles() {
   return (
     <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
       <h2 className="text-xl font-bold text-cyan-950">Ped-BP</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Wühl 2002 ambulatory BP reference by height (120–185 cm boys, 120–175 cm
-        girls). Enter height to see every centile line; add measured values to
-        place the child on them.
-      </p>
 
       <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
@@ -96,13 +91,13 @@ export default function BpCentiles() {
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <label className="block col-span-2 sm:col-span-1">
             <span className="text-xs font-semibold text-slate-600">Height (cm)</span>
-            <input type="number" inputMode="decimal" value={height}
+            <input type="number" inputMode="decimal" data-adv="3" value={height}
               onChange={(e) => setHeight(num(e.target.value))}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-slate-600">Day SBP</span>
-            <input type="number" inputMode="numeric" value={daySbp}
+            <input type="number" inputMode="numeric" data-adv="3" value={daySbp}
               onChange={(e) => setDaySbp(num(e.target.value))}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
           </label>
@@ -114,7 +109,7 @@ export default function BpCentiles() {
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-slate-600">Night SBP</span>
-            <input type="number" inputMode="numeric" value={nightSbp}
+            <input type="number" inputMode="numeric" data-adv="3" value={nightSbp}
               onChange={(e) => setNightSbp(num(e.target.value))}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
           </label>

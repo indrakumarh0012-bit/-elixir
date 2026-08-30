@@ -48,10 +48,6 @@ export default function CreatinineClearance() {
   return (
     <div className="mx-auto max-w-4xl px-3 py-6 md:px-6">
       <h1 className="text-2xl font-bold text-teal-950">Creatinine Clearance</h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Calculate CrCl, then search antibiotics and common drugs for dose or interval
-        adjustments.
-      </p>
 
       <div className="mt-6 space-y-4 rounded-xl border border-[var(--line)] bg-white p-5 shadow-sm">
         <fieldset>
@@ -78,6 +74,7 @@ export default function CreatinineClearance() {
             type="number"
             min={1}
             max={110}
+            data-adv="2"
             value={age}
             onChange={(e) => setAge(numOrEmpty(e.target.value))}
             className="mt-1 w-full rounded-lg border border-[var(--line)] px-3 py-2"

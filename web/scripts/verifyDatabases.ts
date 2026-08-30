@@ -8,6 +8,11 @@ import { analyzeRegimen } from "../src/clinical/AnalysisEngine";
 import { buildRenalDoseReport, searchRenalDrugs } from "../src/lib/renalDoseAdjust";
 import { pediatricDrugsDB, dosesPerDayFromFrequency } from "../src/data/pediatricDrugs";
 import type { DrugRecord } from "../src/clinical/types";
+import {
+  PREGNANCY_CONDITION_DOSING,
+  pregnancyRenalNote,
+  searchPregnancyConditions,
+} from "../src/data/pregnancyConditionDosing";
 
 let failures: string[] = [];
 const fail = (msg: string) => failures.push(msg);
@@ -712,6 +717,46 @@ section("Pediatric DB integrity");
       if (!fm.commonBrandsIndia.length) fail(`${d.id}: formulation without brands`);
   }
   console.log(`pediatric drugs: ${pediatricDrugsDB.length}, unique + consistent`);
+}
+
+// ---------- Pregnancy comorbidity dosing ----------
+{
+  console.log("\n=== Pregnancy comorbidity dosing ===");
+  const names = new Set<string>();
+  for (const e of PREGNANCY_CONDITION_DOSING) {
+    if (names.has(e.condition)) fail(`preg dosing: duplicate condition ${e.condition}`);
+    names.add(e.condition);
+    if (!e.changes.length) fail(`preg dosing ${e.condition}: no changes listed`);
+    for (const c of e.changes)
+      if (c.trim().length < 15) fail(`preg dosing ${e.condition}: suspiciously short change text`);
+    if (!e.ref.trim()) fail(`preg dosing ${e.condition}: missing reference`);
+    for (const t of e.timed ?? []) {
+      if (t.from == null && t.to == null) fail(`preg dosing ${e.condition}: timed note without window`);
+      if (t.from != null && (t.from < 1 || t.from > 44)) fail(`preg dosing ${e.condition}: timed.from ${t.from} out of range`);
+      if (t.to != null && (t.to < 1 || t.to > 44)) fail(`preg dosing ${e.condition}: timed.to ${t.to} out of range`);
+      if (t.from != null && t.to != null && t.from > t.to) fail(`preg dosing ${e.condition}: timed window inverted`);
+    }
+  }
+  // Search must surface the major conditions by common queries
+  const probes: [string, string][] = [
+    ["thyroid", "Hypothyroidism"],
+    ["epilep", "Epilepsy"],
+    ["TB", "Tuberculosis"],
+    ["UTI", "Urinary tract infection"],
+    ["asthma", "Asthma"],
+    ["lupus", "Systemic lupus erythematosus"],
+    ["warfarin", "Venous thromboembolism (DVT / PE)"],
+    ["hypertension", "Hypertension (chronic)"],
+    ["sugar", "Diabetes mellitus (pre-existing, type 1 or 2)"],
+  ];
+  for (const [q, want] of probes)
+    if (!searchPregnancyConditions(q).some((e) => e.condition === want))
+      fail(`preg dosing search "${q}" did not return "${want}"`);
+  // Renal banding: pregnancy norms (upper limit ~0.8 mg/dL)
+  if (pregnancyRenalNote(0.6).band !== "normal") fail("preg renal: 0.6 should be normal");
+  if (pregnancyRenalNote(0.9).band !== "caution") fail("preg renal: 0.9 should be caution");
+  if (pregnancyRenalNote(1.4).band !== "alert") fail("preg renal: 1.4 should be alert");
+  console.log(`pregnancy condition entries: ${PREGNANCY_CONDITION_DOSING.length}, search + renal banding OK`);
 }
 
 // ---------- Result ----------

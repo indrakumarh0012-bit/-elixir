@@ -2,6 +2,11 @@ import { useMemo, useState } from "react";
 import { searchDrugs } from "../clinical/clinicalData";
 import { PREGNANCY_SAFETY } from "../data/pregnancySafety";
 import {
+  PREGNANCY_CONDITION_DOSING,
+  pregnancyRenalNote,
+  searchPregnancyConditions,
+} from "../data/pregnancyConditionDosing";
+import {
   calculateGestation,
   formatDate,
   type ObMethod,
@@ -20,6 +25,10 @@ export default function ObCalculator() {
   const [dateStr, setDateStr] = useState("");
   const [cycle, setCycle] = useState<number | "">(28);
   const [drugQuery, setDrugQuery] = useState("");
+  const [manualWeeks, setManualWeeks] = useState<number | "">("");
+  const [scr, setScr] = useState<number | "">("");
+  const [condQuery, setCondQuery] = useState("");
+  const [selectedConds, setSelectedConds] = useState<string[]>([]);
 
   const drugMatches = useMemo(() => {
     const q = drugQuery.trim();
@@ -44,10 +53,6 @@ export default function ObCalculator() {
       <h2 className="text-xl font-bold text-fuchsia-950">
         Gestational Age &amp; EDD
       </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Pick how the pregnancy is dated; results correct for cycle length and
-        IVF timing automatically.
-      </p>
 
       <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
@@ -89,6 +94,7 @@ export default function ObCalculator() {
                 inputMode="numeric"
                 min={20}
                 max={45}
+                data-adv="2"
                 value={cycle}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -255,12 +261,182 @@ export default function ObCalculator() {
             <li><strong>Lithium:</strong> clearance rises — monthly levels; hold at delivery, then dose drops back.</li>
           </ol>
           <p className="mt-2 text-xs">
-            Tip: in the Polypharmacy tab, add "Pregnancy" as a condition —
+            Tip: in the Polypharm tab, add "Pregnancy" as a condition —
             every drug in the regimen is then screened against this same
             safety data automatically.
           </p>
         </div>
       </section>
+
+      {/* Comorbidity dosing in pregnancy */}
+      {(() => {
+        const gaWeeks =
+          manualWeeks !== ""
+            ? Number(manualWeeks)
+            : result
+              ? result.gaWeeks
+              : null;
+        const renal = scr !== "" && Number(scr) > 0 ? pregnancyRenalNote(Number(scr)) : null;
+        const condMatches = searchPregnancyConditions(condQuery).filter(
+          (e) => !selectedConds.includes(e.condition),
+        );
+        const cards = PREGNANCY_CONDITION_DOSING.filter((e) =>
+          selectedConds.includes(e.condition),
+        );
+        const renalStyle =
+          renal?.band === "alert"
+            ? "border-red-200 bg-red-50 text-red-950"
+            : renal?.band === "caution"
+              ? "border-amber-200 bg-amber-50 text-amber-950"
+              : "border-emerald-200 bg-emerald-50 text-emerald-950";
+        return (
+          <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-base font-bold text-fuchsia-950">
+              Dosing by comorbidity
+            </h3>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-700">
+                  Weeks of gestation
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={44}
+                  data-adv="2"
+                  value={manualWeeks !== "" ? manualWeeks : (result?.gaWeeks ?? "")}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setManualWeeks(v === "" ? "" : Number(v));
+                  }}
+                  placeholder={result ? String(result.gaWeeks) : "e.g. 28"}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-fuchsia-500"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-700">
+                  Serum creatinine (mg/dL)
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="0.1"
+                  value={scr}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setScr(v === "" ? "" : Number(v));
+                  }}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-fuchsia-500"
+                />
+              </label>
+            </div>
+            {renal && (
+              <div className={`mt-3 rounded-lg border p-3 text-sm ${renalStyle}`}>
+                {renal.text}
+              </div>
+            )}
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold text-slate-700">
+                Search conditions
+              </span>
+              <input
+                value={condQuery}
+                onChange={(e) => setCondQuery(e.target.value)}
+                placeholder="e.g. hypothyroid, epilepsy, TB, UTI, asthma, lupus…"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-fuchsia-500"
+              />
+            </label>
+            {condMatches.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {condMatches.map((e) => (
+                  <button
+                    key={e.condition}
+                    type="button"
+                    onClick={() => {
+                      setSelectedConds((prev) => [...prev, e.condition]);
+                      setCondQuery("");
+                    }}
+                    className="rounded-full bg-fuchsia-100 px-3 py-1.5 text-xs font-semibold text-fuchsia-900 hover:bg-fuchsia-200"
+                  >
+                    + {e.condition}
+                  </button>
+                ))}
+              </div>
+            )}
+            {condQuery.trim().length >= 2 && condMatches.length === 0 && (
+              <p className="mt-2 text-xs text-slate-600">
+                No pregnancy-specific dosing entry for that search — for
+                conditions not listed, individualize with the treating
+                specialist rather than assuming standard dosing applies.
+              </p>
+            )}
+            {cards.length > 0 && (
+              <ul className="mt-4 space-y-3">
+                {cards.map((e) => (
+                  <li
+                    key={e.condition}
+                    className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/60 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold text-fuchsia-950">{e.condition}</p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedConds((prev) =>
+                            prev.filter((c) => c !== e.condition),
+                          )
+                        }
+                        className="text-xs font-semibold text-slate-500 underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-900">
+                      {e.changes.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                    {e.timed && e.timed.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {e.timed.map((t, i) => {
+                          const applies =
+                            gaWeeks != null &&
+                            (t.from == null || gaWeeks >= t.from) &&
+                            (t.to == null || gaWeeks <= t.to);
+                          const window =
+                            t.from != null && t.to != null
+                              ? `${t.from}–${t.to} wk`
+                              : t.from != null
+                                ? `from ${t.from} wk`
+                                : `until ${t.to} wk`;
+                          return (
+                            <p
+                              key={i}
+                              className={`rounded-md px-2 py-1.5 text-xs font-semibold ${
+                                applies
+                                  ? "bg-fuchsia-600 text-white"
+                                  : "bg-slate-100 text-slate-700"
+                              }`}
+                            >
+                              {applies
+                                ? `⏱ Applies now (${gaWeeks} wk): `
+                                : `⏱ ${window}: `}
+                              {t.note}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <p className="mt-2 text-xs text-slate-600">Ref: {e.ref}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })()}
     </div>
   );
 }

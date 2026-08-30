@@ -14,7 +14,7 @@
   --ok: #166534;
   --ok-bg: #f0fdf4;
   --line: #dbe3ec;
-  font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
 }
@@ -52,10 +52,8 @@ body {
 }
 
 .brand-text {
-  background: linear-gradient(90deg, #1d4ed8, #7c3aed 55%, #0d9488);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #0f172a;
+  white-space: nowrap;
 }
 
 #root {
