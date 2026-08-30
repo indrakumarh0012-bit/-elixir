@@ -1,7 +1,7 @@
 // Smart-Elixir service worker.
 // Bump CACHE_VERSION whenever the shell list below changes; activate() drops
 // every older cache, so a deploy never serves a half-stale shell.
-const CACHE_VERSION = 'pocket-med-v4'
+const CACHE_VERSION = 'pocket-med-v5'
 const SHELL = [
   '/',
   '/index.html',
