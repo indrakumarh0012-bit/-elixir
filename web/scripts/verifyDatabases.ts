@@ -958,6 +958,12 @@ section("Pediatric DB integrity");
   check("ACOG threshold 23w = 14d", acogRedatingThresholdDays(160).threshold === 14);
   check("ACOG threshold 28w4d = 21d", acogRedatingThresholdDays(200).threshold === 21);
   check("scan rejects implausible GA", calculateGestation("scan", scanDate, new Date("2026-03-01T00:00:00"), 28, 20) === null);
+  check("scan derived LMP = scan date − 84d at 12w0d",
+    Math.round((scanDate.getTime() - gScan.derivedLmp.getTime()) / 86400000) === 84);
+  check("derived LMP + 280d = EDD (scan)",
+    Math.round((gScan.edd.getTime() - gScan.derivedLmp.getTime()) / 86400000) === 280);
+  check("35d-cycle working LMP shifts +7d vs true LMP",
+    Math.round((g35.derivedLmp.getTime() - lmp.getTime()) / 86400000) === 7);
 
   // — Pregnancy safety verdicts (guideline-critical)
   const psafe = (id: string) => PREGNANCY_SAFETY[id];
