@@ -49,17 +49,44 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build debug APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      # A stable signing identity lets updates install over old versions and
+      # avoids the debug-key download warning. The key lives on a dedicated
+      # release tag managed by this workflow; it is an install identity, not a
+      # confidential credential (impossible in a public repository).
+      - name: Obtain signing keystore
+        run: |
+          mkdir -p android/keystore
+          if curl -fL -o android/keystore/pocketmed-release.keystore \
+            "https://github.com/${{ github.repository }}/releases/download/signing-key/pocketmed-release.keystore"; then
+            echo "Reusing the existing signing identity"
+            echo "NEW_KEY=0" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -keystore android/keystore/pocketmed-release.keystore -alias pocketmed \
+              -keyalg RSA -keysize 2048 -validity 10950 -storepass pocketmed -keypass pocketmed \
+              -dname "CN=Pocket-Med, OU=Clinical Tools, O=Pocket-Med, C=IN"
+            echo "NEW_KEY=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Persist a newly created signing identity
+        if: env.NEW_KEY == '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: signing-key
+          name: Pocket-Med install identity
+          body: "Stable APK signing identity used by the build workflow so updates install over previous versions."
+          files: web/android/keystore/pocketmed-release.keystore
+
+      - name: Build release APK (signed)
+        run: cd android && chmod +x gradlew && ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/Pocket-Med.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/Pocket-Med.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Pocket-Med-apk
-          path: web/android/app/build/outputs/apk/debug/Pocket-Med.apk
+          path: web/android/app/build/outputs/apk/release/Pocket-Med.apk
           if-no-files-found: error
 
       - name: Publish APK to the rolling release
@@ -68,7 +95,7 @@ jobs:
           tag_name: apk-latest
           name: Pocket-Med Android app
           body: "Latest Pocket-Med Android APK. Download Pocket-Med.apk below, open it on the phone, and allow install from this source."
-          files: web/android/app/build/outputs/apk/debug/Pocket-Med.apk
+          files: web/android/app/build/outputs/apk/release/Pocket-Med.apk
 
       # Serve the APK from the site itself so the download link is a plain
       # direct URL (no release redirect): https://<pages>/Pocket-Med.apk
@@ -79,7 +106,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages
           git checkout gh-pages
-          cp web/android/app/build/outputs/apk/debug/Pocket-Med.apk ./Pocket-Med.apk
+          cp web/android/app/build/outputs/apk/release/Pocket-Med.apk ./Pocket-Med.apk
           git add Pocket-Med.apk
           git commit -m "Update Pocket-Med.apk direct download" || echo "APK unchanged"
           for i in 1 2 3; do git push origin gh-pages && break; git pull --rebase origin gh-pages; done
