@@ -964,6 +964,15 @@ section("Pediatric DB integrity");
     Math.round((gScan.edd.getTime() - gScan.derivedLmp.getTime()) / 86400000) === 280);
   check("35d-cycle working LMP shifts +7d vs true LMP",
     Math.round((g35.derivedLmp.getTime() - lmp.getTime()) / 86400000) === 7);
+  // EDD-known: entering the EDD reverses to LMP = EDD − 280 and echoes the EDD
+  const eddDate = new Date("2026-09-15T00:00:00");
+  const gEdd = calculateGestation("edd", eddDate, new Date("2026-05-01T00:00:00"))!;
+  check("EDD-known: derived LMP = EDD − 280d",
+    Math.round((eddDate.getTime() - gEdd.derivedLmp.getTime()) / 86400000) === 280);
+  check("EDD-known: EDD echoed unchanged",
+    Math.round((gEdd.edd.getTime() - eddDate.getTime()) / 86400000) === 0);
+  check("EDD-known: GA on 1 May for EDD 15 Sep = 20w3d",
+    gEdd.gaWeeks === 20 && gEdd.gaDays === 3);
 
   // — Pregnancy safety verdicts (guideline-critical)
   const psafe = (id: string) => PREGNANCY_SAFETY[id];
