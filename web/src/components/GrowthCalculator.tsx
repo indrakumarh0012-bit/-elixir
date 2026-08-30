@@ -5,7 +5,6 @@ import {
   heightForAge,
   zBandCompact,
   zBandLabel,
-  toMonths,
   weightForAge,
   GROWTH_MAX_MONTHS,
   type GrowthResult,
@@ -111,15 +110,18 @@ function ResultCard({
  */
 export default function GrowthCalculator() {
   const [sex, setSex] = useState<Sex>("male");
-  const [years, setYears] = useState<number | "">(1);
-  const [months, setMonths] = useState<number | "">(0);
+  const [ageValue, setAgeValue] = useState<number | "">(1);
+  const [ageUnit, setAgeUnit] = useState<"years" | "months" | "days" | "hours">("years");
   const [weight, setWeight] = useState<number | "">("");
   const [height, setHeight] = useState<number | "">("");
 
-  const ageMonths = useMemo(
-    () => toMonths(years === "" ? 0 : Number(years), months === "" ? 0 : Number(months)),
-    [years, months],
-  );
+  const ageMonths = useMemo(() => {
+    const n = ageValue === "" ? 0 : Number(ageValue);
+    if (ageUnit === "years") return n * 12;
+    if (ageUnit === "months") return n;
+    if (ageUnit === "days") return n / 30.4375;
+    return n / 730.5; // hours of life
+  }, [ageValue, ageUnit]);
 
   const overMax = ageMonths > GROWTH_MAX_MONTHS;
 
@@ -135,9 +137,13 @@ export default function GrowthCalculator() {
   );
 
   const ageLabel =
-    ageMonths < 24
-      ? `${ageMonths} month${ageMonths === 1 ? "" : "s"}`
-      : `${Math.floor(ageMonths / 12)} y ${ageMonths % 12} m`;
+    ageUnit === "hours"
+      ? `${ageValue || 0} h of life`
+      : ageMonths < 1
+        ? `${Math.round(ageMonths * 30.4375)} day${Math.round(ageMonths * 30.4375) === 1 ? "" : "s"}`
+        : ageMonths < 24
+          ? `${Math.round(ageMonths * 10) / 10} month${ageMonths === 1 ? "" : "s"}`
+          : `${Math.floor(ageMonths / 12)} y ${Math.round(ageMonths % 12)} m`;
 
   return (
     <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
@@ -166,30 +172,28 @@ export default function GrowthCalculator() {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <label className="block">
-            <span className="text-xs font-semibold text-slate-600">Age — years</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              data-adv="2"
-              value={years}
-              onChange={(e) => setYears(numOrEmpty(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-slate-600">Age — months</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={11}
-              data-adv="2"
-              value={months}
-              onChange={(e) => setMonths(numOrEmpty(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
-            />
+          <label className="col-span-2 block">
+            <span className="text-xs font-semibold text-slate-600">Age</span>
+            <div className="mt-1 flex gap-2">
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={ageValue}
+                onChange={(e) => setAgeValue(numOrEmpty(e.target.value))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <select
+                value={ageUnit}
+                onChange={(e) => setAgeUnit(e.target.value as typeof ageUnit)}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="years">Years</option>
+                <option value="months">Months</option>
+                <option value="days">Days</option>
+                <option value="hours">Hours of life</option>
+              </select>
+            </div>
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-slate-600">Weight (kg)</span>

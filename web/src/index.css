@@ -98,8 +98,10 @@ body {
 .tool-stage .bg-slate-50 { background-color: var(--tint-soft, #f8fafc); }
 .tool-stage .border-slate-200 { border-color: var(--tint-border, #e2e8f0); }
 
-/* Opening splash: centred logo with a scale-in + single heartbeat, then the
-   whole overlay fades to reveal the sign-in page or Home underneath. */
+/* Opening splash: the stethoscope logo rocks gently while growing and
+   shrinking, and the page colour breathes through tints that match the icon
+   (white → cyan wash → soft navy wash). Then the overlay fades to reveal the
+   sign-in page or Home underneath. */
 .splash {
   position: fixed;
   inset: 0;
@@ -108,22 +110,38 @@ body {
   align-items: center;
   justify-content: center;
   background: #ffffff;
-  animation: splash-out 0.45s ease 1.2s forwards;
+  animation:
+    splash-bg 2.4s ease-in-out both,
+    splash-out 0.45s ease 2.3s forwards;
   pointer-events: none;
 }
 .splash img {
-  height: 84px;
+  height: 92px;
   width: auto;
-  animation: splash-in 0.5s ease-out both, splash-beat 0.9s ease-in-out 0.55s;
+  animation:
+    splash-in 0.5s ease-out both,
+    splash-live 1.3s ease-in-out 0.45s infinite;
+  filter: drop-shadow(0 6px 18px rgba(13, 148, 194, 0.25));
 }
 @keyframes splash-in {
-  from { opacity: 0; transform: scale(0.72); }
+  from { opacity: 0; transform: scale(0.6); }
   to { opacity: 1; transform: scale(1); }
 }
-@keyframes splash-beat {
-  0%, 100% { transform: scale(1); }
-  30% { transform: scale(1.07); }
-  60% { transform: scale(0.98); }
+/* Grow–shrink with a slight stethoscope rock left and right. */
+@keyframes splash-live {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.14) rotate(-3deg); }
+  50% { transform: scale(0.96) rotate(0deg); }
+  75% { transform: scale(1.1) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+/* Background breathes through the logo's own palette. */
+@keyframes splash-bg {
+  0% { background: #ffffff; }
+  30% { background: #e0f7fa; }
+  60% { background: #dbe7ff; }
+  85% { background: #eef6ff; }
+  100% { background: #ffffff; }
 }
 @keyframes splash-out {
   to { opacity: 0; visibility: hidden; }

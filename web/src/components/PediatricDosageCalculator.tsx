@@ -18,7 +18,7 @@ import {
   schwartzEgfr,
 } from "../lib/pedRenal";
 
-type AgeUnit = "years" | "months" | "days";
+type AgeUnit = "years" | "months" | "days" | "hours";
 
 export default function PediatricDosageCalculator() {
   const [ageValue, setAgeValue] = useState<number | "">(3);
@@ -41,6 +41,7 @@ export default function PediatricDosageCalculator() {
   const ageDays = useMemo(() => {
     if (ageValue === "" || Number(ageValue) < 0) return null;
     const n = Number(ageValue);
+    if (ageUnit === "hours") return n / 24;
     if (ageUnit === "days") return n;
     if (ageUnit === "months") return n * 30.4375;
     return n * 365.25;
@@ -135,7 +136,7 @@ export default function PediatricDosageCalculator() {
               <input
                 type="number"
                 min={0}
-                step={ageUnit === "days" ? 1 : 0.5}
+                step={ageUnit === "days" || ageUnit === "hours" ? 1 : 0.5}
                 value={ageValue}
                 onChange={(e) =>
                   setAgeValue(e.target.value === "" ? "" : Number(e.target.value))
@@ -150,12 +151,15 @@ export default function PediatricDosageCalculator() {
                 <option value="years">Years</option>
                 <option value="months">Months</option>
                 <option value="days">Days</option>
+                <option value="hours">Hours of life</option>
               </select>
             </div>
             {ageDays != null && (
               <p className="mt-1 text-xs text-slate-500">
-                ≈ {Math.round(ageDays)} days
-                {ageMonths != null ? ` · ${ageMonths.toFixed(1)} months` : ""}
+                {ageUnit === "hours"
+                  ? `${ageValue} h of life · ≈ ${ageDays < 2 ? ageDays.toFixed(1) : Math.round(ageDays)} days`
+                  : `≈ ${Math.round(ageDays)} days`}
+                {ageMonths != null && ageUnit !== "hours" ? ` · ${ageMonths.toFixed(1)} months` : ""}
                 {isNeonate ? " · Neonate (<28 days)" : ""}
               </p>
             )}

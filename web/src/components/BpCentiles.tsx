@@ -28,6 +28,7 @@ export default function BpCentiles() {
   const [sex, setSex] = useState<BpSex>("male");
   const [basis, setBasis] = useState<BpBasis>("height");
   const [age, setAge] = useState<number | "">("");
+  const [bpAgeUnit, setBpAgeUnit] = useState<"years" | "months">("years");
   const [height, setHeight] = useState<number | "">("");
   const [daySbp, setDaySbp] = useState<number | "">("");
   const [dayDbp, setDayDbp] = useState<number | "">("");
@@ -36,7 +37,7 @@ export default function BpCentiles() {
 
   const h = height === "" ? null : Number(height);
   const heightOk = h != null && h >= 105 && h <= 200;
-  const a = age === "" ? null : Number(age);
+  const a = age === "" ? null : bpAgeUnit === "years" ? Number(age) : Number(age) / 12;
   const ageOk = a != null && a >= BP_AGE_MIN - 1 && a <= BP_AGE_MAX + 3;
   const x = basis === "height" ? h : a;
   const xOk = basis === "height" ? heightOk : ageOk;
@@ -112,11 +113,21 @@ export default function BpCentiles() {
           ))}
         </div>
         <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
-          <label className="block">
-            <span className="text-xs font-semibold text-slate-600">Age (years)</span>
-            <input type="number" inputMode="numeric" min={5} max={19} data-adv="2" value={age}
-              onChange={(e) => setAge(num(e.target.value))}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
+          <label className="block col-span-2 sm:col-span-1">
+            <span className="text-xs font-semibold text-slate-600">Age</span>
+            <div className="mt-1 flex gap-1">
+              <input type="number" inputMode="numeric" min={0} value={age}
+                onChange={(e) => setAge(num(e.target.value))}
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cyan-500" />
+              <select
+                value={bpAgeUnit}
+                onChange={(e) => setBpAgeUnit(e.target.value as "years" | "months")}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-1.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value="years">y</option>
+                <option value="months">mo</option>
+              </select>
+            </div>
           </label>
           <label className="block col-span-2 sm:col-span-1">
             <span className="text-xs font-semibold text-slate-600">Height (cm)</span>
@@ -242,7 +253,7 @@ export default function BpCentiles() {
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="text-base font-bold text-slate-900">
             Centile lines ({sex === "male" ? "boy" : "girl"},{" "}
-            {basis === "height" ? `${height} cm` : `${age} y`}) — mmHg
+            {basis === "height" ? `${height} cm` : `${age} ${bpAgeUnit === "years" ? "y" : "mo"}`}) — mmHg
           </h3>
           <table className="mt-2 w-full min-w-[560px] text-sm">
             <thead>
