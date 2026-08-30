@@ -27,6 +27,11 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npx tsc -b && npx vite build --base=./
+      # Carry the current APK into the site so the direct download link
+      # (https://<pages>/Pocket-Med.apk) survives every deploy; the APK
+      # workflow then overwrites it with the freshly built one.
+      - name: Include latest APK for the direct download link
+        run: curl -fL -o dist/Pocket-Med.apk "https://github.com/${{ github.repository }}/releases/download/apk-latest/Pocket-Med.apk" || echo "no APK release yet"
       - name: Publish to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:

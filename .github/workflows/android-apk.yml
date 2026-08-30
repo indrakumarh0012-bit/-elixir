@@ -69,3 +69,17 @@ jobs:
           name: Pocket-Med Android app
           body: "Latest Pocket-Med Android APK. Download Pocket-Med.apk below, open it on the phone, and allow install from this source."
           files: web/android/app/build/outputs/apk/debug/Pocket-Med.apk
+
+      # Serve the APK from the site itself so the download link is a plain
+      # direct URL (no release redirect): https://<pages>/Pocket-Med.apk
+      - name: Publish APK to the site for a direct download link
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git checkout gh-pages
+          cp web/android/app/build/outputs/apk/debug/Pocket-Med.apk ./Pocket-Med.apk
+          git add Pocket-Med.apk
+          git commit -m "Update Pocket-Med.apk direct download" || echo "APK unchanged"
+          for i in 1 2 3; do git push origin gh-pages && break; git pull --rebase origin gh-pages; done
