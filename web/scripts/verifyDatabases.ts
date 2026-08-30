@@ -1125,6 +1125,58 @@ section("Pediatric DB integrity");
   console.log(`insulin: guideline spots OK; randomized patients checked: ${patients}`);
 }
 
+// ---------- ORS / dehydration (WHO plans) ----------
+{
+  console.log("\n=== ORS / dehydration suite ===");
+  const { orsPlan, zincDose } = await import("../src/lib/orsMath");
+
+  // Plan B: 75 ml/kg — 12 kg → 900 ml over 4 h.
+  const b = orsPlan("some", 12, 36);
+  if (b.plan !== "B" || !b.volumeText.includes("900 ml"))
+    fail(`ORS Plan B 12 kg: expected 900 ml, got "${b.volumeText}"`);
+  // Plan C infant (8 mo, 7 kg): 30 ml/kg = 210 over 1 h, then 70 ml/kg = 500 (490→round25=500... check) over 5 h.
+  const cInf = orsPlan("severe", 7, 8);
+  if (cInf.plan !== "C" || !cInf.volumeText.includes("1 hour") || !cInf.volumeText.includes("5 hours"))
+    fail(`ORS Plan C infant timing wrong: "${cInf.volumeText}"`);
+  if (!cInf.volumeText.includes("200 ml") && !cInf.volumeText.includes("225 ml"))
+    fail(`ORS Plan C infant first-phase volume off for 7 kg: "${cInf.volumeText}"`);
+  // Plan C older child (3 y, 14 kg): 420 ml over 30 min then 980→975 ml over 2.5 h.
+  const cOld = orsPlan("severe", 14, 36);
+  if (!cOld.volumeText.includes("30 minutes") || !cOld.volumeText.includes("2.5 hours"))
+    fail(`ORS Plan C older-child timing wrong: "${cOld.volumeText}"`);
+  if (!cOld.volumeText.includes("425 ml") && !cOld.volumeText.includes("420 ml"))
+    fail(`ORS Plan C 14 kg first phase off: "${cOld.volumeText}"`);
+  // Plan A per-stool band 2–10 y.
+  const a = orsPlan("none", 20, 60);
+  if (a.plan !== "A" || !a.volumeText.includes("100–200 ml"))
+    fail(`ORS Plan A 5 y: expected 100–200 ml/stool, got "${a.volumeText}"`);
+  // Zinc bands.
+  if (!zincDose(3).includes("10 mg")) fail("Zinc under 6 months should be 10 mg");
+  if (!zincDose(24).includes("20 mg")) fail("Zinc over 6 months should be 20 mg");
+  console.log("ORS: WHO plan A/B/C volumes, timings and zinc bands OK");
+}
+
+// ---------- CNS drug coverage (adult DB + pregnancy safety + ped DB) ----------
+{
+  console.log("\n=== CNS drug coverage suite ===");
+  const { PREGNANCY_SAFETY } = await import("../src/data/pregnancySafety");
+  const adultIds = new Set(drugsDB.map((d) => d.id));
+  const mustAdult = ["phenytoin", "levetiracetam", "lamotrigine", "carbamazepine", "oxcarbazepine", "ethosuximide", "lacosamide", "zonisamide", "clobazam", "phenobarbital", "diazepam", "lorazepam", "sertraline", "fluoxetine", "escitalopram", "venlafaxine", "duloxetine", "amitriptyline", "imipramine", "nortriptyline", "mirtazapine", "bupropion", "haloperidol", "risperidone", "olanzapine", "quetiapine", "aripiprazole", "clozapine", "lithium", "methylphenidate", "atomoxetine", "buspirone", "chlorpromazine"];
+  for (const id of mustAdult) if (!adultIds.has(id)) fail(`adult drug DB missing CNS drug: ${id}`);
+  const mustPreg = ["valproate-adult", "carbamazepine", "lamotrigine", "levetiracetam", "oxcarbazepine", "phenobarbital", "topiramate", "zonisamide", "lithium", "sertraline", "paroxetine", "duloxetine", "amitriptyline", "quetiapine", "clozapine", "diazepam", "methylphenidate"];
+  for (const id of mustPreg) if (!PREGNANCY_SAFETY[id]) fail(`pregnancy safety missing CNS drug: ${id}`);
+  if (PREGNANCY_SAFETY["valproate-adult"]?.risk !== "avoid") fail("valproate must be AVOID in pregnancy");
+  if (PREGNANCY_SAFETY["phenobarbital"]?.risk !== "avoid") fail("phenobarbital must be AVOID in pregnancy");
+  if (PREGNANCY_SAFETY["lamotrigine"]?.risk !== "safe") fail("lamotrigine should be preferred/safe in pregnancy");
+  const pedIds = new Set(pediatricDrugsDB.map((d) => d.id));
+  for (const id of ["levetiracetam", "valproate", "phenytoin", "phenobarbital", "carbamazepine", "clobazam", "midazolam", "diazepam", "oxcarbazepine", "lamotrigine", "ethosuximide"])
+    if (!pedIds.has(id)) fail(`pediatric DB missing antiseizure drug: ${id}`);
+  const lamo = pediatricDrugsDB.find((d) => d.id === "lamotrigine");
+  if (lamo && !lamo.cautionsAndContraindications.join(" ").includes("valproate"))
+    fail("ped lamotrigine must warn to halve dose with valproate");
+  console.log(`CNS coverage: adult ${mustAdult.length} ids, pregnancy ${mustPreg.length} ids, ped antiseizure set OK`);
+}
+
 // ---------- Result ----------
 console.log("\n========== VERIFY RESULT ==========");
 if (failures.length) {

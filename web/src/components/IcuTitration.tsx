@@ -30,10 +30,9 @@ const BAND_STYLES = {
   alert: "border-red-200 bg-red-50 text-red-950",
 } as const;
 
-type Topic = "drips" | "insulin" | "fluids" | "electrolytes";
+type Topic = "drips" | "fluids" | "electrolytes";
 const TOPICS: { id: Topic; label: string }[] = [
   { id: "drips", label: "Drips" },
-  { id: "insulin", label: "Insulin" },
   { id: "fluids", label: "Fluids" },
   { id: "electrolytes", label: "Electrolytes" },
 ];
@@ -146,22 +145,6 @@ export default function IcuTitration() {
               <strong>Renal:</strong> {drug.renalNote}
             </p>
           )}
-        </section>
-      )}
-
-      {topic === "insulin" && (
-        <section className={`mt-4 ${card}`}>
-          <h3 className="text-base font-bold text-slate-900">Insulin infusion (50 U regular in 50 ml NS = 1 U/ml)</h3>
-          <ul className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-slate-800">
-            <li><strong>DKA:</strong> 0.05–0.1 U/kg/h{w != null ? ` = ${(0.05 * w).toFixed(1)}–${(0.1 * w).toFixed(1)} U/h (${(0.05 * w).toFixed(1)}–${(0.1 * w).toFixed(1)} ml/h) for ${w} kg` : ""} — NO bolus in children.</li>
-            <li>Target glucose fall 50–70 mg/dL/h. Falling faster → halve the rate; slower after 1 h → increase by 25–50%.</li>
-            <li>Glucose &lt; 250: add dextrose (5–10%) to fluids; continue insulin until ketones clear and gap closes — do not stop early.</li>
-            <li><strong>K⁺ rules:</strong> K &lt; 3.3 → HOLD insulin, replace K first. 3.3–5.3 → add 20–40 mEq/L to fluids. &gt; 5.3 → no K until it falls and urine flows.</li>
-            <li><strong>Non-DKA ICU control:</strong> target 140–180 mg/dL; start 0.02–0.05 U/kg/h, check glucose 1-hourly until stable; avoid tight (&lt;110) targets.</li>
-            {child && (
-              <li className="font-semibold text-red-900">Pediatric cerebral edema: headache, falling sensorium or bradycardia during DKA treatment → 3% NaCl 3–5 ml/kg over 10–15 min, slow the fluids, call PICU.</li>
-            )}
-          </ul>
         </section>
       )}
 
@@ -299,9 +282,10 @@ export default function IcuTitration() {
       />
 
       <p className="mt-4 text-xs leading-relaxed text-slate-600">
-        Ref: ISCCM/SSC, ISPAD DKA, standard ICU references. Institutional
-        protocols and senior review prevail — especially for 3% NaCl, insulin
-        and potassium.
+        Insulin infusion, DKA rates and titration are in the Insulin tool
+        (Infusion mode). Ref: ISCCM/SSC, standard ICU references. Institutional
+        protocols and senior review prevail — especially for 3% NaCl and
+        potassium.
       </p>
     </div>
   );

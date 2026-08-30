@@ -669,4 +669,23 @@ export const EXTENDED_DRUGS: DrugRecord[] = [
     standardDose: "30 mg/kg IV over 20 min then 8–10 mg/kg/h with atropine" },
   { id: "n-acetylcysteine-antidote", name: "N-acetylcysteine IV (paracetamol antidote)", class: "Antidote",
     standardDose: "150 mg/kg over 1 h → 50 mg/kg over 4 h → 100 mg/kg over 16 h (21-h regimen)" },
+
+  // ============ CNS / PSYCHIATRY — remaining agents ============
+  { id: "ethosuximide", name: "Ethosuximide (Zarontin)", class: "Antiepileptic (absence)",
+    standardDose: "250 mg BID → 20–30 mg/kg/day (absence seizures only — gives NO generalized tonic-clonic cover)" },
+  { id: "diazepam", name: "Diazepam (Valium / Calmpose)", class: "Benzodiazepine",
+    standardDose: "Anxiety: 2–5 mg BID–TID; status epilepticus: 0.2 mg/kg (max 10 mg) slow IV; alcohol withdrawal per CIWA",
+    geriatricGuidelines: [{ type: "Beers", ruleDescription: "Long-acting benzodiazepine — falls, delirium, dependence.", recommendation: "Avoid in older adults" }] },
+  { id: "imipramine", name: "Imipramine (Depsonil)", class: "Tricyclic antidepressant",
+    standardDose: "25–75 mg at night → max 200 mg; enuresis (≥ 6 y): 25–50 mg HS short courses (anticholinergic; lethal in overdose — small quantities)" },
+  { id: "nortriptyline", name: "Nortriptyline (Sensival)", class: "Tricyclic antidepressant",
+    standardDose: "25 mg HS → 75–150 mg (least orthostatic TCA)" },
+  { id: "chlorpromazine", name: "Chlorpromazine (Largactil)", class: "Typical antipsychotic (phenothiazine)",
+    standardDose: "25–100 mg TID (sedating; hypotension; intractable hiccups: 25–50 mg TID)" },
+  { id: "trifluoperazine", name: "Trifluoperazine (Espazine)", class: "Typical antipsychotic",
+    standardDose: "5–20 mg/day divided (more EPS, less sedation)" },
+  { id: "methylphenidate", name: "Methylphenidate (Inspiral / Addwize)", class: "Stimulant (ADHD)",
+    standardDose: "Children ≥ 6 y: 5 mg OD–BID → 0.3–1 mg/kg/day (max 60 mg); ER once each morning; monitor appetite, growth, BP/HR" },
+  { id: "atomoxetine", name: "Atomoxetine (Attentrol / Axepta)", class: "Non-stimulant ADHD (NRI)",
+    standardDose: "0.5 mg/kg/day × 1 wk → 1.2 mg/kg/day (max 100 mg); suicidal-ideation warning, LFTs if jaundice/symptoms" },
 ];
