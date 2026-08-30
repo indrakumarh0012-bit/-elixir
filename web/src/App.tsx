@@ -2,11 +2,12 @@ import { useState } from "react";
 import BpCentiles from "./components/BpCentiles";
 import CreatinineClearance from "./components/CreatinineClearance";
 import GrowthCalculator from "./components/GrowthCalculator";
+import IcuTitration from "./components/IcuTitration";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 
-type AppTab = "pedDose" | "growth" | "bp" | "crCl" | "regimen" | "ob";
+type AppTab = "pedDose" | "growth" | "bp" | "crCl" | "regimen" | "ob" | "icu";
 
 export default function App() {
   const [tab, setTab] = useState<AppTab>("pedDose");
@@ -54,6 +55,13 @@ export default function App() {
       idle: "bg-rose-50 text-rose-800 hover:bg-rose-100",
     },
     {
+      id: "icu",
+      label: "ICU Titration",
+      shortLabel: "ICU",
+      active: "bg-orange-600 text-white shadow-sm",
+      idle: "bg-orange-50 text-orange-800 hover:bg-orange-100",
+    },
+    {
       id: "ob",
       label: "OB / EDD",
       shortLabel: "OB",
@@ -94,6 +102,7 @@ export default function App() {
         {tab === "bp" && <BpCentiles />}
         {tab === "crCl" && <CreatinineClearance />}
         {tab === "regimen" && <RegimenAnalyzerUI />}
+        {tab === "icu" && <IcuTitration />}
         {tab === "ob" && <ObCalculator />}
       </main>
 

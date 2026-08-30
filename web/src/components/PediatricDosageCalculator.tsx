@@ -8,6 +8,7 @@ import {
   type PediatricDrug,
 } from "../data/pediatricDrugs";
 import { calculatePediatricDose } from "../lib/pediatricDoseMath";
+import { pedMaintenanceFluids, restrictedFluidPlans } from "../lib/icuMath";
 import {
   creatinineUpperLimitForAge,
   gfrStage,
@@ -358,6 +359,26 @@ export default function PediatricDosageCalculator() {
           </div>
 
 
+
+          {weightNum != null && Number.isFinite(weightNum) && weightNum > 0 && (() => {
+            const mf = pedMaintenanceFluids(weightNum);
+            if (!mf) return null;
+            return (
+              <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+                <p className="font-bold">
+                  IV fluids for {weightNum} kg — Holliday–Segar: {mf.daily} ml/day
+                  ({mf.hourly} ml/h)
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {restrictedFluidPlans(mf.daily).map((pl) => (
+                    <li key={pl.label}>
+                      <strong>{pl.label}:</strong> {pl.dailyMl} ml/day — {pl.note}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
           {scr != null && crCutoff && (
             <div
               className={`mb-4 rounded-lg border p-3 text-sm ${

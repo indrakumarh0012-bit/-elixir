@@ -534,6 +534,62 @@ section("Specialty drugs + alternatives");
   console.log("specialty interactions, lithium flag, alternatives-on-stop all OK");
 }
 
+// ---------- 5g. ICU titration math ----------
+section("ICU titrations and corrections");
+{
+  const m = await import("../src/lib/icuMath");
+  const byId = Object.fromEntries(m.VASOACTIVES.map((d) => [d.id, d]));
+  const cases: [string, number, number, number][] = [
+    ["noradrenaline", 0.1, 70, 5.25],
+    ["noradrenaline", 0.05, 10, 0.38],
+    ["adrenaline", 0.1, 15, 1.13],
+    ["dopamine", 10, 10, 1.5],
+    ["dobutamine", 5, 60, 3.6],
+    ["vasopressin", 0.02, 0, 3],
+    ["ntg", 1, 50, 6],
+    ["milrinone", 0.5, 40, 6],
+    ["fentanyl-inf", 2, 20, 4],
+    ["midazolam-inf", 0.1, 30, 3],
+  ];
+  let ok = 0;
+  for (const [id, dose, wt, want] of cases) {
+    const got = m.infusionRateMlPerHour(byId[id], dose, wt);
+    if (got != null && Math.abs(got - want) < 0.02) ok++;
+    else fail(`infusion ${id} ${dose} @ ${wt}kg: got ${got} want ${want}`);
+  }
+  console.log(`infusion rate cases: ${ok}/${cases.length}`);
+  for (const d of m.VASOACTIVES) {
+    if (!(d.doseMin < d.doseMax) || !(d.concPerMl > 0) || !d.dilution || !d.titration)
+      fail(`vasoactive record incomplete: ${d.id}`);
+  }
+
+  const hs: [number, number, number][] = [[8, 800, 32], [10, 1000, 40], [15, 1250, 50], [23, 1560, 63], [40, 1900, 80], [70, 2400, 110]];
+  let fok = 0;
+  for (const [wt, daily, hourly] of hs) {
+    const r = m.pedMaintenanceFluids(wt);
+    if (r && r.daily === daily && Math.abs(r.hourly - hourly) < 0.5) fok++;
+    else fail(`Holliday-Segar ${wt}kg: got ${JSON.stringify(r)} want ${daily}/${hourly}`);
+  }
+  const plans = m.restrictedFluidPlans(1560);
+  if (plans[0].dailyMl !== 1040) fail(`HF restriction of 1560 should be 1040, got ${plans[0].dailyMl}`);
+  if (!/urine output/.test(String(plans[1].dailyMl))) fail("renal plan must add urine output");
+  console.log(`fluid cases: ${fok}/${hs.length} + restriction checks`);
+
+  const el: [string, number | null, number][] = [
+    ["NaDef", m.sodiumDeficit(70, 120, 128, "male"), 336],
+    ["NaDefF", m.sodiumDeficit(60, 118, 123, "female"), 150],
+    ["FWD", m.freeWaterDeficit(60, 160, "female"), 4.3],
+    ["corrNa", m.correctedNa(130, 600), 138],
+    ["corrCa", m.correctedCa(7, 2), 8.6],
+  ];
+  for (const [name, got, want] of el) {
+    if (got == null || Math.abs(got - want) > 0.05) fail(`${name}: got ${got} want ${want}`);
+  }
+  if (m.sodiumDeficit(70, 140, 130) !== null) fail("Na deficit with target<current should be null");
+  if (m.freeWaterDeficit(70, 140) !== null) fail("FWD with normal Na should be null");
+  console.log("electrolyte formulas: deficit, free water, corrected Na/Ca all exact");
+}
+
 // ---------- 6. Pediatric DB integrity ----------
 section("Pediatric DB integrity");
 {
