@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import HomeScreen from "./components/HomeScreen";
 import SavedScreen from "./components/SavedScreen";
 import SideMenu, { type MenuTarget } from "./components/SideMenu";
+import BmiCalculator from "./components/BmiCalculator";
 import BpCentiles from "./components/BpCentiles";
 import CreatinineClearance from "./components/CreatinineClearance";
 import GrowthCalculator from "./components/GrowthCalculator";
@@ -64,6 +65,13 @@ export default function App() {
       label: "Ped-BP",
       shortLabel: "Ped-BP",
       active: "bg-cyan-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
+    {
+      id: "bmi",
+      label: "BMI",
+      shortLabel: "BMI",
+      active: "bg-emerald-900 text-white shadow-sm",
       idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
@@ -149,6 +157,7 @@ export default function App() {
         {tab === "pedDose" && <PediatricDosageCalculator />}
         {tab === "growth" && <GrowthCalculator />}
         {tab === "bp" && <BpCentiles />}
+        {tab === "bmi" && <BmiCalculator />}
         {tab === "crCl" && <CreatinineClearance />}
         {tab === "regimen" && <RegimenAnalyzerUI />}
         {tab === "icu" && <IcuTitration />}

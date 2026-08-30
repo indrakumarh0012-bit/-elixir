@@ -125,7 +125,7 @@ export default function PediatricDosageCalculator() {
       </header>
 
       <section className="mb-5 rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">1. Patient parameters</h2>
+        <h3 className="mb-4 text-base font-bold text-slate-900">1. Patient parameters</h3>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Age</label>
@@ -217,7 +217,7 @@ export default function PediatricDosageCalculator() {
       </section>
 
       <section className="mb-5 rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">2. Drug selection</h2>
+        <h3 className="mb-4 text-base font-bold text-slate-900">2. Drug selection</h3>
         <div className="relative">
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Search
@@ -289,9 +289,9 @@ export default function PediatricDosageCalculator() {
 
       {selectedDrug && (
         <section className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">
+          <h3 className="mb-4 text-base font-bold text-slate-900">
             3. Dosage calculation — {selectedDrug.name}
-          </h2>
+          </h3>
 
           <p className="mb-3 rounded-lg bg-[var(--accent-soft)] p-3 text-sm text-slate-700">
             <strong>Guideline dose:</strong> {selectedDrug.recommendedDose}
@@ -565,9 +565,9 @@ export default function PediatricDosageCalculator() {
           )}
 
           <div className="space-y-4 border-t border-slate-200 pt-4">
-            <h3 className="text-base font-semibold text-slate-900">4. Clinical guidelines</h3>
+            <h3 className="text-base font-bold text-slate-900">4. Clinical guidelines</h3>
             <div>
-              <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-800">
+              <h4 className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-950">
                 <span aria-hidden>⚠</span> Cautions / contraindications
               </h4>
               <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
@@ -577,7 +577,7 @@ export default function PediatricDosageCalculator() {
               </ul>
             </div>
             <div>
-              <h4 className="mb-1 text-sm font-bold text-[var(--accent)]">
+              <h4 className="mb-1 text-sm font-bold text-slate-900">
                 Administration instructions
               </h4>
               <p className="text-sm text-slate-700">{selectedDrug.instructions}</p>

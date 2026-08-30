@@ -14,6 +14,13 @@ import {
   searchPregnancyConditions,
 } from "../src/data/pregnancyConditionDosing";
 import { assessPotassium } from "../src/lib/icuMath";
+import { bmiValue, classifyBmiIndian, feetInchesToCm, waistFlag } from "../src/lib/bmiMath";
+import { egfrCkdEpi2021, gfrCategory } from "../src/lib/creatinineClearanceMath";
+import { assessBp, bpCentiles } from "../src/lib/bpMath";
+import {
+  WUEHL_AGE_SBP_DAY_BOYS, WUEHL_AGE_SBP_DAY_GIRLS,
+  WUEHL_AGE_DBP_NIGHT_BOYS, WUEHL_AGE_SBP_24H_GIRLS,
+} from "../src/data/wuehlBpAgeReference";
 
 let failures: string[] = [];
 const fail = (msg: string) => failures.push(msg);
@@ -790,6 +797,53 @@ section("Pediatric DB integrity");
   if (!renal || !renal.actions.some((x) => x.includes("Renal impairment")))
     fail("K renal-impairment note missing");
   console.log("potassium bands verified across 9 levels + pediatric + renal variants");
+}
+
+// ---------- BMI (Indian cutoffs), eGFR, age-based BP ----------
+{
+  console.log("\n=== BMI / eGFR / age-based BP ===");
+  // BMI boundaries per Indian consensus
+  if (classifyBmiIndian(22.9).band !== "normal") fail("BMI 22.9 should be normal");
+  if (!classifyBmiIndian(23.0).label.includes("Overweight")) fail("BMI 23.0 should be overweight (Indian)");
+  if (!classifyBmiIndian(25.0).label.includes("Obese")) fail("BMI 25.0 should be obese (Indian)");
+  if (classifyBmiIndian(18.4).band === "normal") fail("BMI 18.4 should be underweight");
+  const b = bmiValue(70, 170);
+  if (b == null || Math.abs(b - 24.2) > 0.05) fail(`BMI 70kg/170cm expected 24.2, got ${b}`);
+  const cm = feetInchesToCm(5, 7);
+  if (Math.abs(cm - 170.2) > 0.2) fail(`5'7" expected ~170.2 cm, got ${cm}`);
+  if (!waistFlag(90, "male").abnormal || waistFlag(89, "male").abnormal) fail("male waist cutoff should be 90");
+  if (!waistFlag(80, "female").abnormal || waistFlag(79, "female").abnormal) fail("female waist cutoff should be 80");
+
+  // eGFR CKD-EPI 2021 properties + spot value
+  const e1 = egfrCkdEpi2021("Male", 50, 1.0);
+  const e2 = egfrCkdEpi2021("Male", 50, 2.0);
+  const e3 = egfrCkdEpi2021("Female", 50, 1.0);
+  if (e1 == null || e2 == null || e3 == null) fail("eGFR returned null for valid inputs");
+  else {
+    if (!(e2 < e1)) fail("eGFR must fall as creatinine rises");
+    if (!(e3 < e1)) fail("eGFR female at same SCr 1.0 should be lower than male");
+    if (e1 < 80 || e1 > 100) fail(`eGFR M/50y/1.0 expected ~85-95, got ${e1}`);
+  }
+  if (egfrCkdEpi2021("Male", 15, 1.0) !== null) fail("eGFR should be adults-only (null < 18y)");
+  if (gfrCategory(50).stage !== "G3a" || gfrCategory(10).stage !== "G5") fail("GFR staging wrong");
+
+  // Age-based Wuehl tables: monotonic ages, plausible medians, rising with age
+  for (const [name, t] of [
+    ["SBP_DAY_BOYS", WUEHL_AGE_SBP_DAY_BOYS], ["SBP_DAY_GIRLS", WUEHL_AGE_SBP_DAY_GIRLS],
+    ["DBP_NIGHT_BOYS", WUEHL_AGE_DBP_NIGHT_BOYS], ["SBP_24H_GIRLS", WUEHL_AGE_SBP_24H_GIRLS],
+  ] as const) {
+    for (let i = 1; i < t.length; i++)
+      if (t[i][0] <= t[i - 1][0]) fail(`${name}: ages not increasing at row ${i}`);
+    if (t[0][2] <= 50 || t[0][2] > 140) fail(`${name}: implausible first median ${t[0][2]}`);
+  }
+  const c10 = bpCentiles("male", "day", "sbp", 10, "age");
+  if (!(c10.p50 > 105 && c10.p50 < 122)) fail(`10y boy day SBP p50 implausible: ${c10.p50}`);
+  if (!(c10.p95 > c10.p50 && c10.p50 > c10.p5)) fail("age-based centiles not ordered");
+  const hi = assessBp("male", "day", "sbp", 10, 150, "age");
+  if (!hi || hi.band !== "alert") fail("150 SBP at 10y should be hypertensive alert");
+  const lo = assessBp("male", "day", "sbp", 10, 78, "age");
+  if (!lo || lo.band !== "alert") fail("78 SBP at 10y should flag low/alert");
+  console.log("BMI boundaries, eGFR behaviour, and age-based BP tables verified");
 }
 
 // ---------- Result ----------

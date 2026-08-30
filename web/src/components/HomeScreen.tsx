@@ -5,6 +5,7 @@ const TOOLS: { id: MenuTarget; title: string }[] = [
   { id: "pedDose", title: "Ped Dose Calculator" },
   { id: "growth", title: "Growth Charts" },
   { id: "bp", title: "Ped-BP" },
+  { id: "bmi", title: "BMI" },
   { id: "crCl", title: "Creatinine Clearance" },
   { id: "regimen", title: "Polypharm" },
   { id: "icu", title: "ICU Titration" },
@@ -15,8 +16,7 @@ const TOOLS: { id: MenuTarget; title: string }[] = [
 export default function HomeScreen({ onOpen }: { onOpen: (t: MenuTarget) => void }) {
   return (
     <div className="mx-auto max-w-4xl px-3 py-6 md:px-6">
-      <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Pocket-Med" className="h-16 w-auto" />
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {TOOLS.map((t) => (
           <button
             key={t.id}
