@@ -46,8 +46,8 @@ export default function CreatinineClearance() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-3 py-6 md:px-6">
-      <h1 className="text-2xl font-bold text-teal-950">Creatinine Clearance</h1>
+    <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
+      <h2 className="text-xl font-bold tracking-tight text-slate-900">Creatinine Clearance</h2>
 
       <div className="mt-6 space-y-4 rounded-xl border border-[var(--line)] bg-white p-5 shadow-sm">
         <fieldset>
@@ -161,9 +161,9 @@ export default function CreatinineClearance() {
 
       {result.valid && (
         <div className="mt-6 rounded-xl border border-[var(--line)] bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-[var(--ink)]">
+          <h3 className="text-base font-bold text-slate-900">
             Renal dose adjustment lookup
-          </h2>
+          </h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
             Search antibiotics and renally cleared drugs. Adjustments use your calculated
             CrCl of <strong>{result.crCl} mL/min</strong>.

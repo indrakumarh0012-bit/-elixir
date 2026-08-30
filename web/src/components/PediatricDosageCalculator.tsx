@@ -117,11 +117,11 @@ export default function PediatricDosageCalculator() {
       : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-3xl px-3 py-5 md:px-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-blue-950">
-          Pediatric Dosage Calculator
-        </h1>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900">
+          Ped Dose Calculator
+        </h2>
       </header>
 
       <section className="mb-5 rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">

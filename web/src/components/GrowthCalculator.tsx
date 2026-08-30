@@ -141,9 +141,7 @@ export default function GrowthCalculator() {
 
   return (
     <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
-      <h2 className="text-xl font-bold text-violet-950">
-        Growth — height &amp; weight for age
-      </h2>
+      <h2 className="text-xl font-bold tracking-tight text-slate-900">Growth Charts</h2>
 
       <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">

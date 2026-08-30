@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { searchDrugs } from "../clinical/clinicalData";
+import { estimateCrCl } from "../lib/creatinineClearanceMath";
+import { buildRenalDoseReport } from "../lib/renalDoseAdjust";
 import { PREGNANCY_SAFETY } from "../data/pregnancySafety";
 import {
   PREGNANCY_CONDITION_DOSING,
@@ -27,6 +29,8 @@ export default function ObCalculator() {
   const [drugQuery, setDrugQuery] = useState("");
   const [manualWeeks, setManualWeeks] = useState<number | "">("");
   const [scr, setScr] = useState<number | "">("");
+  const [momAge, setMomAge] = useState<number | "">("");
+  const [momWeight, setMomWeight] = useState<number | "">("");
   const [condQuery, setCondQuery] = useState("");
   const [selectedConds, setSelectedConds] = useState<string[]>([]);
 
@@ -35,6 +39,22 @@ export default function ObCalculator() {
     if (q.length < 2) return [];
     return searchDrugs(q).slice(0, 8);
   }, [drugQuery]);
+
+  // Cockcroft-Gault (female) from the values entered above the drug search.
+  // Not validated in pregnancy (true GFR runs ~50% higher) — used only to
+  // pick the renal dose band, which errs on the safe side.
+  const momCrCl = useMemo(() => {
+    if (momAge === "" || momWeight === "" || scr === "" || Number(scr) <= 0) return null;
+    const r = estimateCrCl({
+      sex: "Female",
+      ageYears: Number(momAge),
+      weightKg: Number(momWeight),
+      heightCm: null,
+      creatinine: Number(scr),
+      unit: "mg/dL",
+    });
+    return r.valid ? r.crCl : null;
+  }, [momAge, momWeight, scr]);
 
   const result = useMemo(() => {
     if (!dateStr) return null;
@@ -49,10 +69,8 @@ export default function ObCalculator() {
   const active = METHODS.find((m) => m.id === method)!;
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-5 md:px-6">
-      <h2 className="text-xl font-bold text-fuchsia-950">
-        Gestational Age &amp; EDD
-      </h2>
+    <div className="mx-auto max-w-4xl px-3 py-5 md:px-6">
+      <h2 className="text-xl font-bold tracking-tight text-slate-900">OB / EDD</h2>
 
       <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
@@ -180,9 +198,36 @@ export default function ObCalculator() {
 
       {/* Pregnancy drug safety */}
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-bold text-fuchsia-800">
+        <h3 className="text-base font-bold text-slate-900">
           Pregnancy drug check
         </h3>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700">Age (years)</span>
+            <input type="number" inputMode="numeric" min={12} max={60} data-adv="2" value={momAge}
+              onChange={(e) => { const v = e.target.value; setMomAge(v === "" ? "" : Number(v)); }}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-500" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700">Weight (kg)</span>
+            <input type="number" inputMode="decimal" min={30} step="0.5" value={momWeight}
+              onChange={(e) => { const v = e.target.value; setMomWeight(v === "" ? "" : Number(v)); }}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-500" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700">Creatinine (mg/dL)</span>
+            <input type="number" inputMode="decimal" min={0} step="0.1" value={scr}
+              onChange={(e) => { const v = e.target.value; setScr(v === "" ? "" : Number(v)); }}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-500" />
+          </label>
+        </div>
+        {momCrCl != null && (
+          <p className="mt-2 rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-800">
+            Estimated CrCl (Cockcroft-Gault, female): {momCrCl} mL/min — drug
+            doses below adjust to this. True pregnancy GFR runs ~50% higher, so
+            this errs on the cautious side.
+          </p>
+        )}
         <input
           value={drugQuery}
           onChange={(e) => setDrugQuery(e.target.value)}
@@ -241,6 +286,26 @@ export default function ObCalculator() {
                       prescribing in pregnancy.
                     </p>
                   )}
+                  {momCrCl != null && risk !== "avoid" && (() => {
+                    const report = buildRenalDoseReport(d, momCrCl);
+                    return (
+                      <div className="mt-2 rounded-md border border-slate-300 bg-white/80 p-2 text-slate-900">
+                        <p className="text-xs font-bold uppercase tracking-wide">
+                          Dose at CrCl {momCrCl} mL/min
+                        </p>
+                        {report.recommendations.length > 0 ? (
+                          report.recommendations.map((r, i) => (
+                            <p key={i} className="mt-1">{r}</p>
+                          ))
+                        ) : (
+                          <p className="mt-1">
+                            Standard dose: {d.standardDose} — no renal
+                            adjustment data held for this drug.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })}
@@ -271,7 +336,7 @@ export default function ObCalculator() {
               : "border-emerald-200 bg-emerald-50 text-emerald-950";
         return (
           <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-base font-bold text-fuchsia-950">
+            <h3 className="text-base font-bold text-slate-900">
               Dosing by comorbidity
             </h3>
             <div className="mt-3 grid grid-cols-2 gap-3">
