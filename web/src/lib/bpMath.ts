@@ -131,8 +131,7 @@ export function assessBp(
   let classification: string;
   let band: BpAssessment["band"];
   if (pct < 5) {
-    classification =
-      "LOW (below 5th centile) — hypotension; in dengue/sepsis this means decompensated shock";
+    classification = "LOW (below 5th centile) — hypotension";
     band = "alert";
   } else if (pct < 10) {
     classification = "Low-normal (5th–10th centile) — watch trend, check pulse pressure";
