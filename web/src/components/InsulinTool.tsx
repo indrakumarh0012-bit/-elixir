@@ -242,6 +242,9 @@ export default function InsulinTool() {
                 <li>{setting === "child" ? "Children: 0.05–0.1 U/kg/h, NO IV bolus (cerebral edema risk); start insulin only AFTER 1 h of fluids." : "Adults: 0.1 U/kg/h (an initial 0.1 U/kg bolus is optional)."}</li>
                 <li>Target fall 50–70 mg/dL/h; add 5–10% dextrose to fluids once glucose &lt; 250 and CONTINUE insulin until ketones clear and the gap closes.</li>
                 <li>K⁺ rules: &lt; 3.3 hold insulin and replace K first; 3.3–5.3 add 20–40 mEq/L to fluids; &gt; 5.3 no K until it falls with urine output.</li>
+                {setting === "child" && (
+                  <li className="font-semibold text-red-900">Cerebral edema: headache, falling sensorium or bradycardia during DKA treatment → 3% NaCl 3–5 ml/kg over 10–15 min, slow the fluids, call PICU.</li>
+                )}
               </ul>
             </section>
           )}
