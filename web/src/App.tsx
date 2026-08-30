@@ -127,19 +127,36 @@ export default function App() {
     if (showAuth) setMenuOpen(false);
   }, [showAuth]);
 
+  // Animated logo splash on every open: logo beats once at the centre, the
+  // overlay fades, and the sign-in page (or Home when signed in) is beneath.
+  const [splash, setSplash] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setSplash(false), 1700);
+    return () => clearTimeout(t);
+  }, []);
+  const splashEl = splash ? (
+    <div className="splash" aria-hidden>
+      <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+    </div>
+  ) : null;
+
   if (showAuth) {
     return (
-      <AuthScreen
-        onGuest={() => {
-          sessionStorage.setItem("POCKETMED_GUEST", "1");
-          setGuest(true);
-        }}
-      />
+      <>
+        {splashEl}
+        <AuthScreen
+          onGuest={() => {
+            sessionStorage.setItem("POCKETMED_GUEST", "1");
+            setGuest(true);
+          }}
+        />
+      </>
     );
   }
 
   return (
     <div className="flex min-h-screen flex-col">
+      {splashEl}
       <header className="app-header border-b border-[var(--line)] bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 md:px-6">
           <div className="flex shrink-0 items-center gap-2">
