@@ -6,6 +6,7 @@ import {
   waistFlag,
 } from "../lib/bmiMath";
 import SaveButton from "./SaveButton";
+import BmiGauge from "./BmiGauge";
 
 const BAND_STYLES = {
   normal: "border-emerald-200 bg-emerald-50 text-emerald-950",
@@ -124,6 +125,8 @@ export default function BmiCalculator() {
           <p className="mt-1 text-sm">{cls.advice}</p>
         </div>
       )}
+
+      {bmi != null && <BmiGauge bmi={bmi} />}
 
       {pediatric && (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">

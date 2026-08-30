@@ -131,7 +131,7 @@ export default function App() {
   // overlay fades, and the sign-in page (or Home when signed in) is beneath.
   const [splash, setSplash] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => setSplash(false), 1700);
+    const t = setTimeout(() => setSplash(false), 2800);
     return () => clearTimeout(t);
   }, []);
   const splashEl = splash ? (
