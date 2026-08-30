@@ -194,7 +194,7 @@ export default function ObCalculator() {
           <p className="mt-1 text-3xl font-bold text-slate-900">
             {result.gaLabel}
           </p>
-          <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-md bg-white/80 px-3 py-2">
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 EDD
@@ -220,7 +220,26 @@ export default function ObCalculator() {
                 {formatDate(result.conceptionDate)}
               </dd>
             </div>
+            {method !== "lmp" && (
+              <div className="rounded-md border border-slate-300 bg-white px-3 py-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  {method === "scan" ? "LMP by scan (calculated)" : "Working LMP (calculated)"}
+                </dt>
+                <dd className="text-lg font-bold text-slate-900">
+                  {formatDate(result.derivedLmp)}
+                </dd>
+              </div>
+            )}
           </dl>
+          {method === "scan" && (
+            <p className="mt-2 text-xs text-slate-600">
+              LMP unknown? Use this calculated LMP ({formatDate(result.derivedLmp)}) as
+              the working LMP for records and gestational charting — it is the
+              scan date minus the scan GA, the standard back-calculation when
+              the period date is not known (ACOG CO 700: ultrasound then serves
+              as the official dating).
+            </p>
+          )}
           <p className="mt-3 text-xs text-slate-700">{result.note}</p>
           <p className="mt-1 text-xs text-slate-500">
             A first-trimester ultrasound CRL that differs from menstrual dating

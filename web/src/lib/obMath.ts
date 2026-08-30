@@ -20,6 +20,8 @@ export type ObResult = {
   gaLabel: string;
   edd: Date;
   conceptionDate: Date;
+  /** Nominal (working) LMP back-calculated from the dating anchor. */
+  derivedLmp: Date;
   trimester: 1 | 2 | 3;
   postTerm: boolean;
   preViable: boolean;
@@ -100,6 +102,7 @@ export function calculateGestation(
     gaLabel: `${gaWeeks} weeks ${gaDays} day${gaDays === 1 ? "" : "s"}`,
     edd,
     conceptionDate: conception,
+    derivedLmp: nominalLmp,
     trimester,
     postTerm: gaWeeks >= 42,
     preViable: gaWeeks < 24,
