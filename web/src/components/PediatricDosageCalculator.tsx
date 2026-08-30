@@ -289,7 +289,86 @@ export default function PediatricDosageCalculator() {
         )}
       </section>
 
-      {selectedDrug && (
+      {selectedDrug?.id === "ors" && (
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900">
+            3. Rehydration plan — ORS (WHO)
+          </h3>
+          <p className="mt-1 text-xs text-slate-600">
+            Uses the weight and age from section 1. Pick the assessed level of
+            dehydration:
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(
+              [
+                { id: "none", label: "No dehydration" },
+                { id: "some", label: "Some dehydration" },
+                { id: "severe", label: "Severe dehydration" },
+              ] as { id: DehydrationLevel; label: string }[]
+            ).map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setDehydration(d.id)}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  dehydration === d.id
+                    ? d.id === "severe"
+                      ? "bg-red-800 text-white shadow-sm"
+                      : "bg-slate-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          {dehydration === "" ? (
+            <p className="mt-3 text-xs text-slate-600">
+              Assess: some dehydration = 2 of restless/irritable, sunken eyes,
+              thirsty/drinks eagerly, skin pinch goes back slowly. Severe = 2 of
+              lethargic/unconscious, sunken eyes, drinking poorly or unable,
+              skin pinch goes back very slowly (≥ 2 s).
+            </p>
+          ) : (
+            (() => {
+              const plan = orsPlan(
+                dehydration,
+                weight === "" || Number(weight) <= 0 ? null : Number(weight),
+                ageMonths,
+              );
+              return (
+                <div className="mt-3">
+                  <p
+                    className={`rounded-lg border p-3 text-sm font-bold ${
+                      plan.plan === "C"
+                        ? "border-red-200 bg-red-50 text-red-950"
+                        : plan.plan === "B"
+                          ? "border-amber-200 bg-amber-50 text-amber-950"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-950"
+                    }`}
+                  >
+                    {plan.title}
+                    <span className="mt-1 block text-base">{plan.volumeText}</span>
+                  </p>
+                  <ul className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-slate-800">
+                    {plan.steps.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                    <li className="font-semibold">{plan.zinc}</li>
+                  </ul>
+                  <p className="mt-2 text-xs text-slate-600">
+                    Low-osmolarity ORS (WHO): 1 sachet in EXACTLY 1 litre of
+                    clean water; discard after 24 hours. Ref: WHO Pocket Book
+                    2013 / IMNCI / IAP acute gastroenteritis guidelines.
+                  </p>
+                </div>
+              );
+            })()
+          )}
+        </section>
+      )}
+
+      {selectedDrug && selectedDrug.id !== "ors" && (
         <section className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-base font-bold text-slate-900">
             3. Dosage calculation — {selectedDrug.name}
@@ -596,82 +675,6 @@ export default function PediatricDosageCalculator() {
         </section>
       )}
 
-      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-bold text-slate-900">
-          ORS &amp; dehydration (WHO plans)
-        </h3>
-        <p className="mt-1 text-xs text-slate-600">
-          Uses the weight and age entered above. Pick the assessed level of
-          dehydration:
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(
-            [
-              { id: "none", label: "No dehydration" },
-              { id: "some", label: "Some dehydration" },
-              { id: "severe", label: "Severe dehydration" },
-            ] as { id: DehydrationLevel; label: string }[]
-          ).map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setDehydration(d.id)}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                dehydration === d.id
-                  ? d.id === "severe"
-                    ? "bg-red-800 text-white shadow-sm"
-                    : "bg-slate-900 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-        {dehydration === "" ? (
-          <p className="mt-3 text-xs text-slate-600">
-            Assess: some dehydration = 2 of restless/irritable, sunken eyes,
-            thirsty/drinks eagerly, skin pinch goes back slowly. Severe = 2 of
-            lethargic/unconscious, sunken eyes, drinking poorly or unable,
-            skin pinch goes back very slowly (≥ 2 s).
-          </p>
-        ) : (
-          (() => {
-            const plan = orsPlan(
-              dehydration,
-              weight === "" || Number(weight) <= 0 ? null : Number(weight),
-              ageMonths,
-            );
-            return (
-              <div className="mt-3">
-                <p
-                  className={`rounded-lg border p-3 text-sm font-bold ${
-                    plan.plan === "C"
-                      ? "border-red-200 bg-red-50 text-red-950"
-                      : plan.plan === "B"
-                        ? "border-amber-200 bg-amber-50 text-amber-950"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-950"
-                  }`}
-                >
-                  {plan.title}
-                  <span className="mt-1 block text-base">{plan.volumeText}</span>
-                </p>
-                <ul className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-slate-800">
-                  {plan.steps.map((s, i) => (
-                    <li key={i}>{s}</li>
-                  ))}
-                  <li className="font-semibold">{plan.zinc}</li>
-                </ul>
-                <p className="mt-2 text-xs text-slate-600">
-                  Low-osmolarity ORS (WHO): 1 sachet in EXACTLY 1 litre of clean
-                  water; discard after 24 hours. Ref: WHO Pocket Book 2013 /
-                  IMNCI / IAP acute gastroenteritis guidelines.
-                </p>
-              </div>
-            );
-          })()
-        )}
-      </section>
     </div>
   );
 }
