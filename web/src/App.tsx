@@ -7,6 +7,7 @@ import BpCentiles from "./components/BpCentiles";
 import CreatinineClearance from "./components/CreatinineClearance";
 import GrowthCalculator from "./components/GrowthCalculator";
 import IcuTitration from "./components/IcuTitration";
+import InsulinTool from "./components/InsulinTool";
 import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
@@ -105,6 +106,13 @@ export default function App() {
       idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
+      id: "insulin",
+      label: "Insulin",
+      shortLabel: "Insulin",
+      active: "bg-indigo-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
+    {
       id: "ob",
       label: "OB / EDD",
       shortLabel: "OB",
@@ -186,6 +194,7 @@ export default function App() {
         {tab === "crCl" && <CreatinineClearance />}
         {tab === "regimen" && <RegimenAnalyzerUI />}
         {tab === "icu" && <IcuTitration />}
+        {tab === "insulin" && <InsulinTool />}
         {tab === "ob" && <ObCalculator />}
         {tab === "report" && <ReportIssue />}
       </main>
