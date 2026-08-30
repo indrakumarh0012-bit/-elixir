@@ -57,7 +57,7 @@ section("Renal band coverage sweep");
   const renalDrugs = searchRenalDrugs("");
   // searchRenalDrugs caps at 40 — go direct:
   const all = drugsDB.filter((d) => d.renalAdjustmentLimit != null || d.renalNote);
-  if (drugsDB.length < 265) fail(`drugsDB only ${drugsDB.length} (< 265)`);
+  if (drugsDB.length < 500) fail(`drugsDB only ${drugsDB.length} (< 500)`);
   let checked = 0;
   for (const drug of all) {
     for (let crCl = 0; crCl <= 130; crCl += 5) {

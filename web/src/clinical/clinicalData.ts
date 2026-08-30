@@ -1,4 +1,5 @@
 import type { DrugRecord, PracticalInteraction } from "./types";
+import { EXTENDED_DRUGS } from "./drugsExtended";
 
 export const KNOWN_CONDITIONS = [
   "Heart Failure",
@@ -69,13 +70,33 @@ export const CONDITIONS_CATALOG: string[] = [
   "Anemia", "Iron Deficiency Anemia", "B12 Deficiency", "Thrombocytopenia",
   "Chronic Lymphocytic Leukemia", "Multiple Myeloma", "MGUS",
   "Solid Malignancy (on treatment)", "Breast Cancer (past)", "Colon Cancer (past)",
+  // Cancers — solid organ
+  "Breast Cancer", "Lung Cancer (NSCLC)", "Lung Cancer (Small Cell)",
+  "Colorectal Cancer", "Gastric Cancer", "Esophageal Cancer", "Pancreatic Cancer",
+  "Hepatocellular Carcinoma", "Gallbladder Cancer", "Cholangiocarcinoma",
+  "Cervical Cancer", "Ovarian Cancer", "Endometrial Cancer",
+  "Head & Neck Cancer", "Oral Cavity Cancer", "Nasopharyngeal Cancer",
+  "Thyroid Cancer", "Renal Cell Carcinoma", "Bladder Cancer", "Testicular Cancer",
+  "Brain Tumor / Glioma", "Melanoma", "Skin Cancer (BCC / SCC)",
+  "Soft Tissue Sarcoma", "Osteosarcoma", "Ewing Sarcoma", "GIST",
+  "Neuroendocrine Tumor / Carcinoid",
+  // Cancers — hematologic & pediatric
+  "Acute Lymphoblastic Leukemia (ALL)", "Acute Myeloid Leukemia (AML)",
+  "Acute Promyelocytic Leukemia (APL)", "Chronic Myeloid Leukemia (CML)",
+  "Hodgkin Lymphoma", "Non-Hodgkin Lymphoma", "Myelodysplastic Syndrome",
+  "Myelofibrosis", "Polycythemia Vera", "Essential Thrombocythemia",
+  "Neuroblastoma", "Wilms Tumor", "Retinoblastoma",
+  // Cancer treatment states
+  "Cancer — on Chemotherapy", "Cancer — on Immunotherapy",
+  "Cancer — on Hormonal Therapy", "Cancer — Palliative Care",
+  "Post Bone Marrow Transplant", "Chemotherapy-induced Neutropenia",
   // Infection / immune / skin
   "Infection / Sepsis", "Recent Pneumonia", "Cellulitis", "Recent Herpes Zoster",
   "Post-herpetic Neuralgia", "Chronic Osteomyelitis", "HIV", "Immunosuppressed State",
   "Chronic Pruritus", "Psoriasis", "Chronic Leg Ulcer",
 ];
 
-export const drugsDB: DrugRecord[] = [
+const BASE_DRUGS: DrugRecord[] = [
   // —— Analgesics / antipyretics / NSAIDs ——
   {
     id: "paracetamol",
@@ -2420,6 +2441,8 @@ export const drugsDB: DrugRecord[] = [
     renalNote: "No renal adjustment. Bone loss monitoring as with letrozole.",
   },
 ];
+
+export const drugsDB: DrugRecord[] = [...BASE_DRUGS, ...EXTENDED_DRUGS];
 
 export const interactionsDB: PracticalInteraction[] = [
   {
