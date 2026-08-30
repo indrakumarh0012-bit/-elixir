@@ -76,3 +76,24 @@ body {
 .tool-stage {
   background: linear-gradient(165deg, rgba(15, 23, 42, 0.03), rgba(30, 58, 138, 0.05));
 }
+
+/* Faded per-tool tint: inside a tool page, boxes that were white or
+   near-white take a soft wash of that tool's colour. These rules are
+   unlayered, so they win over the layered Tailwind utilities without
+   needing !important. Falls back to white where no tint is set (home). */
+.tool-pedDose  { --tint: #eff6ff; --tint-soft: #dbeafe; --tint-border: #bfdbfe; }
+.tool-growth   { --tint: #f5f3ff; --tint-soft: #ede9fe; --tint-border: #ddd6fe; }
+.tool-bp       { --tint: #ecfeff; --tint-soft: #cffafe; --tint-border: #a5f3fc; }
+.tool-bmi      { --tint: #ecfdf5; --tint-soft: #d1fae5; --tint-border: #a7f3d0; }
+.tool-crCl     { --tint: #f0fdfa; --tint-soft: #ccfbf1; --tint-border: #99f6e4; }
+.tool-regimen  { --tint: #fff1f2; --tint-soft: #ffe4e6; --tint-border: #fecdd3; }
+.tool-icu      { --tint: #fff7ed; --tint-soft: #ffedd5; --tint-border: #fed7aa; }
+.tool-insulin  { --tint: #eef2ff; --tint-soft: #e0e7ff; --tint-border: #c7d2fe; }
+.tool-ob       { --tint: #fdf4ff; --tint-soft: #fae8ff; --tint-border: #f5d0fe; }
+.tool-saved    { --tint: #f8fafc; --tint-soft: #f1f5f9; --tint-border: #e2e8f0; }
+.tool-report   { --tint: #fffbeb; --tint-soft: #fef3c7; --tint-border: #fde68a; }
+
+.tool-stage .bg-white { background-color: var(--tint, #ffffff); }
+.tool-stage [class*="bg-white/"] { background-color: color-mix(in srgb, var(--tint, #ffffff) 85%, #ffffff); }
+.tool-stage .bg-slate-50 { background-color: var(--tint-soft, #f8fafc); }
+.tool-stage .border-slate-200 { border-color: var(--tint-border, #e2e8f0); }
