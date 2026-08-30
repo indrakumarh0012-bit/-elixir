@@ -1,4 +1,7 @@
 import { useState } from "react";
+import HomeScreen from "./components/HomeScreen";
+import SavedScreen from "./components/SavedScreen";
+import SideMenu, { type MenuTarget } from "./components/SideMenu";
 import BpCentiles from "./components/BpCentiles";
 import CreatinineClearance from "./components/CreatinineClearance";
 import GrowthCalculator from "./components/GrowthCalculator";
@@ -7,10 +10,11 @@ import PediatricDosageCalculator from "./components/PediatricDosageCalculator";
 import ObCalculator from "./components/ObCalculator";
 import RegimenAnalyzerUI from "./components/RegimenAnalyzerUI";
 
-type AppTab = "pedDose" | "growth" | "bp" | "crCl" | "regimen" | "ob" | "icu";
+type AppTab = MenuTarget;
 
 export default function App() {
-  const [tab, setTab] = useState<AppTab>("pedDose");
+  const [tab, setTab] = useState<AppTab>("home");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const tabs: {
     id: AppTab;
@@ -74,9 +78,23 @@ export default function App() {
     <div className="flex min-h-screen flex-col">
       <header className="app-header border-b border-[var(--line)] bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
-          <p className="brand-text text-lg font-extrabold tracking-tight">
-            Smart-Elixir
-          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Open menu"
+              onClick={() => setMenuOpen(true)}
+              className="rounded-lg px-2 py-1.5 text-xl leading-none text-slate-700 hover:bg-slate-100"
+            >
+              ☰
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("home")}
+              className="brand-text text-lg font-extrabold tracking-tight"
+            >
+              Pocket-Med
+            </button>
+          </div>
           <nav className="flex flex-wrap gap-2" aria-label="Main navigation">
             {tabs.map((t) => (
               <button
@@ -96,7 +114,11 @@ export default function App() {
         <div className="brand-ribbon" />
       </header>
 
-      <main className="flex-1">
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(t) => setTab(t)} />
+
+      <main className={`tool-stage tool-${tab} flex-1`}>
+        {tab === "home" && <HomeScreen onOpen={(t) => setTab(t)} />}
+        {tab === "saved" && <SavedScreen />}
         {tab === "pedDose" && <PediatricDosageCalculator />}
         {tab === "growth" && <GrowthCalculator />}
         {tab === "bp" && <BpCentiles />}
@@ -107,7 +129,7 @@ export default function App() {
       </main>
 
       <footer className="border-t border-[var(--line)] bg-white px-3 py-4 text-center text-xs leading-relaxed text-[var(--muted)] md:px-6">
-        Smart-Elixir is a clinical decision-support tool for licensed healthcare
+        Pocket-Med is a clinical decision-support tool for licensed healthcare
         professionals. It does not replace clinical judgment, diagnosis, or
         emergency care. Verify all doses and plans before prescribing.
       </footer>

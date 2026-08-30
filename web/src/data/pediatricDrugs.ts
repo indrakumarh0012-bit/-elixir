@@ -1,5 +1,5 @@
 /**
- * Pediatric drug schema + India (Bengaluru private OPD) common formulations.
+ * Pediatric drug schema with common Indian formulations and brands.
  * Decision support only — verify brand label, Cloherty (neonates), Harriet Lane / Nelson / IAP.
  */
 
@@ -25,7 +25,7 @@ export interface DrugFormulation {
   strengthMg: number;
   /** Denominator ml (5 for mg/5 ml; 1 for mg/ml drops) */
   strengthVolumeMl: number;
-  /** Brands commonly stocked in Indian / Bengaluru private setups */
+  /** Commonly available Indian brands */
   commonBrandsIndia: string[];
   packSizes?: string[];
   /** Dropper capacity if applicable */
@@ -196,7 +196,7 @@ export const pediatricDrugsDB: PediatricDrug[] = [
     defaultDosesPerDay: 2,
     route: ["PO"],
     cautionsAndContraindications: ["Cephalosporin allergy", "Diarrhea"],
-    instructions: "Give with food. Common Bengaluru OPD 3rd-gen oral choice.",
+    instructions: "Give with food.",
     referenceSource: "Harriet Lane / IAP",
     renalAdjustment: true,
     formulations: [
@@ -451,7 +451,7 @@ export const pediatricDrugsDB: PediatricDrug[] = [
       "Many OTC cold combos not recommended <4–6 years",
       "Sedation / overdose risk with stacking antihistamines",
     ],
-    instructions: "Very common in Bengaluru private pharmacies — prefer single-agent when possible.",
+    instructions: "Prefer single-agent therapy when possible.",
     referenceSource: "IAP caution on irrational combinations / brand label",
     renalAdjustment: false,
     formulations: [
@@ -709,7 +709,7 @@ export const pediatricDrugsDB: PediatricDrug[] = [
       "Separate from calcium, milk, tetracyclines, quinolones",
     ],
     instructions:
-      "Very common Bengaluru / Indian OPD brand. Prefer elemental-iron based dosing from bottle label. Shake well. After food if GI upset.",
+      "Dose by elemental iron from the bottle label. Shake well. After food if GI upset.",
     referenceSource: "Tonoferon label + Harriet Lane iron dosing",
     renalAdjustment: false,
     formulations: [
@@ -1114,7 +1114,7 @@ export const pediatricDrugsDB: PediatricDrug[] = [
     defaultDosesPerDay: 3,
     route: ["PO"],
     cautionsAndContraindications: ["QT / cardiac risk — avoid prolonged use"],
-    instructions: "Before meals. Short course only. Very common Bengaluru OPD syrup.",
+    instructions: "Before meals. Short course only.",
     referenceSource: "Regional practice + cardiac cautions",
     renalAdjustment: false,
     formulations: [

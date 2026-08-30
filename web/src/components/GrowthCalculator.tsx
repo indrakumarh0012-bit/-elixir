@@ -11,6 +11,7 @@ import {
   type GrowthResult,
   type Sex,
 } from "../lib/growthMath";
+import SaveButton from "./SaveButton";
 
 const BAND_STYLES: Record<GrowthResult["band"], string> = {
   normal: "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -256,6 +257,20 @@ export default function GrowthCalculator() {
           />
         </div>
       )}
+
+      <SaveButton
+        tool="Growth"
+        build={() => {
+          if (!wfa && !hfa) return null;
+          const parts: string[] = [];
+          if (wfa) parts.push(`Weight ${weight} kg: ${centileBandCompact(wfa.percentile)} centile, ${zBandCompact(wfa.z)} SD — ${wfa.classification}`);
+          if (hfa) parts.push(`Height ${height} cm: ${centileBandCompact(hfa.percentile)} centile, ${zBandCompact(hfa.z)} SD — ${hfa.classification}`);
+          return {
+            title: `Growth — ${sex === "male" ? "boy" : "girl"} ${ageLabel}`,
+            detail: parts.join("\n"),
+          };
+        }}
+      />
 
       <p className="mt-4 text-xs leading-relaxed text-slate-500">
         Z-scores use the WHO LMS method on completed months, with WHO's

@@ -7,6 +7,7 @@ import {
   type DrugFormulation,
   type PediatricDrug,
 } from "../data/pediatricDrugs";
+import SaveButton from "./SaveButton";
 import { calculatePediatricDose } from "../lib/pediatricDoseMath";
 import { pedMaintenanceFluids, restrictedFluidPlans } from "../lib/icuMath";
 import {
@@ -98,7 +99,9 @@ export default function PediatricDosageCalculator() {
       : null;
   const egfrInfo = egfr != null ? gfrStage(egfr) : null;
   const renalAction =
-    egfr != null && selectedDrug ? pedRenalAction(selectedDrug.id, egfr) : null;
+    egfr != null && selectedDrug
+      ? pedRenalAction(selectedDrug.id, egfr, selectedDrug.renalAdjustment)
+      : null;
   const renalWarn =
     Boolean(selectedDrug?.renalAdjustment) && crElevated && egfr == null;
   const weightInvalid =
@@ -312,7 +315,7 @@ export default function PediatricDosageCalculator() {
 
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              India / Bengaluru common formulation (syrup · powder · drops · IV)
+              Formulation (syrup · powder · drops · IV)
             </label>
             <select
               value={selectedFormulation?.strengthLabel ?? ""}
@@ -339,7 +342,7 @@ export default function PediatricDosageCalculator() {
                   <strong>Strength:</strong> {selectedFormulation.strengthLabel}
                 </p>
                 <p>
-                  <strong>Common brands (India / private Bengaluru):</strong>{" "}
+                  <strong>Common Indian brands:</strong>{" "}
                   {selectedFormulation.commonBrandsIndia.join(", ")}
                 </p>
                 {selectedFormulation.packSizes && (
@@ -379,6 +382,17 @@ export default function PediatricDosageCalculator() {
               </div>
             );
           })()}
+          <SaveButton
+            tool="Ped Dose"
+            build={() => {
+              if (!selectedDrug || !(perDose > 0)) return null;
+              return {
+                title: `${selectedDrug.name} — ${weightNum ?? "?"} kg`,
+                detail: `${perDose.toFixed(1)} mg/dose (${frequency}), daily ${cappedDaily.toFixed(0)} mg${volumeMl != null ? `, ${volumeMl.toFixed(2)} ml/dose` : ""}${egfr != null ? ` | eGFR ${egfr}` : ""}`,
+              };
+            }}
+          />
+
           {scr != null && crCutoff && (
             <div
               className={`mb-4 rounded-lg border p-3 text-sm ${
@@ -406,22 +420,10 @@ export default function PediatricDosageCalculator() {
                     <strong>eGFR (bedside Schwartz):</strong> {egfr} mL/min/1.73 m²
                     — {egfrInfo.label}
                   </p>
-                  {renalAction ? (
-                    <p className="mt-1">
-                      <strong>{selectedDrug.name} at this eGFR:</strong>{" "}
-                      {renalAction}
-                    </p>
-                  ) : selectedDrug.renalAdjustment ? (
-                    <p className="mt-1">
-                      <strong>{selectedDrug.name}:</strong> renally cleared —
-                      adjust per Harriet Lane / nephrology if eGFR &lt; 50.
-                    </p>
-                  ) : (
-                    <p className="mt-1">
-                      <strong>{selectedDrug.name}:</strong> no routine renal dose
-                      adjustment.
-                    </p>
-                  )}
+                  <p className="mt-1">
+                    <strong>{selectedDrug.name} at this eGFR:</strong>{" "}
+                    {renalAction}
+                  </p>
                 </div>
               ) : (
                 crElevated && (
@@ -542,6 +544,9 @@ export default function PediatricDosageCalculator() {
                       )}
                     </div>
                   )}
+                  <p className="mt-2 text-[11px] text-emerald-800/70">
+                    Ref: {selectedDrug.referenceSource}
+                  </p>
                 </div>
               )}
 

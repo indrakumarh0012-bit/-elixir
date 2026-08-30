@@ -6,6 +6,7 @@ import {
   formatDate,
   type ObMethod,
 } from "../lib/obMath";
+import SaveButton from "./SaveButton";
 
 const METHODS: { id: ObMethod; label: string; dateLabel: string }[] = [
   { id: "lmp", label: "LMP", dateLabel: "First day of last period" },
@@ -153,6 +154,23 @@ export default function ObCalculator() {
           &gt; 45 weeks). Check the date and method.
         </p>
       )}
+
+      {result && (
+        <SaveButton
+          tool="OB"
+          build={() =>
+            result
+              ? {
+                  title: `GA ${result.gaLabel}`,
+                  detail: `EDD ${formatDate(result.edd)} · trimester ${result.trimester} · ${result.note}`,
+                }
+              : null
+          }
+        />
+      )}
+      <p className="mt-2 text-xs text-slate-500">
+        Ref: Naegele rule with cycle correction · ACOG/FOGSI dating practice.
+      </p>
 
       {/* Pregnancy drug safety */}
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
