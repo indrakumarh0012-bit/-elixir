@@ -12,19 +12,37 @@ import ToolIcon, { TOOL_TEXT } from "./ToolIcon";
 export type MenuTarget =
   | "home" | "pedDose" | "growth" | "bp" | "bmi" | "crCl" | "regimen" | "icu" | "insulin" | "ob" | "saved" | "report";
 
-const LINKS: { id: MenuTarget; label: string }[] = [
-  { id: "home", label: "Home" },
-  { id: "pedDose", label: "Ped Dose Calculator" },
-  { id: "growth", label: "Growth Charts" },
-  { id: "bp", label: "Ped-BP" },
-  { id: "bmi", label: "BMI" },
-  { id: "crCl", label: "Creatinine Clearance" },
-  { id: "regimen", label: "Polypharm" },
-  { id: "icu", label: "ICU Titration" },
-  { id: "insulin", label: "Insulin" },
-  { id: "ob", label: "OB / EDD" },
-  { id: "saved", label: "Saved Calculations" },
-  { id: "report", label: "Report an Issue" },
+const LINK_GROUPS: {
+  heading: string | null;
+  links: { id: MenuTarget; label: string }[];
+}[] = [
+  { heading: null, links: [{ id: "home", label: "Home" }] },
+  {
+    heading: "Medicine",
+    links: [
+      { id: "crCl", label: "Creatinine Clearance" },
+      { id: "insulin", label: "Insulin" },
+      { id: "icu", label: "ICU Titration" },
+      { id: "regimen", label: "Polypharm" },
+      { id: "bmi", label: "BMI" },
+    ],
+  },
+  {
+    heading: "Pediatrics",
+    links: [
+      { id: "pedDose", label: "Ped Dose Calculator" },
+      { id: "growth", label: "Growth Charts" },
+      { id: "bp", label: "Ped-BP" },
+    ],
+  },
+  { heading: "OBG", links: [{ id: "ob", label: "OB / EDD" }] },
+  {
+    heading: null,
+    links: [
+      { id: "saved", label: "Saved Calculations" },
+      { id: "report", label: "Report an Issue" },
+    ],
+  },
 ];
 
 const inputCls =
@@ -79,18 +97,27 @@ export default function SideMenu({
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Pocket-Med" className="h-10 w-auto" />
         </div>
         <nav className="flex-1 p-2">
-          {LINKS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => {
-                onNavigate(l.id);
-                onClose();
-              }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-900 hover:bg-slate-100"
-            >
-              <ToolIcon id={l.id} className={`h-4.5 w-4.5 ${TOOL_TEXT[l.id]}`} /> {l.label}
-            </button>
+          {LINK_GROUPS.map((group, gi) => (
+            <div key={group.heading ?? `group-${gi}`} className="mb-1 last:mb-0">
+              {group.heading && (
+                <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                  {group.heading}
+                </p>
+              )}
+              {group.links.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => {
+                    onNavigate(l.id);
+                    onClose();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                >
+                  <ToolIcon id={l.id} className={`h-4.5 w-4.5 ${TOOL_TEXT[l.id]}`} /> {l.label}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="border-t border-slate-200 p-4">

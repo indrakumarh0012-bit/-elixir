@@ -49,6 +49,7 @@ export default function App() {
     return () => document.removeEventListener("input", onInput);
   }, []);
 
+  // Ordered to match the home-screen categories: Medicine, Pediatrics, OBG.
   const tabs: {
     id: AppTab;
     label: string;
@@ -56,6 +57,41 @@ export default function App() {
     active: string;
     idle: string;
   }[] = [
+    {
+      id: "crCl",
+      label: "Creatinine Clearance",
+      shortLabel: "CrCl",
+      active: "bg-teal-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
+    {
+      id: "insulin",
+      label: "Insulin",
+      shortLabel: "Insulin",
+      active: "bg-indigo-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
+    {
+      id: "icu",
+      label: "ICU Titration",
+      shortLabel: "ICU",
+      active: "bg-orange-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
+    {
+      id: "regimen",
+      label: "Polypharm",
+      shortLabel: "Polypharm",
+      active: "bg-rose-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
+    {
+      id: "bmi",
+      label: "BMI",
+      shortLabel: "BMI",
+      active: "bg-emerald-900 text-white shadow-sm",
+      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
+    },
     {
       id: "pedDose",
       label: "Ped Dose Calculator",
@@ -75,41 +111,6 @@ export default function App() {
       label: "Ped-BP",
       shortLabel: "Ped-BP",
       active: "bg-cyan-900 text-white shadow-sm",
-      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
-    },
-    {
-      id: "bmi",
-      label: "BMI",
-      shortLabel: "BMI",
-      active: "bg-emerald-900 text-white shadow-sm",
-      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
-    },
-    {
-      id: "crCl",
-      label: "Creatinine Clearance",
-      shortLabel: "CrCl",
-      active: "bg-teal-900 text-white shadow-sm",
-      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
-    },
-    {
-      id: "regimen",
-      label: "Polypharm",
-      shortLabel: "Polypharm",
-      active: "bg-rose-900 text-white shadow-sm",
-      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
-    },
-    {
-      id: "icu",
-      label: "ICU Titration",
-      shortLabel: "ICU",
-      active: "bg-orange-900 text-white shadow-sm",
-      idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
-    },
-    {
-      id: "insulin",
-      label: "Insulin",
-      shortLabel: "Insulin",
-      active: "bg-indigo-900 text-white shadow-sm",
       idle: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     },
     {
