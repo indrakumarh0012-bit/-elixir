@@ -7,8 +7,8 @@ android {
         applicationId "com.pocketmed.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "2.0"
+        versionCode 3
+        versionName "2.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +16,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            // The CI workflow provides the keystore and passphrase; the
+            // passphrase is an install-identity convention, not a secret
+            // (a public repository cannot hold confidential key material).
+            storeFile file(System.getenv('POCKETMED_KEYSTORE') ?: '../keystore/pocketmed-release.keystore')
+            storePassword System.getenv('POCKETMED_KEYSTORE_PASS') ?: 'pocketmed'
+            keyAlias 'pocketmed'
+            keyPassword System.getenv('POCKETMED_KEYSTORE_PASS') ?: 'pocketmed'
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
