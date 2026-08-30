@@ -62,8 +62,10 @@ export default function ObWheel({
               opacity={i + 1 === trimester ? 1 : 0.45}
             />
           ))}
-          {/* term window 37–40 wk */}
-          <path d={arc(259, 280, 102)} fill="none" stroke="#0d9488" strokeWidth="7" />
+          {/* green progress arc — sweeps from week 0 to today's exact GA */}
+          {clamped > 1 && (
+            <path d={arc(0, clamped, 102)} fill="none" stroke="#16a34a" strokeWidth="7" strokeLinecap="round" />
+          )}
           {/* week ticks */}
           {Array.from({ length: 40 }, (_, i) => i + 1).map((w) => {
             const day = w * 7;
@@ -109,8 +111,8 @@ export default function ObWheel({
         </div>
       </div>
       <p className="mt-2 text-xs text-slate-600">
-        Teal arc = term window (37–40 wk). Needle marks today's gestational
-        age on the entered dates.
+        The green arc grows with the pregnancy — it runs from week 0 to
+        today's exact gestational age, ending at the needle. Term = 37–40 wk.
       </p>
     </div>
   );
