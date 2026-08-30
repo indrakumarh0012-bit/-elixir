@@ -9,6 +9,7 @@ const TOOLS: { id: MenuTarget; title: string }[] = [
   { id: "crCl", title: "Creatinine Clearance" },
   { id: "regimen", title: "Polypharm" },
   { id: "icu", title: "ICU Titration" },
+  { id: "insulin", title: "Insulin" },
   { id: "ob", title: "OB / EDD" },
   { id: "report", title: "Report an Issue" },
 ];

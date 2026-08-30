@@ -10,7 +10,7 @@ import {
 import ToolIcon from "./ToolIcon";
 
 export type MenuTarget =
-  | "home" | "pedDose" | "growth" | "bp" | "bmi" | "crCl" | "regimen" | "icu" | "ob" | "saved" | "report";
+  | "home" | "pedDose" | "growth" | "bp" | "bmi" | "crCl" | "regimen" | "icu" | "insulin" | "ob" | "saved" | "report";
 
 const LINKS: { id: MenuTarget; label: string }[] = [
   { id: "home", label: "Home" },
@@ -21,6 +21,7 @@ const LINKS: { id: MenuTarget; label: string }[] = [
   { id: "crCl", label: "Creatinine Clearance" },
   { id: "regimen", label: "Polypharm" },
   { id: "icu", label: "ICU Titration" },
+  { id: "insulin", label: "Insulin" },
   { id: "ob", label: "OB / EDD" },
   { id: "saved", label: "Saved Calculations" },
   { id: "report", label: "Report an Issue" },

@@ -1039,6 +1039,77 @@ section("Pediatric DB integrity");
   if (audits < 100) fail(`audit count ${audits} < 100`);
 }
 
+// ---------- Insulin: guideline spots + 100-patient randomized sweep ----------
+{
+  console.log("\n=== Insulin dosing suite ===");
+  const {
+    basalTitration, bolusTitration, carbRatio, correctionDose, correctionFactor,
+    dkaRate, regimenSplit, tddPerKgRange, vriiiRate,
+  } = await import("../src/lib/insulinMath");
+  const REGS = ["basal", "basalPlus", "basalBolus", "premix", "splitMixed"] as const;
+
+  // Guideline spot checks
+  if (correctionFactor(50, true) !== 36) fail("1800 rule: TDD 50 should give CF 36");
+  if (correctionFactor(50, false) !== 30) fail("1500 rule: TDD 50 should give CF 30");
+  if (carbRatio(50, true) !== 10) fail("500 rule: TDD 50 should give ICR 10 g/U");
+  if (basalTitration(65)!.band !== "alert" || !basalTitration(65)!.text.includes("Reduce"))
+    fail("FBS 65 must advise dose reduction");
+  if (basalTitration(110)!.band !== "normal") fail("FBS 110 must be at target");
+  if (!basalTitration(150)!.text.includes("2 units")) fail("FBS 150 must advise +2 U q3d");
+  if (!basalTitration(220)!.text.includes("4 units")) fail("FBS 220 must advise +4 U q3d");
+  if (bolusTitration(160)!.band !== "normal") fail("PPBS 160 must be at target (<180)");
+  if (bolusTitration(210)!.band !== "caution") fail("PPBS 210 must prompt bolus increase");
+  if (vriiiRate(60).rate !== 0 || !vriiiRate(60).text.includes("STOP")) fail("GRBS 60 must stop infusion");
+  if (vriiiRate(160).rate !== 1) fail("GRBS 160 should run 1 U/h");
+  if (vriiiRate(320).rate !== 4) fail("GRBS 320 should run 4 U/h");
+  const d12 = dkaRate(12, "child")!;
+  if (Math.abs(d12.low - 0.6) > 0.01 || Math.abs(d12.high - 1.2) > 0.01)
+    fail("12 kg child DKA should be 0.6-1.2 U/h");
+  if (Math.abs(dkaRate(70, "adult")!.low - 7) > 0.01) fail("70 kg adult DKA should be 7 U/h");
+  if (correctionDose(140, 50) !== null) fail("no correction below target 150");
+  const cd = correctionDose(300, 50);
+  if (cd == null || Math.abs(cd - 4) > 0.6) fail(`GRBS 300 at TDD 50 correction ~4 U, got ${cd}`);
+
+  // 100 randomized patients per run: structural safety invariants
+  let insState = Number(process.env.VERIFY_SEED ?? 42) * 7919 + 17;
+  const irng = () => (insState = (insState * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+  let patients = 0;
+  for (let i = 0; i < 100; i++) {
+    const child = irng() > 0.6;
+    const setting = child ? ("child" as const) : ("adult" as const);
+    const dm = child || irng() > 0.5 ? ("t1" as const) : ("t2" as const);
+    const reg = REGS[Math.floor(irng() * REGS.length)];
+    const wkg = child ? 8 + Math.round(irng() * 42) : 40 + Math.round(irng() * 60);
+    const range = tddPerKgRange(setting, dm, reg);
+    if (!(range.low < range.high) || range.low < 0.05 || range.high > 2.5)
+      fail(`patient ${i}: implausible TDD/kg range`);
+    const tddU = Math.max(1, Math.round(((range.low + range.high) / 2) * wkg));
+    if (child && (tddU < 0.3 * wkg || tddU > 1.2 * wkg))
+      fail(`patient ${i}: child TDD ${tddU} outside 0.3-1.2 U/kg for ${wkg} kg`);
+    const split = regimenSplit(reg, tddU, setting);
+    const sum = split.reduce((a, x) => a + x.units, 0);
+    if (split.some((x) => x.units < 1)) fail(`patient ${i}: split has < 1 U entry`);
+    if (Math.abs(sum - tddU) > split.length) fail(`patient ${i}: split sum ${sum} far from TDD ${tddU}`);
+    const cf1 = correctionFactor(tddU)!;
+    if (!(cf1 > 0)) fail(`patient ${i}: bad CF`);
+    const fbsV = 45 + Math.round(irng() * 300);
+    const t = basalTitration(fbsV)!;
+    if (fbsV < 70 && !/reduce/i.test(t.text)) fail(`patient ${i}: hypo FBS must reduce`);
+    if (fbsV > 130 && /reduce/i.test(t.text)) fail(`patient ${i}: high FBS must not reduce`);
+    const g1 = 80 + Math.round(irng() * 350);
+    const g2 = g1 + 60;
+    const r1 = vriiiRate(g1).rate ?? 0;
+    const r2 = vriiiRate(g2).rate ?? 0;
+    if (r2 < r1) fail(`patient ${i}: VRIII not monotonic (${g1}->${r1}, ${g2}->${r2})`);
+    if (r1 > 6 || r2 > 6) fail(`patient ${i}: VRIII rate above scale max`);
+    const cdX = correctionDose(200 + Math.round(irng() * 300), tddU);
+    if (cdX != null && (cdX < 0 || cdX > 0.4 * tddU))
+      fail(`patient ${i}: correction dose ${cdX} out of safe proportion to TDD ${tddU}`);
+    patients++;
+  }
+  console.log(`insulin: guideline spots OK; randomized patients checked: ${patients}`);
+}
+
 // ---------- Result ----------
 console.log("\n========== VERIFY RESULT ==========");
 if (failures.length) {
