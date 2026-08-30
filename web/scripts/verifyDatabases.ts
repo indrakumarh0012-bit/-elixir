@@ -604,7 +604,7 @@ section("ICU titrations and corrections");
 }
 
 // ---------- 5h. Ped-BP low flags, pulse pressure, pregnancy safety ----------
-section("Ped-BP dengue flags + pregnancy safety");
+section("Ped-BP low-BP flags + pregnancy safety");
 {
   const bp = await import("../src/lib/bpMath");
   const low = bp.assessBp("male", "day", "sbp", 140, 85); // well below 5th

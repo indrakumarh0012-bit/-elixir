@@ -228,7 +228,7 @@ export default function BpCentiles() {
                 }`}>
                 <strong>{label} pulse pressure: {pp} mmHg</strong>{" "}
                 {pp <= 20
-                  ? "— ≤ 20 mmHg: SHOCK by IAP/WHO dengue criteria even if systolic looks normal. Act now."
+                  ? "— ≤ 20 mmHg: narrow pulse pressure — assess perfusion urgently; this can mean shock even when systolic looks normal."
                   : "— adequate (> 20 mmHg)."}
               </div>
             ))}
@@ -289,8 +289,7 @@ export default function BpCentiles() {
           </table>
           <p className="mt-2 text-xs text-slate-500">
             ≥ 95th centile = ambulatory hypertension; 90th–95th = elevated.
-            BELOW the 5th centile = hypotension — in dengue (IAP/WHO), systolic
-            below the 5th centile OR pulse pressure ≤ 20 mmHg defines shock.
+            BELOW the 5th centile = hypotension.
             Reference: Wühl et al., J Hypertens 2002 (height-normalized ABPM).
           </p>
         </div>
