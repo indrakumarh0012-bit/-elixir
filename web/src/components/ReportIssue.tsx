@@ -108,7 +108,10 @@ export default function ReportIssue() {
         {error && <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>}
         {status === "sent" && (
           <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-            Report sent — thank you. It will be reviewed and cross-checked against the references.
+            Report sent — thank you. It will be reviewed and cross-checked
+            against the references. (The very first report ever sent triggers a
+            one-time activation email to the maintainer's inbox; once
+            activated, every report is delivered.)
           </p>
         )}
         {status === "failed" && (
