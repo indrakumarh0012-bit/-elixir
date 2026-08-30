@@ -9,7 +9,9 @@ import {
   searchPregnancyConditions,
 } from "../data/pregnancyConditionDosing";
 import {
+  acogRedatingThresholdDays,
   calculateGestation,
+  diffDays,
   formatDate,
   type ObMethod,
 } from "../lib/obMath";
@@ -17,6 +19,7 @@ import SaveButton from "./SaveButton";
 
 const METHODS: { id: ObMethod; label: string; dateLabel: string }[] = [
   { id: "lmp", label: "LMP", dateLabel: "First day of last period" },
+  { id: "scan", label: "Scan (USG)", dateLabel: "Scan date" },
   { id: "ivf5", label: "IVF — day-5 transfer", dateLabel: "Embryo transfer date" },
   { id: "ivf3", label: "IVF — day-3 transfer", dateLabel: "Embryo transfer date" },
   { id: "ovulation", label: "Ovulation / IUI", dateLabel: "Ovulation / IUI date" },
@@ -26,6 +29,9 @@ export default function ObCalculator() {
   const [method, setMethod] = useState<ObMethod>("lmp");
   const [dateStr, setDateStr] = useState("");
   const [cycle, setCycle] = useState<number | "">(28);
+  const [scanWeeks, setScanWeeks] = useState<number | "">("");
+  const [scanDays, setScanDays] = useState<number | "">(0);
+  const [lmpCompare, setLmpCompare] = useState("");
   const [drugQuery, setDrugQuery] = useState("");
   const [manualWeeks, setManualWeeks] = useState<number | "">("");
   const [scr, setScr] = useState<number | "">("");
@@ -56,15 +62,37 @@ export default function ObCalculator() {
     return r.valid ? r.crCl : null;
   }, [momAge, momWeight, scr]);
 
+  const gaAtScan =
+    scanWeeks === "" ? null : Number(scanWeeks) * 7 + (scanDays === "" ? 0 : Number(scanDays));
+
   const result = useMemo(() => {
     if (!dateStr) return null;
+    if (method === "scan" && gaAtScan == null) return null;
     return calculateGestation(
       method,
       new Date(dateStr + "T00:00:00"),
       new Date(),
       cycle === "" ? 28 : Number(cycle),
+      gaAtScan ?? undefined,
     );
-  }, [method, dateStr, cycle]);
+  }, [method, dateStr, cycle, gaAtScan]);
+
+  // LMP vs scan comparison per ACOG CO 700 when both are entered.
+  const redating = useMemo(() => {
+    if (method !== "scan" || !result || !lmpCompare || gaAtScan == null) return null;
+    const lmpRes = calculateGestation("lmp", new Date(lmpCompare + "T00:00:00"), new Date(), 28);
+    if (!lmpRes) return null;
+    const diff = Math.abs(diffDays(lmpRes.edd, result.edd));
+    const { threshold, window } = acogRedatingThresholdDays(gaAtScan);
+    return {
+      lmpEdd: lmpRes.edd,
+      scanEdd: result.edd,
+      diff,
+      threshold,
+      window,
+      useScan: diff > threshold,
+    };
+  }, [method, result, lmpCompare, gaAtScan]);
 
   const active = METHODS.find((m) => m.id === method)!;
 
@@ -102,6 +130,41 @@ export default function ObCalculator() {
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-fuchsia-500"
             />
           </label>
+          {method === "scan" && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">GA at scan — weeks</span>
+                  <input
+                    type="number" inputMode="numeric" min={5} max={42} data-adv="2"
+                    value={scanWeeks}
+                    onChange={(e) => { const v = e.target.value; setScanWeeks(v === "" ? "" : Number(v)); }}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-slate-500"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">+ days</span>
+                  <input
+                    type="number" inputMode="numeric" min={0} max={6} data-adv="1"
+                    value={scanDays}
+                    onChange={(e) => { const v = e.target.value; setScanDays(v === "" ? "" : Number(v)); }}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-slate-500"
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">
+                  LMP date (optional — to compare with the scan)
+                </span>
+                <input
+                  type="date"
+                  value={lmpCompare}
+                  onChange={(e) => setLmpCompare(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-slate-500"
+                />
+              </label>
+            </>
+          )}
           {method === "lmp" && (
             <label className="block">
               <span className="text-xs font-semibold text-slate-600">
@@ -193,8 +256,66 @@ export default function ObCalculator() {
         />
       )}
       <p className="mt-2 text-xs text-slate-500">
-        Ref: Naegele rule with cycle correction · ACOG/FOGSI dating practice.
+        Ref: Naegele rule with cycle correction · ultrasound dating and
+        re-dating per ACOG Committee Opinion 700.
       </p>
+
+      {redating && (
+        <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900">
+            LMP vs scan — which EDD to use (ACOG CO 700)
+          </h3>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-md bg-slate-50 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">EDD by LMP</p>
+              <p className="font-bold text-slate-900">{formatDate(redating.lmpEdd)}</p>
+            </div>
+            <div className="rounded-md bg-slate-50 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">EDD by scan</p>
+              <p className="font-bold text-slate-900">{formatDate(redating.scanEdd)}</p>
+            </div>
+          </div>
+          <p
+            className={`mt-3 rounded-lg border p-3 text-sm font-semibold ${
+              redating.useScan
+                ? "border-amber-200 bg-amber-50 text-amber-950"
+                : "border-emerald-200 bg-emerald-50 text-emerald-950"
+            }`}
+          >
+            Difference {redating.diff} day{redating.diff === 1 ? "" : "s"}. At a
+            scan GA of {redating.window}, ultrasound re-dates the pregnancy when
+            the difference exceeds {redating.threshold} days —{" "}
+            {redating.useScan
+              ? "USE THE ULTRASOUND EDD as the official due date."
+              : "the LMP EDD stands (difference within the accepted window)."}
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-xs text-slate-700">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="py-1 pr-2">GA at scan</th>
+                  <th className="py-1 pr-2">Method</th>
+                  <th className="py-1">Re-date if scan differs by</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-slate-100"><td className="py-1 pr-2">≤ 8w6d</td><td className="py-1 pr-2">CRL</td><td className="py-1">&gt; 5 days</td></tr>
+                <tr className="border-t border-slate-100"><td className="py-1 pr-2">9w0d – 13w6d</td><td className="py-1 pr-2">CRL</td><td className="py-1">&gt; 7 days</td></tr>
+                <tr className="border-t border-slate-100"><td className="py-1 pr-2">14w0d – 15w6d</td><td className="py-1 pr-2">BPD/HC/AC/FL</td><td className="py-1">&gt; 7 days</td></tr>
+                <tr className="border-t border-slate-100"><td className="py-1 pr-2">16w0d – 21w6d</td><td className="py-1 pr-2">BPD/HC/AC/FL</td><td className="py-1">&gt; 10 days</td></tr>
+                <tr className="border-t border-slate-100"><td className="py-1 pr-2">22w0d – 27w6d</td><td className="py-1 pr-2">BPD/HC/AC/FL</td><td className="py-1">&gt; 14 days</td></tr>
+                <tr className="border-t border-slate-100"><td className="py-1 pr-2">≥ 28w0d</td><td className="py-1 pr-2">BPD/HC/AC/FL</td><td className="py-1">&gt; 21 days</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-slate-600">
+            Ref: ACOG Committee Opinion 700 (Methods for Estimating the Due
+            Date). Once an EDD is set by the best early scan it should not be
+            changed by later scans. Comparison here uses a 28-day-cycle Naegele
+            EDD for the LMP.
+          </p>
+        </section>
+      )}
 
       {/* Pregnancy drug safety */}
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

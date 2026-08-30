@@ -946,6 +946,18 @@ section("Pediatric DB integrity");
   const et = new Date("2026-02-01T00:00:00");
   const g5 = calculateGestation("ivf5", et, new Date("2026-03-01T00:00:00"))!;
   check("IVF day-5 EDD = transfer + 261d", Math.round((g5.edd.getTime() - et.getTime()) / 86400000) === 261);
+  // Scan dating: EDD = scan date + (280 − GA-at-scan days)
+  const { acogRedatingThresholdDays } = await import("../src/lib/obMath");
+  const scanDate = new Date("2026-02-01T00:00:00");
+  const gScan = calculateGestation("scan", scanDate, new Date("2026-03-01T00:00:00"), 28, 84)!;
+  check("scan 12w0d: EDD = scan + 196d", Math.round((gScan.edd.getTime() - scanDate.getTime()) / 86400000) === 196);
+  check("scan 12w0d: GA 28d later = 16w0d", gScan.gaWeeks === 16 && gScan.gaDays === 0);
+  check("ACOG threshold 8w4d = 5d", acogRedatingThresholdDays(60).threshold === 5);
+  check("ACOG threshold 10w0d = 7d", acogRedatingThresholdDays(70).threshold === 7);
+  check("ACOG threshold 17w = 10d", acogRedatingThresholdDays(120).threshold === 10);
+  check("ACOG threshold 23w = 14d", acogRedatingThresholdDays(160).threshold === 14);
+  check("ACOG threshold 28w4d = 21d", acogRedatingThresholdDays(200).threshold === 21);
+  check("scan rejects implausible GA", calculateGestation("scan", scanDate, new Date("2026-03-01T00:00:00"), 28, 20) === null);
 
   // — Pregnancy safety verdicts (guideline-critical)
   const psafe = (id: string) => PREGNANCY_SAFETY[id];
