@@ -97,7 +97,14 @@ export function assessBp(
   const pct = zToPercentile(z);
   let classification: string;
   let band: BpAssessment["band"];
-  if (pct < 90) {
+  if (pct < 5) {
+    classification =
+      "LOW (below 5th centile) — hypotension; in dengue/sepsis this means decompensated shock";
+    band = "alert";
+  } else if (pct < 10) {
+    classification = "Low-normal (5th–10th centile) — watch trend, check pulse pressure";
+    band = "caution";
+  } else if (pct < 90) {
     classification = "Normal";
     band = "normal";
   } else if (pct < 95) {
@@ -108,6 +115,15 @@ export function assessBp(
     band = "alert";
   }
   return { z: Math.round(z * 100) / 100, percentile: Math.round(pct * 10) / 10, classification, band };
+}
+
+/**
+ * Pulse pressure (SBP − DBP). IAP/WHO dengue: pulse pressure ≤ 20 mmHg
+ * indicates shock even when systolic still looks "normal".
+ */
+export function pulsePressure(sbp: number, dbp: number): number | null {
+  if (!Number.isFinite(sbp) || !Number.isFinite(dbp) || sbp <= dbp) return null;
+  return Math.round((sbp - dbp) * 10) / 10;
 }
 
 /** Nocturnal dipping: (day − night)/day. Normal ≥ 10%. */
