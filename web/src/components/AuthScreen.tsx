@@ -86,7 +86,7 @@ export default function AuthScreen({ onGuest }: { onGuest: () => void }) {
           Continue without account
         </button>
         <p className="mt-4 text-center text-[11px] leading-snug text-slate-500">
-          Accounts and saved calculations stay on this device only.
+          Saved calculations stay on this device. At sign-up your phone number is shared once with the app maintainer for records.
         </p>
       </div>
     </div>

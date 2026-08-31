@@ -195,7 +195,7 @@ export default function SideMenu({
                 {mode === "signup" ? "Create account" : "Sign in"}
               </button>
               <p className="mt-2 text-[11px] leading-snug text-slate-600">
-                Accounts and saved calculations stay on this device.
+                Saved calculations stay on this device. At sign-up your phone number is shared once with the app maintainer for records.
               </p>
             </>
           )}
