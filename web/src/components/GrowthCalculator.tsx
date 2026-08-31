@@ -118,17 +118,18 @@ export default function GrowthCalculator() {
   const [sex, setSex] = useState<Sex>("male");
   const [ageValue, setAgeValue] = useState<number | "">(1);
   const [ageUnit, setAgeUnit] = useState<"years" | "months" | "days" | "hours">("years");
+  const [agePlusMonths, setAgePlusMonths] = useState<number | "">(0);
   const [weight, setWeight] = useState<number | "">("");
   const [height, setHeight] = useState<number | "">("");
   const [hc, setHc] = useState<number | "">("");
 
   const ageMonths = useMemo(() => {
     const n = ageValue === "" ? 0 : Number(ageValue);
-    if (ageUnit === "years") return n * 12;
+    if (ageUnit === "years") return n * 12 + (agePlusMonths === "" ? 0 : Number(agePlusMonths));
     if (ageUnit === "months") return n;
     if (ageUnit === "days") return n / 30.4375;
     return n / 730.5; // hours of life
-  }, [ageValue, ageUnit]);
+  }, [ageValue, ageUnit, agePlusMonths]);
 
   const overMax = ageMonths > GROWTH_MAX_MONTHS;
 
@@ -205,6 +206,21 @@ export default function GrowthCalculator() {
                 <option value="hours">Hours of life</option>
               </select>
             </div>
+            {ageUnit === "years" && (
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-600">+</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={11}
+                  value={agePlusMonths}
+                  onChange={(e) => setAgePlusMonths(numOrEmpty(e.target.value))}
+                  className="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-violet-500"
+                />
+                <span className="text-xs font-medium text-slate-600">months (e.g. 1 y 5 mo)</span>
+              </div>
+            )}
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-slate-600">Weight (kg)</span>

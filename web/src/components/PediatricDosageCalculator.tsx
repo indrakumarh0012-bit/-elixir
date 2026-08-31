@@ -23,6 +23,7 @@ type AgeUnit = "years" | "months" | "days" | "hours";
 export default function PediatricDosageCalculator() {
   const [ageValue, setAgeValue] = useState<number | "">(3);
   const [ageUnit, setAgeUnit] = useState<AgeUnit>("years");
+  const [agePlusMonths, setAgePlusMonths] = useState<number | "">(0);
   const [weight, setWeight] = useState<number | "">(14);
   const [creatinine, setCreatinine] = useState<number | "">("");
   const [heightCm, setHeightCm] = useState<number | "">("");
@@ -44,8 +45,9 @@ export default function PediatricDosageCalculator() {
     if (ageUnit === "hours") return n / 24;
     if (ageUnit === "days") return n;
     if (ageUnit === "months") return n * 30.4375;
-    return n * 365.25;
-  }, [ageValue, ageUnit]);
+    const extra = agePlusMonths === "" ? 0 : Number(agePlusMonths);
+    return n * 365.25 + extra * 30.4375;
+  }, [ageValue, ageUnit, agePlusMonths]);
 
   const ageMonths = useMemo(() => {
     if (ageDays == null) return null;
@@ -154,6 +156,23 @@ export default function PediatricDosageCalculator() {
                 <option value="hours">Hours of life</option>
               </select>
             </div>
+            {ageUnit === "years" && (
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-600">+</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={11}
+                  value={agePlusMonths}
+                  onChange={(e) =>
+                    setAgePlusMonths(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-[var(--accent)]"
+                />
+                <span className="text-xs font-medium text-slate-600">months (e.g. 1 y 5 mo)</span>
+              </div>
+            )}
             {ageDays != null && (
               <p className="mt-1 text-xs text-slate-500">
                 {ageUnit === "hours"
