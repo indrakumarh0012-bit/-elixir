@@ -1179,6 +1179,52 @@ section("Pediatric DB integrity");
   console.log(`CNS coverage: adult ${mustAdult.length} ids, pregnancy ${mustPreg.length} ids, ped antiseizure set OK`);
 }
 
+// ---------- Head circumference + child BMI + chart curves ----------
+{
+  console.log("\n=== HC / child BMI / chart curve suite ===");
+  const { WHO_HC_BOYS, WHO_HC_GIRLS } = await import("../src/data/whoHeadCircumference");
+  const { WHO_BMI_BOYS, WHO_BMI_GIRLS } = await import("../src/data/whoBmiReference");
+  const { headCircForAge } = await import("../src/lib/growthMath");
+  const { whoChartSpec, iapChartSpec, whoBmiChartSpec, childBmiAssess } = await import("../src/lib/growthChartSpecs");
+
+  // WHO anchors (official published values).
+  if (Math.abs(WHO_HC_BOYS[0][2] - 34.4618) > 0.001) fail("HC boys birth median should be 34.4618");
+  if (Math.abs(WHO_HC_GIRLS[0][2] - 33.8787) > 0.001) fail("HC girls birth median should be 33.8787");
+  if (Math.abs(WHO_BMI_BOYS[0][2] - 13.4069) > 0.001) fail("BMI boys birth median should be 13.4069");
+  if (WHO_HC_BOYS.length !== 61 || WHO_BMI_BOYS.length !== 229) fail("HC/BMI table lengths wrong");
+  // Medians strictly increase for HC over infancy.
+  for (const t of [WHO_HC_BOYS, WHO_HC_GIRLS])
+    for (let i = 1; i <= 24; i++) if (t[i][2] <= t[i - 1][2]) fail(`HC median not increasing at month ${i}`);
+
+  // HC classification: boys 12 mo median 46.1 → normal; 41 cm at 12 mo → microcephaly.
+  const hcN = headCircForAge(46.1, 12, "male");
+  if (!hcN || hcN.band !== "normal" || Math.abs(hcN.z) > 0.15) fail(`HC 46.1@12m boys should be ~median, got ${hcN?.z}`);
+  const hcMicro = headCircForAge(41, 12, "male");
+  if (!hcMicro || !hcMicro.classification.toLowerCase().includes("microcephaly")) fail("HC 41@12m boys should be microcephaly");
+
+  // Chart curves: centiles strictly ordered at every x; patient point carried.
+  for (const spec of [
+    whoChartSpec("weight", "male", 14, 9.8, "t"),
+    whoChartSpec("hc", "female", 6, 42, "t"),
+    iapChartSpec("height", "female", 9, 130, "t"),
+    whoBmiChartSpec("male", 120, 17, "t"),
+  ]) {
+    for (let i = 1; i < spec.curves.length; i++) {
+      const a = spec.curves[i - 1].pts, b = spec.curves[i].pts;
+      for (let j = 0; j < Math.min(a.length, b.length); j++)
+        if (b[j][1] <= a[j][1]) fail(`${spec.title}: centile curves cross at x=${b[j][0]}`);
+    }
+    if (spec.patient.y <= 0) fail(`${spec.title}: patient point missing`);
+  }
+
+  // Child BMI: WHO 5-19 overweight cutoff behaviour (z just above +1 → overweight).
+  const cb = childBmiAssess("male", 120, 19.5);
+  if (cb.z <= 1 || !cb.label.toLowerCase().includes("overweight")) fail(`BMI 19.5 at 10 y boys should be overweight (z ${cb.z})`);
+  const cbN = childBmiAssess("male", 120, 16.4);
+  if (cbN.band !== "normal") fail(`BMI 16.4 at 10 y boys should be normal (z ${cbN.z})`);
+  console.log("HC anchors, chart curve ordering and child BMI cutoffs OK");
+}
+
 // ---------- Result ----------
 console.log("\n========== VERIFY RESULT ==========");
 if (failures.length) {

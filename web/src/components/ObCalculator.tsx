@@ -21,7 +21,6 @@ import ObWheel from "./ObWheel";
 const METHODS: { id: ObMethod; label: string; dateLabel: string }[] = [
   { id: "lmp", label: "LMP", dateLabel: "First day of last period" },
   { id: "scan", label: "Scan (USG)", dateLabel: "Scan date" },
-  { id: "edd", label: "EDD known", dateLabel: "EDD (from the scan report)" },
   { id: "ivf5", label: "IVF — day-5 transfer", dateLabel: "Embryo transfer date" },
   { id: "ivf3", label: "IVF — day-3 transfer", dateLabel: "Embryo transfer date" },
   { id: "ovulation", label: "Ovulation / IUI", dateLabel: "Ovulation / IUI date" },
@@ -29,6 +28,9 @@ const METHODS: { id: ObMethod; label: string; dateLabel: string }[] = [
 
 export default function ObCalculator() {
   const [method, setMethod] = useState<ObMethod>("lmp");
+  // Scan (USG) covers both entries in one place: GA read on the scan, or the
+  // EDD printed on the report (which back-calculates the LMP).
+  const [scanMode, setScanMode] = useState<"ga" | "edd">("ga");
   const [dateStr, setDateStr] = useState("");
   const [cycle, setCycle] = useState<number | "">(28);
   const [scanWeeks, setScanWeeks] = useState<number | "">("");
@@ -66,21 +68,23 @@ export default function ObCalculator() {
   const gaAtScan =
     scanWeeks === "" ? null : Number(scanWeeks) * 7 + (scanDays === "" ? 0 : Number(scanDays));
 
+  const effMethod: ObMethod = method === "scan" && scanMode === "edd" ? "edd" : method;
+
   const result = useMemo(() => {
     if (!dateStr) return null;
-    if (method === "scan" && gaAtScan == null) return null;
+    if (effMethod === "scan" && gaAtScan == null) return null;
     return calculateGestation(
-      method,
+      effMethod,
       new Date(dateStr + "T00:00:00"),
       new Date(),
       cycle === "" ? 28 : Number(cycle),
       gaAtScan ?? undefined,
     );
-  }, [method, dateStr, cycle, gaAtScan]);
+  }, [effMethod, dateStr, cycle, gaAtScan]);
 
   // LMP vs scan comparison per ACOG CO 700 when both are entered.
   const redating = useMemo(() => {
-    if (method !== "scan" || !result || !lmpCompare || gaAtScan == null) return null;
+    if (effMethod !== "scan" || !result || !lmpCompare || gaAtScan == null) return null;
     const lmpRes = calculateGestation("lmp", new Date(lmpCompare + "T00:00:00"), new Date(), 28);
     if (!lmpRes) return null;
     const diff = Math.abs(diffDays(lmpRes.edd, result.edd));
@@ -93,7 +97,7 @@ export default function ObCalculator() {
       window,
       useScan: diff > threshold,
     };
-  }, [method, result, lmpCompare, gaAtScan]);
+  }, [effMethod, result, lmpCompare, gaAtScan]);
 
   const active = METHODS.find((m) => m.id === method)!;
 
@@ -119,10 +123,36 @@ export default function ObCalculator() {
           ))}
         </div>
 
+        {method === "scan" && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {([
+              { id: "ga", label: "GA on the scan" },
+              { id: "edd", label: "EDD on the report" },
+            ] as { id: "ga" | "edd"; label: string }[]).map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setScanMode(m.id)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  scanMode === m.id
+                    ? "bg-fuchsia-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="text-xs font-semibold text-slate-600">
-              {active.dateLabel}
+              {method === "scan"
+                ? scanMode === "edd"
+                  ? "EDD printed on the scan report"
+                  : "Scan date"
+                : active.dateLabel}
             </span>
             <input
               type="date"
@@ -131,7 +161,7 @@ export default function ObCalculator() {
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-fuchsia-500"
             />
           </label>
-          {method === "scan" && (
+          {method === "scan" && scanMode === "ga" && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
@@ -224,7 +254,7 @@ export default function ObCalculator() {
             {method !== "lmp" && (
               <div className="rounded-md border border-slate-300 bg-white px-3 py-2">
                 <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  {method === "scan" || method === "edd"
+                  {effMethod === "scan" || effMethod === "edd"
                     ? "LMP (calculated backwards)"
                     : "Working LMP (calculated)"}
                 </dt>
@@ -234,11 +264,11 @@ export default function ObCalculator() {
               </div>
             )}
           </dl>
-          {(method === "scan" || method === "edd") && (
+          {(effMethod === "scan" || effMethod === "edd") && (
             <p className="mt-2 text-xs text-slate-600">
               LMP unknown? Use this calculated LMP ({formatDate(result.derivedLmp)})
               as the working LMP for records and gestational charting —{" "}
-              {method === "edd"
+              {effMethod === "edd"
                 ? "it is the EDD minus 280 days (Naegele reversed)."
                 : "it is the scan date minus the scan GA."}{" "}
               (ACOG CO 700: the ultrasound dating then serves as official.)

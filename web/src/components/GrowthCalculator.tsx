@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   centileBandCompact,
   centileBandLabel,
+  headCircForAge,
   heightForAge,
   zBandCompact,
   zBandLabel,
@@ -10,6 +11,8 @@ import {
   type GrowthResult,
   type Sex,
 } from "../lib/growthMath";
+import CentileChart, { type ChartSpec } from "./CentileChart";
+import { iapChartSpec, whoChartSpec } from "../lib/growthChartSpecs";
 import SaveButton from "./SaveButton";
 
 const BAND_STYLES: Record<GrowthResult["band"], string> = {
@@ -40,8 +43,11 @@ function ResultCard({
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
         <p className="text-sm font-semibold text-slate-700">{title}</p>
         <p className="mt-1 text-sm text-slate-500">
-          Enter {title.toLowerCase().includes("weight") ? "weight" : "height"} to
-          see the result.
+          Enter {title.toLowerCase().includes("weight")
+            ? "weight"
+            : title.toLowerCase().includes("head")
+              ? "head circumference"
+              : "height"} to see the result.
         </p>
       </div>
     );
@@ -114,6 +120,7 @@ export default function GrowthCalculator() {
   const [ageUnit, setAgeUnit] = useState<"years" | "months" | "days" | "hours">("years");
   const [weight, setWeight] = useState<number | "">("");
   const [height, setHeight] = useState<number | "">("");
+  const [hc, setHc] = useState<number | "">("");
 
   const ageMonths = useMemo(() => {
     const n = ageValue === "" ? 0 : Number(ageValue);
@@ -134,6 +141,10 @@ export default function GrowthCalculator() {
     () =>
       height === "" ? null : heightForAge(Number(height), ageMonths, sex),
     [height, ageMonths, sex],
+  );
+  const hcfa = useMemo(
+    () => (hc === "" ? null : headCircForAge(Number(hc), ageMonths, sex)),
+    [hc, ageMonths, sex],
   );
 
   const ageLabel =
@@ -221,6 +232,20 @@ export default function GrowthCalculator() {
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
             />
           </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-600">
+              Head circumference (cm)
+            </span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.1"
+              value={hc}
+              onChange={(e) => setHc(numOrEmpty(e.target.value))}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-violet-500"
+            />
+          </label>
         </div>
 
         <p className="mt-2 text-xs text-slate-500">
@@ -255,16 +280,59 @@ export default function GrowthCalculator() {
             unit="cm"
             result={hfa}
           />
+          {hc !== "" && (
+            <ResultCard
+              title="Head circumference for age"
+              value={hc}
+              unit="cm"
+              result={hcfa}
+            />
+          )}
         </div>
       )}
+
+      {!overMax && (() => {
+        const ageYears = ageMonths / 12;
+        const cap = (label: string, val: number, unit: string, r: GrowthResult | null) =>
+          r
+            ? `${label} ${val} ${unit} at ${ageLabel} — ${centileBandCompact(r.percentile)} centile, ${zBandCompact(r.z)} SD`
+            : "";
+        const charts: ChartSpec[] = [];
+        if (wfa && weight !== "") {
+          charts.push(
+            ageMonths <= 60
+              ? whoChartSpec("weight", sex, ageMonths, Number(weight), cap("Weight", Number(weight), "kg", wfa))
+              : iapChartSpec("weight", sex, ageYears, Number(weight), cap("Weight", Number(weight), "kg", wfa)),
+          );
+        }
+        if (hfa && height !== "") {
+          charts.push(
+            ageMonths <= 60
+              ? whoChartSpec("height", sex, ageMonths, Number(height), cap("Height", Number(height), "cm", hfa))
+              : iapChartSpec("height", sex, ageYears, Number(height), cap("Height", Number(height), "cm", hfa)),
+          );
+        }
+        if (hcfa && hc !== "" && ageMonths <= 60) {
+          charts.push(whoChartSpec("hc", sex, ageMonths, Number(hc), cap("Head circumference", Number(hc), "cm", hcfa)));
+        }
+        if (charts.length === 0) return null;
+        return (
+          <div className="grid gap-3 md:grid-cols-2">
+            {charts.map((spec) => (
+              <CentileChart key={spec.title} spec={spec} />
+            ))}
+          </div>
+        );
+      })()}
 
       <SaveButton
         tool="Growth"
         build={() => {
-          if (!wfa && !hfa) return null;
+          if (!wfa && !hfa && !hcfa) return null;
           const parts: string[] = [];
           if (wfa) parts.push(`Weight ${weight} kg: ${centileBandCompact(wfa.percentile)} centile, ${zBandCompact(wfa.z)} SD — ${wfa.classification}`);
           if (hfa) parts.push(`Height ${height} cm: ${centileBandCompact(hfa.percentile)} centile, ${zBandCompact(hfa.z)} SD — ${hfa.classification}`);
+          if (hcfa) parts.push(`Head circumference ${hc} cm: ${centileBandCompact(hcfa.percentile)} centile, ${zBandCompact(hcfa.z)} SD — ${hcfa.classification}`);
           return {
             title: `Growth — ${sex === "male" ? "boy" : "girl"} ${ageLabel}`,
             detail: parts.join("\n"),
