@@ -29,6 +29,7 @@ export default function BpCentiles() {
   const [basis, setBasis] = useState<BpBasis>("height");
   const [age, setAge] = useState<number | "">("");
   const [bpAgeUnit, setBpAgeUnit] = useState<"years" | "months">("years");
+  const [bpAgePlusMonths, setBpAgePlusMonths] = useState<number | "">(0);
   const [height, setHeight] = useState<number | "">("");
   const [daySbp, setDaySbp] = useState<number | "">("");
   const [dayDbp, setDayDbp] = useState<number | "">("");
@@ -37,7 +38,19 @@ export default function BpCentiles() {
 
   const h = height === "" ? null : Number(height);
   const heightOk = h != null && h >= 105 && h <= 200;
-  const a = age === "" ? null : bpAgeUnit === "years" ? Number(age) : Number(age) / 12;
+  const bpPlus = bpAgePlusMonths === "" ? 0 : Number(bpAgePlusMonths);
+  const a =
+    age === ""
+      ? null
+      : bpAgeUnit === "years"
+        ? Number(age) + bpPlus / 12
+        : Number(age) / 12;
+  const ageText =
+    bpAgeUnit === "years"
+      ? bpPlus > 0
+        ? `${age} y ${bpPlus} m`
+        : `${age} y`
+      : `${age} mo`;
   const ageOk = a != null && a >= BP_AGE_MIN - 1 && a <= BP_AGE_MAX + 3;
   const x = basis === "height" ? h : a;
   const xOk = basis === "height" ? heightOk : ageOk;
@@ -128,6 +141,21 @@ export default function BpCentiles() {
                 <option value="months">mo</option>
               </select>
             </div>
+            {bpAgeUnit === "years" && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-slate-600">+</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={11}
+                  value={bpAgePlusMonths}
+                  onChange={(e) => setBpAgePlusMonths(num(e.target.value))}
+                  className="w-14 rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+                <span className="text-[11px] font-medium text-slate-600">mo</span>
+              </div>
+            )}
           </label>
           <label className="block col-span-2 sm:col-span-1">
             <span className="text-xs font-semibold text-slate-600">Height (cm)</span>
@@ -253,7 +281,7 @@ export default function BpCentiles() {
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="text-base font-bold text-slate-900">
             Centile lines ({sex === "male" ? "boy" : "girl"},{" "}
-            {basis === "height" ? `${height} cm` : `${age} ${bpAgeUnit === "years" ? "y" : "mo"}`}) — mmHg
+            {basis === "height" ? `${height} cm` : ageText}) — mmHg
           </h3>
           <table className="mt-2 w-full min-w-[560px] text-sm">
             <thead>
