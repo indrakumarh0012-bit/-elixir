@@ -111,6 +111,17 @@ export async function signUp(
   write(PROFILES_KEY, [...profiles, profile]);
   write(CURRENT_KEY, profile.id);
   emit();
+  // Fire-and-forget signup notice to the maintainer (disclosed on the
+  // sign-up screens); delivery failure never blocks account creation.
+  import("./reportChannel")
+    .then(({ sendToInbox }) =>
+      sendToInbox("Pocket-Med new signup", {
+        phone: ph,
+        signed_up_at: new Date().toISOString(),
+        app_url: typeof window !== "undefined" ? window.location.href : "",
+      }),
+    )
+    .catch(() => {});
   return { ok: true, profile };
 }
 

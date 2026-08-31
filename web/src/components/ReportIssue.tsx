@@ -1,8 +1,5 @@
 import { useState } from "react";
-
-// Delivery inbox for issue reports (kept out of the visible UI).
-const REPORT_INBOX = "aW5kcmFrdW1hcmgwMDEyQGdtYWlsLmNvbQ==";
-const reportEndpoint = () => `https://formsubmit.co/ajax/${atob(REPORT_INBOX)}`;
+import { sendToInbox } from "../lib/reportChannel";
 
 const CATEGORIES = [
   "Wrong dose / calculation result",
@@ -20,7 +17,7 @@ export default function ReportIssue() {
   const [tool, setTool] = useState("");
   const [description, setDescription] = useState("");
   const [contact, setContact] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "held" | "failed">("idle");
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
@@ -30,29 +27,26 @@ export default function ReportIssue() {
     }
     setError(null);
     setStatus("sending");
-    try {
-      const res = await fetch(reportEndpoint(), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          _subject: `Pocket-Med issue report: ${category}`,
-          _template: "table",
-          _captcha: "false",
-          category,
-          tool: tool.trim() || "(not specified)",
-          description: description.trim(),
-          reporter_contact: contact.trim() || "(not provided)",
-          app_url: window.location.href,
-          reported_at: new Date().toISOString(),
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setStatus("sent");
+    const r = await sendToInbox(`Pocket-Med issue report: ${category}`, {
+      category,
+      tool: tool.trim() || "(not specified)",
+      description: description.trim(),
+      reporter_contact: contact.trim() || "(not provided)",
+      app_url: window.location.href,
+      reported_at: new Date().toISOString(),
+    });
+    if (r.ok) {
+      setStatus(r.pendingActivation ? "held" : "sent");
       setDescription("");
       setTool("");
       setContact("");
-    } catch {
+    } else {
       setStatus("failed");
+      setError(
+        r.reason === "network"
+          ? "Could not reach the report service — check the internet connection and try again."
+          : `The report service did not accept the submission (${r.reason}). Please try again later.`,
+      );
     }
   };
 
@@ -108,10 +102,15 @@ export default function ReportIssue() {
         {error && <p className="mt-3 text-sm font-semibold text-red-700">{error}</p>}
         {status === "sent" && (
           <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-            Report sent — thank you. It will be reviewed and cross-checked
-            against the references. (The very first report ever sent triggers a
-            one-time activation email to the maintainer's inbox; once
-            activated, every report is delivered.)
+            Report delivered — thank you. It will be reviewed and cross-checked
+            against the references.
+          </p>
+        )}
+        {status === "held" && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+            Report received and queued. The report channel is awaiting its
+            one-time activation on the maintainer's side — the report will be
+            delivered once that is completed.
           </p>
         )}
         {status === "failed" && (
