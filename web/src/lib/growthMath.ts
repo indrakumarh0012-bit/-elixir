@@ -353,3 +353,97 @@ export function centileBandCompact(percentile: number): string {
 export function toMonths(years: number, months: number): number {
   return (Number(years) || 0) * 12 + (Number(months) || 0);
 }
+
+// ---------------------------------------------------------------------------
+// Head circumference (WHO 0-60 months)
+// ---------------------------------------------------------------------------
+import { WHO_HC_BOYS, WHO_HC_GIRLS } from "../data/whoHeadCircumference";
+
+/** Head-circumference-for-age, WHO 0-60 months. Null outside that range. */
+export function headCircForAge(
+  hcCm: number,
+  ageMonths: number,
+  sex: Sex,
+): GrowthResult | null {
+  const month = Math.floor(ageMonths);
+  if (!Number.isFinite(hcCm) || hcCm <= 0) return null;
+  if (month < 0 || month > WHO_MAX_MONTHS) return null;
+  const table = sex === "male" ? WHO_HC_BOYS : WHO_HC_GIRLS;
+  const [, l, m, s] = table[month];
+  const z = lmsZ(hcCm, l, m, s);
+  let classification: string;
+  let band: GrowthResult["band"];
+  if (z < -3) {
+    classification = "Severe microcephaly (below −3 SD)";
+    band = "alert";
+  } else if (z < -2) {
+    classification = "Microcephaly (below −2 SD)";
+    band = "alert";
+  } else if (z <= 2) {
+    classification = "Normal head circumference";
+    band = "normal";
+  } else if (z <= 3) {
+    classification = "Macrocephaly (above +2 SD)";
+    band = "caution";
+  } else {
+    classification = "Macrocephaly (above +3 SD)";
+    band = "alert";
+  }
+  return {
+    z: round(z, 2),
+    percentile: round(zToPercentile(z), 1),
+    median: m,
+    reference: "WHO Child Growth Standards, head-circumference-for-age (0–5 y)",
+    classification,
+    band,
+  };
+}
+
+/** Value at a given z for an LMS row: M(1+LSz)^(1/L), or M·e^(Sz) when L=0. */
+export function lmsValueAtZ(l: number, m: number, s: number, z: number): number {
+  if (l === 0) return m * Math.exp(s * z);
+  return m * Math.pow(1 + l * s * z, 1 / l);
+}
+
+/** z for a centile (inverse normal, Acklam approximation — enough for charts). */
+export function percentileToZ(p: number): number {
+  const q = p / 100;
+  const a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924];
+  const b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857];
+  const c = [-0.00778489400243029, -0.322396458041136, -2.40075827716184, -2.54973253934373, 4.37466414146497, 2.93816398269878];
+  const d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742];
+  const pl = 0.02425;
+  let x: number;
+  if (q < pl) {
+    const u = Math.sqrt(-2 * Math.log(q));
+    x = (((((c[0] * u + c[1]) * u + c[2]) * u + c[3]) * u + c[4]) * u + c[5]) / ((((d[0] * u + d[1]) * u + d[2]) * u + d[3]) * u + 1);
+  } else if (q <= 1 - pl) {
+    const u = q - 0.5, t = u * u;
+    x = (((((a[0] * t + a[1]) * t + a[2]) * t + a[3]) * t + a[4]) * t + a[5]) * u / (((((b[0] * t + b[1]) * t + b[2]) * t + b[3]) * t + b[4]) * t + 1);
+  } else {
+    const u = Math.sqrt(-2 * Math.log(1 - q));
+    x = -(((((c[0] * u + c[1]) * u + c[2]) * u + c[3]) * u + c[4]) * u + c[5]) / ((((d[0] * u + d[1]) * u + d[2]) * u + d[3]) * u + 1);
+  }
+  return x;
+}
+
+/** LMS row [month,L,M,S] lookup for chart building. */
+export function whoLmsRow(
+  kind: "weight" | "height" | "hc",
+  sex: Sex,
+  month: number,
+): [number, number, number] {
+  if (kind === "hc") {
+    const t = sex === "male" ? WHO_HC_BOYS : WHO_HC_GIRLS;
+    const [, l, m, s] = t[Math.min(Math.max(month, 0), WHO_MAX_MONTHS)];
+    return [l, m, s];
+  }
+  if (kind === "weight") {
+    const t = sex === "male" ? WHO_WFA_BOYS : WHO_WFA_GIRLS;
+    const [, l, m, s] = t[Math.min(Math.max(month, 0), WHO_MAX_MONTHS)];
+    return [l, m, s];
+  }
+  const t = sex === "male" ? WHO_HFA_BOYS : WHO_HFA_GIRLS;
+  const [, l, m, s] = t[Math.min(Math.max(month, 0), WHO_MAX_MONTHS)];
+  return [l, m, s];
+}

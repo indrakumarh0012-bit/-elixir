@@ -7,6 +7,8 @@ import {
 } from "../lib/bmiMath";
 import SaveButton from "./SaveButton";
 import BmiGauge from "./BmiGauge";
+import CentileChart from "./CentileChart";
+import { childBmiAssess, whoBmiChartSpec } from "../lib/growthChartSpecs";
 
 const BAND_STYLES = {
   normal: "border-emerald-200 bg-emerald-50 text-emerald-950",
@@ -46,8 +48,9 @@ export default function BmiCalculator() {
   }, [weight, effHeight]);
 
   const cls = bmi != null ? classifyBmiIndian(bmi) : null;
-  const pediatric = age !== "" && Number(age) < 18;
-  const wf = waist !== "" && Number(waist) > 0 ? waistFlag(Number(waist), sex) : null;
+  const childAgeYears = age !== "" && Number(age) < 19 && Number(age) >= 0 ? Number(age) : null;
+  const child = childAgeYears != null && bmi != null ? childBmiAssess(sex, childAgeYears * 12, bmi) : null;
+  const wf = waist !== "" && Number(waist) > 0 && childAgeYears == null ? waistFlag(Number(waist), sex) : null;
 
   return (
     <div className="mx-auto max-w-3xl px-3 py-5 md:px-6">
@@ -116,7 +119,7 @@ export default function BmiCalculator() {
         )}
       </section>
 
-      {bmi != null && cls && (
+      {bmi != null && child == null && cls && (
         <div className={`mt-4 rounded-lg border p-4 ${BAND_STYLES[cls.band]}`}>
           <p className="text-3xl font-bold">
             {bmi} <span className="text-lg font-semibold">kg/m²</span>
@@ -126,14 +129,36 @@ export default function BmiCalculator() {
         </div>
       )}
 
-      {bmi != null && <BmiGauge bmi={bmi} />}
+      {bmi != null && child == null && <BmiGauge bmi={bmi} />}
 
-      {pediatric && (
-        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          Age under 18: adult cutoffs do not apply — plot BMI on the IAP
-          age-and-sex BMI centile chart instead (overweight ≥ adult-equivalent
-          23 line, obesity ≥ adult-equivalent 27 line per IAP 2015).
-        </p>
+      {bmi != null && child != null && childAgeYears != null && (
+        <>
+          <div className={`mt-4 rounded-lg border p-4 ${BAND_STYLES[child.band]}`}>
+            <p className="text-3xl font-bold">
+              {bmi} <span className="text-lg font-semibold">kg/m²</span>
+            </p>
+            <p className="mt-1 text-lg font-bold">{child.label}</p>
+            <p className="mt-1 text-sm">
+              Child assessment ({childAgeYears} y): z-score {child.z} SD against
+              the WHO BMI-for-age reference (median {child.median.toFixed(1)}).
+              Adult cutoffs do not apply under 19.
+            </p>
+          </div>
+          <CentileChart
+            spec={whoBmiChartSpec(
+              sex,
+              childAgeYears * 12,
+              bmi,
+              `BMI ${bmi} kg/m² at ${childAgeYears} y — ${child.label} (z ${child.z} SD)`,
+            )}
+          />
+          <p className="mt-2 text-xs text-slate-600">
+            IAP 2015 interpretation for Indian children (5–18 y): overweight
+            from the adult-equivalent 23 line and obesity from the
+            adult-equivalent 27 line — read borderline results against the
+            printed IAP chart too.
+          </p>
+        </>
       )}
 
       {wf && (

@@ -107,32 +107,30 @@ export default function CreatinineClearance() {
         </label>
 
         <label className="block text-sm font-semibold">
-          Serum creatinine unit
-          <select
-            value={unit}
-            onChange={(e) => {
-              const next = e.target.value as "mg/dL" | "µmol/L";
-              setUnit(next);
-              setCreatinine(next === "mg/dL" ? 1.2 : 106);
-            }}
-            className="mt-1 w-full rounded-lg border border-[var(--line)] px-3 py-2"
-          >
-            <option value="mg/dL">mg/dL</option>
-            <option value="µmol/L">µmol/L</option>
-          </select>
-        </label>
-
-        <label className="block text-sm font-semibold">
-          Serum creatinine ({unit})
-          <input
-            type="number"
-            min={unit === "mg/dL" ? 0.1 : 10}
-            max={unit === "mg/dL" ? 30 : 3000}
-            step={unit === "mg/dL" ? 0.1 : 1}
-            value={creatinine}
-            onChange={(e) => setCreatinine(numOrEmpty(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-[var(--line)] px-3 py-2"
-          />
+          Serum creatinine
+          <div className="mt-1 flex gap-2">
+            <input
+              type="number"
+              min={unit === "mg/dL" ? 0.1 : 10}
+              max={unit === "mg/dL" ? 30 : 3000}
+              step={unit === "mg/dL" ? 0.1 : 1}
+              value={creatinine}
+              onChange={(e) => setCreatinine(numOrEmpty(e.target.value))}
+              className="w-full min-w-0 rounded-lg border border-[var(--line)] px-3 py-2"
+            />
+            <select
+              value={unit}
+              onChange={(e) => {
+                const next = e.target.value as "mg/dL" | "µmol/L";
+                setUnit(next);
+                setCreatinine(next === "mg/dL" ? 1.2 : 106);
+              }}
+              className="rounded-lg border border-[var(--line)] bg-slate-50 px-2 py-2 text-sm"
+            >
+              <option value="mg/dL">mg/dL</option>
+              <option value="µmol/L">µmol/L</option>
+            </select>
+          </div>
         </label>
       </div>
 
